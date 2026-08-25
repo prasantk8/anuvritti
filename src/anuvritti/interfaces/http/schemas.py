@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
-from anuvritti.domain.return_engine import Suggestion
+from anuvritti.domain.return_engine import Suggestion, describe_elapsed
 from anuvritti.domain.spark import Spark
 from anuvritti.domain.values import IntentType, SourceKind, Visibility
 
@@ -51,8 +51,14 @@ class SourceRequest(Strict):
 
 
 class CaptureSparkRequest(Strict):
-    family_id: str
-    owner_id: str
+    """`family_id` and `owner_id` are optional because the token already says who this is.
+
+    They remain *accepted* so a client that believes it knows can be told when it is wrong
+    (TASK-511): a mismatch is a 403, not a silently redirected write into the right family.
+    """
+
+    family_id: str | None = None
+    owner_id: str | None = None
     source: SourceRequest
     subject_child_id: str | None = None
     note: str | None = Field(default=None, max_length=2000)
@@ -72,7 +78,7 @@ class OverrideFieldRequest(Strict):
 class MarkAsDoneRequest(Strict):
     """Every field optional - "nothing" is a valid answer (PRD 15)."""
 
-    created_by: str
+    created_by: str | None = None
     happened_on: date | None = None
     reflection: str | None = Field(default=None, max_length=4000)
     photo_media_id: str | None = None
@@ -84,23 +90,47 @@ class SuggestionResponseRequest(Strict):
 
 
 class CaptureLittleThingRequest(Strict):
-    family_id: str
-    author_id: str
+    family_id: str | None = None
+    author_id: str | None = None
     subject_child_id: str | None = None
     text: str | None = Field(default=None, max_length=4000)
     audio_media_id: str | None = None
 
 
 class CaptureRightNowRequest(Strict):
-    family_id: str
+    family_id: str | None = None
     child_id: str
     answer: str = Field(min_length=1, max_length=4000)
     prompt: str | None = Field(default=None, max_length=400)
 
 
+# ------------------------------------------------------------------- pairing
+class ClaimPairingRequest(Strict):
+    """Eight characters read off a phone already inside the house, and a name for this one.
+
+    `code` deliberately carries no `min_length`. It is the one field in this file where
+    Pydantic validating the shape would be a security bug: a 422 for an empty code and a 401
+    for a wrong one are two different answers, and the difference tells a caller that their
+    guess was at least the right shape. Every code that is not the code must be refused
+    identically, so the string goes to `PairingCode.parse` whatever it looks like.
+
+    `max_length` stays. It is not about which codes exist - it is a bound on how much work
+    an unauthenticated caller can ask for in one request.
+    """
+
+    code: str = Field(max_length=200)
+    device_name: str = Field(min_length=1, max_length=60)
+
+
 # ------------------------------------------------------------------ renderers
-def render_spark(spark: Spark) -> dict[str, Any]:
-    """Provenance is always on the wire (PRD 13, 42). It is not an optional expansion."""
+def render_spark(spark: Spark, *, now: datetime) -> dict[str, Any]:
+    """Provenance is always on the wire (PRD 13, 42). It is not an optional expansion.
+
+    `saved` is the other half of TASK-507. The server does the arithmetic and hands over the
+    *phrase*, because a client that receives a day count will eventually render one - not out
+    of malice, but because "247" is right there and the deadline is Friday. `created_at` stays
+    for ordering and for the export; the interface never needs to subtract it from anything.
+    """
     return {
         "id": str(spark.id),
         "family_id": str(spark.family_id),
@@ -122,20 +152,41 @@ def render_spark(spark: Spark) -> dict[str, Any]:
         "why": spark.why.to_dict() if spark.why else None,
         "status": spark.status.value,
         "visibility": spark.visibility.value,
+        "saved": describe_elapsed(spark.days_since_capture(now)),
         "created_at": spark.created_at.isoformat(),
     }
 
 
-def render_suggestion(suggestion: Suggestion) -> dict[str, Any]:
+def render_suggestion(suggestion: Suggestion, *, now: datetime) -> dict[str, Any]:
     """PRD 8.5 - no counters, no urgency, no score on the wire.
 
     The score is a ranking device, not something to show a parent about their own child.
+
+    `days_since_capture` used to be here, and its removal is TASK-507. It was the one field
+    on the whole wire that handed an interface a number about a family's own life, and every
+    interesting misuse of this product starts with rendering it: "247 days", then "8 months
+    overdue", then a badge. `elapsed` is the same fact with the precision deliberately gone.
     """
     return {
-        "spark": render_spark(suggestion.spark),
+        "spark": render_spark(suggestion.spark, now=now),
         "reason": suggestion.reason,
-        "days_since_capture": suggestion.days_since_capture,
+        "elapsed": describe_elapsed(suggestion.days_since_capture),
         "actions": list(suggestion.actions),
+    }
+
+
+def render_device(device: Any) -> dict[str, Any]:
+    """A paired device, as a parent deciding what to revoke would need to see it.
+
+    No token, no fingerprint, no request count. `last_seen_at` is the only usage fact kept,
+    and it exists so "revoke the one I lost" has an answer.
+    """
+    return {
+        "id": str(device.id),
+        "display_name": device.display_name,
+        "created_at": device.created_at.isoformat(),
+        "last_seen_at": device.last_seen_at.isoformat() if device.last_seen_at else None,
+        "revoked": device.is_revoked,
     }
 
 
@@ -202,6 +253,7 @@ __all__ = [
     "CaptureLittleThingRequest",
     "CaptureRightNowRequest",
     "CaptureSparkRequest",
+    "ClaimPairingRequest",
     "CreateChildRequest",
     "CreateFamilyRequest",
     "MarkAsDoneRequest",
@@ -212,6 +264,7 @@ __all__ = [
     "V0Intent",
     "datetime",
     "parse_intent",
+    "render_device",
     "render_family",
     "render_little_thing",
     "render_moment",

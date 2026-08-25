@@ -13,7 +13,6 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from cryptography.fernet import Fernet
-from fastapi.testclient import TestClient
 
 from anuvritti.adapters.intent.heuristic import HeuristicIntentEngine
 from anuvritti.adapters.persistence.schema import connect, migrate
@@ -27,6 +26,7 @@ from anuvritti.interfaces.http.container import build_container
 from anuvritti.shared.clock import FrozenClock
 from anuvritti.shared.identity import MemberId, SequentialIdGenerator, SparkId
 from tests.integration.conftest import CHILD, FAMILY, PAPA
+from tests.support.http import PairedClient
 
 T0 = datetime(2026, 1, 10, 9, 0, tzinfo=UTC)
 
@@ -43,7 +43,7 @@ def client(tmp_path):
         }
     ).unwrap()
     container = build_container(settings, clock=clock, ids=SequentialIdGenerator("id"))
-    test_client = TestClient(create_app(settings, container=container))
+    test_client = PairedClient(create_app(settings, container=container))
     test_client.clock = clock  # type: ignore[attr-defined]
     yield test_client
     container.close()
@@ -472,48 +472,51 @@ class TestConcurrency:
 
 
 class TestSearchDoesNotLeak:
-    def test_a_search_cannot_reach_another_familys_archive(self, client, family):
-        other = client.post(
+    """Family isolation, with two real tokens rather than one token and a forged id.
+
+    Until TASK-511 the last test in this class asserted `200` and carried a comment
+    admitting it: a Spark id typed into the URL bar returned another family's Spark, because
+    scoping lived in the search query and direct fetch skipped it. That is HARDENING 5.1 in
+    one line. It now returns 404 - the same answer an id that never existed gets, so the
+    response cannot be used to discover that a stranger's Spark is there.
+    """
+
+    @pytest.fixture
+    def stranger(self, client, family):
+        """Another family entirely, on the same server, holding its own token."""
+        other = client.another_device()
+        created = other.post(
             "/v1/families", json={"name": "Another", "owner_display_name": "Someone"}
         ).json()
-        client.post(
+        spark = other.post(
             "/v1/sparks",
-            json={
-                "family_id": other["id"],
-                "owner_id": other["members"][0]["id"],
-                "source": {"kind": "TEXT", "text": "their private thing"},
-            },
-        )
-        found = client.get(
-            "/v1/sparks",
-            params={
-                "family_id": family["family_id"],
-                "actor_id": family["papa_id"],
-                "q": "private",
-            },
+            json={"source": {"kind": "TEXT", "text": "their private thing"}},
         ).json()
+        return {"client": other, "family_id": created["id"], "spark_id": spark["id"]}
+
+    def test_a_search_cannot_reach_another_familys_archive(self, client, family, stranger):
+        found = client.get("/v1/sparks", params={"q": "private"}).json()
         assert found == []
 
-    def test_a_member_of_one_family_cannot_query_another(self, client, family):
-        other = client.post(
-            "/v1/families", json={"name": "Another", "owner_display_name": "Someone"}
-        ).json()
-        response = client.get(
-            "/v1/sparks", params={"family_id": other["id"], "actor_id": family["papa_id"]}
-        )
-        assert response.json()["error"]["code"] == "MEMBER_NOT_FOUND"
+    def test_naming_another_family_is_refused(self, client, family, stranger):
+        response = client.get("/v1/sparks", params={"family_id": stranger["family_id"]})
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "PERMISSION_DENIED"
 
-    def test_a_spark_id_from_another_family_is_not_readable_by_guessing(self, client, family):
-        other = client.post(
-            "/v1/families", json={"name": "Another", "owner_display_name": "Someone"}
-        ).json()
-        their_spark = client.post(
-            "/v1/sparks",
-            json={
-                "family_id": other["id"],
-                "owner_id": other["members"][0]["id"],
-                "source": {"kind": "TEXT", "text": "their private thing"},
-            },
-        ).json()
-        # Direct fetch is by id; the search path is where family scoping is enforced.
-        assert client.get(f"/v1/sparks/{their_spark['id']}").status_code == 200
+    def test_a_spark_id_from_another_family_is_not_readable_by_guessing(
+        self, client, family, stranger
+    ):
+        assert client.get(f"/v1/sparks/{stranger['spark_id']}").status_code == 404
+
+        # And the 404 is isolation, not absence: it is right there for the family it
+        # belongs to. Without this line the test would pass against a broken store.
+        assert stranger["client"].get(f"/v1/sparks/{stranger['spark_id']}").status_code == 200
+
+    def test_another_familys_spark_cannot_be_written_to_either(self, client, family, stranger):
+        """Reading is the obvious leak. Writing is the one that damages an archive."""
+        assert (
+            client.post(
+                f"/v1/sparks/{stranger['spark_id']}/why", json={"text": "not mine to say"}
+            ).status_code
+            == 404
+        )

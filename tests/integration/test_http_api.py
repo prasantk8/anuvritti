@@ -10,13 +10,13 @@ from datetime import UTC, datetime
 
 import pytest
 from cryptography.fernet import Fernet
-from fastapi.testclient import TestClient
 
 from anuvritti.config.settings import Environment, Settings, load_settings
 from anuvritti.interfaces.http.app import create_app
 from anuvritti.interfaces.http.container import build_container
 from anuvritti.shared.clock import FrozenClock
 from anuvritti.shared.identity import SequentialIdGenerator
+from tests.support.http import PairedClient
 
 T0 = datetime(2026, 1, 10, 9, 0, tzinfo=UTC)
 PHOTO = b"\xff\xd8\xff\xe0" + b"his face" * 40
@@ -39,7 +39,7 @@ def api(tmp_path):
             self.container = build_container(
                 settings, clock=self.clock, ids=SequentialIdGenerator("id")
             )
-            self.client = TestClient(create_app(settings, container=self.container))
+            self.client = PairedClient(create_app(settings, container=self.container))
             self._bootstrap()
 
         def _bootstrap(self) -> None:
@@ -94,10 +94,17 @@ class TestBootstrap:
         assert response.status_code == 422
         assert response.json()["error"]["code"] == "VALIDATION_FAILED"
 
-    def test_an_unknown_family_is_a_404_with_a_stable_code(self, api):
+    def test_naming_another_family_is_refused_before_it_is_looked_up(self, api):
+        """TASK-511 changed this deliberately, and the change is the point.
+
+        This used to be a 404: the server looked the id up, found nothing, and said so -
+        which meant a stranger could learn which family ids exist by watching 404 turn into
+        403. Now the token is checked first, so every id that is not this device's family
+        gets the same answer whether it exists or not.
+        """
         response = api.client.get("/v1/families/nope")
-        assert response.status_code == 404
-        assert response.json()["error"]["code"] == "FAMILY_NOT_FOUND"
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "PERMISSION_DENIED"
 
 
 class TestCapture:
@@ -242,10 +249,12 @@ class TestVault:
         assert response.status_code == 422
 
     def test_searching_as_a_stranger_is_refused(self, api):
+        """A device acts for one member. Claiming to be another never reaches the store."""
         response = api.client.get(
             "/v1/sparks", params={"family_id": api.family_id, "actor_id": "stranger"}
         )
-        assert response.json()["error"]["code"] == "MEMBER_NOT_FOUND"
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "PERMISSION_DENIED"
 
 
 class TestReturnEngine:
@@ -446,15 +455,20 @@ class TestFamilyRights:
         response = api.client.get(f"/v1/families/{api.family_id}/export")
         assert "attachment" in response.headers["content-disposition"]
 
-    def test_delete_removes_everything_and_reports_it(self, api):
+    def test_delete_removes_everything_including_the_keys_to_it(self, api):
+        """PRD 44 says "delete everything". The paired devices are part of everything.
+
+        After the archive is gone the token that opened it authenticates nothing, so the
+        phone in the parent's hand is not left holding a working key to an empty house.
+        """
         api.capture()
         response = api.client.delete(f"/v1/families/{api.family_id}")
         assert response.status_code == 200
         assert response.json()["sparks"] == 1
-        assert api.client.get(f"/v1/families/{api.family_id}").status_code == 404
+        assert api.client.get(f"/v1/families/{api.family_id}").status_code == 401
 
-    def test_deleting_an_unknown_family_is_a_404(self, api):
-        assert api.client.delete("/v1/families/nope").status_code == 404
+    def test_deleting_a_family_this_device_does_not_belong_to_is_refused(self, api):
+        assert api.client.delete("/v1/families/nope").status_code == 403
 
 
 class TestErrorContract:
@@ -500,7 +514,7 @@ class TestApiSurface:
             min_days_before_return=7,
         )
         container = build_container(settings, clock=FrozenClock(T0))
-        client = TestClient(create_app(settings, container=container))
+        client = PairedClient(create_app(settings, container=container))
         assert client.get("/docs").status_code == 404
         assert client.get("/openapi.json").status_code == 404
         container.close()

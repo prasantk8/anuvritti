@@ -16,13 +16,13 @@ from datetime import UTC, datetime
 
 import pytest
 from cryptography.fernet import Fernet
-from fastapi.testclient import TestClient
 
 from anuvritti.config.settings import load_settings
 from anuvritti.interfaces.http.app import create_app
 from anuvritti.interfaces.http.container import build_container
 from anuvritti.shared.clock import FrozenClock
 from anuvritti.shared.identity import SequentialIdGenerator
+from tests.support.http import PairedClient
 
 #: A Tuesday evening in January. He is putting the child to bed and scrolling.
 JANUARY = datetime(2026, 1, 13, 21, 40, tzinfo=UTC)
@@ -41,7 +41,7 @@ def app(tmp_path):
         }
     ).unwrap()
     container = build_container(settings, clock=clock, ids=SequentialIdGenerator("id"))
-    client = TestClient(create_app(settings, container=container))
+    client = PairedClient(create_app(settings, container=container))
     client.clock = clock  # type: ignore[attr-defined]
     client.container = container  # type: ignore[attr-defined]
     yield client

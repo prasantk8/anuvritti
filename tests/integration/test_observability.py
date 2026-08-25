@@ -12,13 +12,13 @@ from datetime import UTC, datetime
 
 import pytest
 from cryptography.fernet import Fernet
-from fastapi.testclient import TestClient
 
 from anuvritti.config.settings import load_settings
 from anuvritti.interfaces.http.app import create_app
 from anuvritti.interfaces.http.container import build_container
 from anuvritti.shared.clock import FrozenClock
 from anuvritti.shared.identity import SequentialIdGenerator
+from tests.support.http import PairedClient
 
 NOW = datetime(2026, 8, 25, 9, 0, tzinfo=UTC)
 
@@ -35,7 +35,7 @@ def client(tmp_path):
         }
     ).unwrap()
     container = build_container(settings, clock=clock, ids=SequentialIdGenerator("id"))
-    test_client = TestClient(create_app(settings, container=container))
+    test_client = PairedClient(create_app(settings, container=container))
     test_client.clock = clock  # type: ignore[attr-defined]
     test_client.container = container  # type: ignore[attr-defined]
     yield test_client

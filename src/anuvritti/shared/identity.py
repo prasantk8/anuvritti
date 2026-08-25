@@ -61,6 +61,10 @@ class RightNowId(_Identifier): ...
 class EventId(_Identifier): ...
 
 
+@dataclass(frozen=True, slots=True)
+class DeviceId(_Identifier): ...
+
+
 class IdGenerator(Protocol):
     """Port. Kept behind an interface so tests can be deterministic."""
 

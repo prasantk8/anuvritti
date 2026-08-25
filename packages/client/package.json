@@ -1,0 +1,18 @@
+{
+  "name": "@anuvritti/client",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "The Anuvritti API as typed calls. Generated from docs/contracts/openapi.yaml; zero dependencies, zero build step.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "python3 codegen/generate.py",
+    "check": "python3 codegen/generate.py --check",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "engines": {
+    "node": ">=22.6"
+  }
+}

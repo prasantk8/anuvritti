@@ -102,7 +102,7 @@ class TestProvenanceCannotBeLost:
     def test_provenance_is_always_on_the_wire(self):
         from anuvritti.interfaces.http.schemas import render_spark
 
-        rendered = render_spark(_spark())
+        rendered = render_spark(_spark(), now=datetime(2026, 1, 10, tzinfo=UTC))
         for field in ("intent", "category"):
             assert set(rendered[field]) == {"value", "source", "confidence", "human_override"}
 

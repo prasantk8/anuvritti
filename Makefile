@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world design specimen
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -11,21 +11,38 @@ install:
 world:
 	npm --prefix packages/world run build --silent
 
+# packages/client is generated from docs/contracts/openapi.yaml. The generated file is
+# committed, and `make check` fails if it no longer matches the contract - a generated
+# artefact that is not verified is just a second source of truth wearing the first's clothes.
+client:
+	$(PY) packages/client/codegen/generate.py
+
+# Deliberately does *not* depend on `client`: regenerating and then checking for drift
+# would check the file against itself and pass forever. `make client` is a decision.
+# The app's decisions - what a share means, what comes back today - are pure functions
+# with no `expo-*` import, so they run here. What cannot run here is the view layer, which
+# needs a device; TASK-513 is the checklist for that.
+app:
+	npm --prefix apps/anuvritti test --silent
+
 design: world
 	$(PY) -m pytest tests/design -q
 	npm --prefix packages/world test --silent
+	$(PY) packages/client/codegen/generate.py --check
+	npm --prefix packages/client test --silent
+	npm --prefix apps/anuvritti test --silent
 
 specimen: world
 	@echo "serving packages/world/specimen at http://127.0.0.1:8765/specimen/"
 	@cd packages/world && python3 -m http.server 8765 --bind 127.0.0.1
 
 lint:
-	$(PY) -m ruff check src tests
-	$(PY) -m ruff format --check src tests
+	$(PY) -m ruff check src tests packages/client/codegen
+	$(PY) -m ruff format --check src tests packages/client/codegen
 
 format:
-	$(PY) -m ruff format src tests
-	$(PY) -m ruff check src tests --fix
+	$(PY) -m ruff format src tests packages/client/codegen
+	$(PY) -m ruff check src tests packages/client/codegen --fix
 
 types:
 	$(PY) -m mypy

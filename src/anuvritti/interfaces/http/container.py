@@ -8,20 +8,32 @@ change to this file and nothing else - which is the entire point of ADR-0001.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 
 from anuvritti.adapters.intent.heuristic import HeuristicIntentEngine
 from anuvritti.adapters.media.filesystem import EncryptedFilesystemMediaStore
 from anuvritti.adapters.persistence.schema import GuardedConnection, connect, migrate
 from anuvritti.adapters.persistence.sqlite import (
+    SqliteDeviceRepository,
     SqliteEventPublisher,
     SqliteFamilyRepository,
+    SqliteIdempotencyStore,
     SqliteLittleThingRepository,
     SqliteMediaCatalogue,
     SqliteMomentRepository,
+    SqlitePairingRepository,
     SqliteRightNowRepository,
     SqliteSparkRepository,
     SqliteUnitOfWork,
+)
+from anuvritti.application.access import (
+    AuthenticateDeviceUseCase,
+    ClaimPairingUseCase,
+    ListDevicesUseCase,
+    OpenPairingUseCase,
+    PairDeviceUseCase,
+    RevokeDeviceUseCase,
 )
 from anuvritti.application.capture import (
     CaptureSparkUseCase,
@@ -37,9 +49,11 @@ from anuvritti.application.returning import (
 )
 from anuvritti.application.vault import SearchVaultUseCase
 from anuvritti.config.settings import Settings
+from anuvritti.domain.access import CODE_TTL
 from anuvritti.domain.return_engine import ReturnEngine
 from anuvritti.shared.clock import Clock, SystemClock
 from anuvritti.shared.identity import IdGenerator, Uuid7IdGenerator
+from anuvritti.shared.randomness import RandomSource, SystemRandomSource
 
 
 @dataclass
@@ -50,6 +64,8 @@ class Container:
     connection: GuardedConnection
     clock: Clock
     ids: IdGenerator
+    random: RandomSource
+    pairing_ttl: timedelta
 
     families: SqliteFamilyRepository
     sparks: SqliteSparkRepository
@@ -59,6 +75,9 @@ class Container:
     media: EncryptedFilesystemMediaStore
     events: SqliteEventPublisher
     uow: SqliteUnitOfWork
+    devices: SqliteDeviceRepository
+    pairings: SqlitePairingRepository
+    idempotency: SqliteIdempotencyStore
 
     capture_spark: CaptureSparkUseCase
     record_why: RecordWhyUseCase
@@ -71,17 +90,33 @@ class Container:
     capture_right_now: CaptureRightNowUseCase
     export_family: ExportFamilyDataUseCase
     delete_family: DeleteFamilyDataUseCase
+    pair_device: PairDeviceUseCase
+    open_pairing: OpenPairingUseCase
+    claim_pairing: ClaimPairingUseCase
+    authenticate_device: AuthenticateDeviceUseCase
+    list_devices: ListDevicesUseCase
+    revoke_device: RevokeDeviceUseCase
 
     def close(self) -> None:
         self.connection.close()
 
 
 def build_container(
-    settings: Settings, *, clock: Clock | None = None, ids: IdGenerator | None = None
+    settings: Settings,
+    *,
+    clock: Clock | None = None,
+    ids: IdGenerator | None = None,
+    random: RandomSource | None = None,
 ) -> Container:
-    """Wire the application. `clock` and `ids` are injectable so tests are deterministic."""
+    """Wire the application.
+
+    `clock`, `ids` and `random` are injectable so tests are deterministic. `random` is the
+    one that must never be defaulted anywhere but here: a predictable source would make
+    every device token in the family guessable.
+    """
     clock = clock or SystemClock()
     ids = ids or Uuid7IdGenerator()
+    random = random or SystemRandomSource()
 
     db_path = settings.db_path
     if str(db_path) != ":memory:":
@@ -96,6 +131,9 @@ def build_container(
     right_now = SqliteRightNowRepository(connection)
     events = SqliteEventPublisher(connection)
     uow = SqliteUnitOfWork(connection)
+    devices = SqliteDeviceRepository(connection)
+    pairings = SqlitePairingRepository(connection)
+    idempotency = SqliteIdempotencyStore(connection)
     media = EncryptedFilesystemMediaStore(
         root=Path(settings.media_dir),
         catalogue=SqliteMediaCatalogue(connection),
@@ -105,11 +143,17 @@ def build_container(
         allowed_mime_types=settings.allowed_media_types,
     )
 
+    pair_device = PairDeviceUseCase(
+        devices=devices, events=events, clock=clock, ids=ids, random=random, uow=uow
+    )
+
     return Container(
         settings=settings,
         connection=connection,
         clock=clock,
         ids=ids,
+        random=random,
+        pairing_ttl=CODE_TTL,
         families=families,
         sparks=sparks,
         moments=moments,
@@ -118,6 +162,9 @@ def build_container(
         media=media,
         events=events,
         uow=uow,
+        devices=devices,
+        pairings=pairings,
+        idempotency=idempotency,
         capture_spark=CaptureSparkUseCase(
             families=families,
             sparks=sparks,
@@ -189,4 +236,16 @@ def build_container(
             clock=clock,
             uow=uow,
         ),
+        pair_device=pair_device,
+        open_pairing=OpenPairingUseCase(pairings=pairings, clock=clock, random=random, uow=uow),
+        claim_pairing=ClaimPairingUseCase(
+            pairings=pairings,
+            families=families,
+            pair_device=pair_device,
+            clock=clock,
+            uow=uow,
+        ),
+        authenticate_device=AuthenticateDeviceUseCase(devices=devices, clock=clock),
+        list_devices=ListDevicesUseCase(devices=devices),
+        revoke_device=RevokeDeviceUseCase(devices=devices, events=events, clock=clock, uow=uow),
     )

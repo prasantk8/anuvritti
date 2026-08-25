@@ -1,0 +1,17 @@
+{
+  "name": "anuvritti-workspace",
+  "private": true,
+  "version": "0.2.0",
+  "description": "Anuvritti. The Python server, the design language, the typed client and the app, in one tree.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "world": "npm --prefix packages/world run build",
+    "client": "python3 packages/client/codegen/generate.py",
+    "test": "npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test"
+  },
+  "engines": {
+    "node": ">=22.6"
+  }
+}

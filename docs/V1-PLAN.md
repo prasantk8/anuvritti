@@ -108,5 +108,88 @@ Gate at this point: ruff clean, mypy clean over 44 files, **1,089 tests** passin
 98.48% domain and application coverage, 97.49% overall, 20 `packages/world` tests, and
 no drift between the specimen and the emitted stylesheet. `make check` runs all of it.
 
-**Next: TASK-505** — the Expo app and a typed client generated from
-`docs/contracts/openapi.yaml`.
+### Phase 5 complete — the Surface (TASK-505 to 513)
+
+**42/68. `make check`: 1,229 Python tests, 105 TypeScript tests, 97.29% domain coverage.**
+
+#### HARDENING §5.1 is closed
+
+V0 took `actor_id` on trust. Every route below the pairing boundary now resolves a bearer
+device token to a `DeviceIdentity` and is handed *that* family id. The rule is stated once,
+in `interfaces/http/auth.py`, and it is the less obvious of the two readings:
+
+> An id in a path, a query or a body is an assertion, not an instruction. It must agree with
+> the token, or the request is refused.
+
+Ignoring a wrong `family_id` and silently using the token's would be safe *and* wrong — a
+client with a stale id would write into the right family and never learn it had a bug.
+
+Three decisions in the pairing design are worth keeping:
+
+1. **Attempt limiting is global, not per code.** Per-code counting is the intuitive design
+   and it is worthless: a wrong guess matches no stored fingerprint, so there is no record to
+   increment and the attacker sweeps the keyspace paying nothing.
+2. **SHA-256, not Argon2.** These are 256-bit and 40-bit *random* secrets, not passwords.
+   There is no dictionary to run, and a slow KDF on every authenticated request is itself a
+   denial-of-service lever. The 40-bit code is protected by five attempts and ten minutes.
+3. **One error for every failure.** Wrong, malformed, expired, claimed and locked-out all
+   answer `PAIRING_FAILED`. A test caught the leak this rule exists to prevent: an empty code
+   was returning `422` from Pydantic's `min_length` while a wrong one returned `401`, which
+   told a caller their guess was at least the right shape.
+
+#### The contract is now enforced in both directions
+
+`tests/integration/test_contract_conformance.py` compares `openapi.yaml` to the routed
+application, method by method. It found two undocumented endpoints on its first run —
+`GET /media/{media_id}`, routed since V0, and `GET /families/{family_id}`. The path-only
+version of that test passes on both, which is why it compares operations.
+
+#### `packages/client` — generated, and zero dependencies
+
+A Python generator emits the typed surface (22 operations, 32 schemas) and a hand-written
+runtime supplies transport, `Result`, session and queue. `openapi-typescript` would also have
+worked and was rejected for two reasons: its output is types only, so the transport is
+hand-written either way; and adding it would put a `node_modules` and a lockfile back into the
+one part of this repository that has managed without them. The generator **refuses** rather
+than guessing — an unknown schema type, an unknown brand, a missing `operationId` — because a
+generated `unknown` is how a contract stops being enforced without anyone noticing.
+
+#### Time as language, held on both sides
+
+`days_since_capture` is gone from the wire; `Spark.saved` and `Suggestion.elapsed` carry the
+phrase. That alone is one deploy away from being worked around, so the client holds the other
+half: `Instant` is branded and is deliberately not a `Date`, and `packages/client` contains no
+`Date.parse`, `new Date`, `Date.now`, `getTime` or `valueOf` — asserted by a test that
+mutation-checks its own regexes against the exact line someone would write under a deadline.
+
+The design test that was *supposed* to catch this had been passing for a year: it scanned
+Pydantic `AnnAssign` fields, and `days_since_capture` was in a dict literal inside
+`render_suggestion`. It now reads the renderers' dict keys too.
+
+#### Native capture, verified against the packages rather than remembered
+
+`expo-sharing`'s first-party config plugin — added in SDK 55 — covers the iOS share extension
+*and* the Android `SEND` filters in one declaration. Verified by unpacking the published
+57.0.15 tarball rather than trusting a summary, which is also how the keychain option turned
+out to be `accessGroup` and not `keychainAccessGroup`.
+
+The alternative, `expo-share-extension`, renders a React Native view inside the share sheet so
+the app never opens. It is the nicer interaction and it is broken on SDK 55+: the view
+controller boots the runtime without an Expo `AppContext`, so `globalThis.expo` is never
+installed and the bundle throws on import. The fix exists only in a `6.0.0-beta` from February
+2026 in a repository untouched since April. Recorded in `capture/incoming.ts` with the
+condition for revisiting.
+
+#### End to end, across both languages
+
+`tests/e2e/test_the_app_against_the_server.py` starts the real ASGI application on a real port
+and runs the real generated TypeScript client against it, in Node, with the server's
+`FrozenClock` advanced eight months between the two halves of the story. Nothing is stubbed:
+JSON on the wire, bearer tokens in headers, the offline queue holding a capture with no
+network and replaying it without duplicating it.
+
+`docs/DEVICE.md` is the remainder — four things that genuinely need hardware, and it is short
+because everything checkable without a device is already a test.
+
+**Next: TASK-601** — hold to talk. Phase 6 begins, and Phase 7's `filmkit` extraction is
+unblocked by TASK-501.

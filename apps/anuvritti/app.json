@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Anuvritti",
+    "slug": "anuvritti",
+    "scheme": "anuvritti",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.anuvritti.app",
+      "supportsTablet": true,
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.anuvritti.app"]
+      }
+    },
+    "android": {
+      "package": "com.anuvritti.app",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-sharing",
+        {
+          "ios": {
+            "enabled": true,
+            "appGroupId": "group.com.anuvritti.app",
+            "activationRule": {
+              "supportsText": true,
+              "supportsWebUrlWithMaxCount": 1,
+              "supportsWebPageWithMaxCount": 1,
+              "supportsImageWithMaxCount": 1
+            }
+          },
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["text/plain", "image/*"],
+            "multipleShareMimeTypes": ["image/*"]
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

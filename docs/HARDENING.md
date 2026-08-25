@@ -26,7 +26,7 @@ commercially and a great deal to lose personally. That shapes the priorities.
 | T9 | Product drifts into surveillance or engagement mechanics | **High** | Mitigated — PRD §46/§47 enforced as failing tests in CI |
 | T10 | Malicious upload (HTML/executable) served back to a browser | Medium | Mitigated — MIME allow-list, `no-store`, size cap |
 | T11 | Supply-chain compromise via a dependency | Medium | Partial — 5 runtime deps, `pip-audit` blocking; no hash pinning yet |
-| T12 | Unauthenticated access to the API | **High** | **Open** — see §5.1 |
+| T12 | Unauthenticated access to the API | **High** | **Closed** — device pairing, TASK-511. See §5.1 |
 
 ---
 
@@ -165,14 +165,36 @@ pip-audit                       no known vulnerabilities
 These are deliberate V0 gaps, not oversights. Each is a decision to make before a second
 family is onboarded.
 
-### 5.1 `HIGH` — there is no authentication
+### 5.1 `HIGH` — there is no authentication — **closed (TASK-511)**
 
-Every endpoint takes `actor_id` on trust. For a single-family deployment behind a private
-network or a personal device this is acceptable and keeps V0 small; PRD §48 explicitly scopes
-this to "one father and one child". **It must not reach a second family without identity.**
-The `Family`/`Member` model and the `Visibility` checks are already in place, so this is an
-authentication layer, not a redesign. Mitigation until then: bind to localhost or a
-private network, and do not expose the port publicly.
+*Was:* every endpoint took `actor_id` on trust, so any caller who could reach the port could
+read any family's archive by typing a different id.
+
+*Now:* every route below the pairing boundary resolves a bearer device token to a
+`DeviceIdentity`, and the handler is given **that** family id rather than the request's. The
+rule is stated once, in `interfaces/http/auth.py`: an id in a path, query or body is an
+assertion, not an instruction, and it must agree with the token or the request is refused.
+Disagreement is a `403` rather than a silent redirect into the right family, so a client with
+a stale id finds out.
+
+| Property | How |
+|---|---|
+| Pairing | Bootstrap pairs the founding device in the same call that creates the family, so there is no window between "the family exists" and "the family is protected". Later devices claim an 8-character Crockford code shown on a device already inside the house. |
+| Code strength | 40 bits, single use, ten minutes, and **five failed attempts per window across the whole server**. Per-code counting is the intuitive design and is worthless — a wrong guess matches no stored fingerprint, so there is nothing to increment. |
+| Storage | Only SHA-256 fingerprints, for both tokens and codes. A stolen copy of the archive yields nothing replayable. SHA-256 rather than Argon2 is correct for 256-bit *random* secrets: there is no dictionary, and a slow KDF on every request is itself a denial-of-service lever. |
+| Comparison | `hmac.compare_digest`, everywhere. |
+| Failure | Wrong, malformed, expired, already-claimed and locked-out all answer `PAIRING_FAILED` identically. `ClaimPairingRequest.code` carries no `min_length` for the same reason — a `422` for an empty code and a `401` for a wrong one are two different answers. |
+| Revocation | A parent can list what is paired by a name they chose and cut a lost phone off. Deleting the family cascades to its devices, so "delete everything" leaves nobody holding a working key. |
+
+*Verified by* `tests/integration/test_pairing.py` (52 tests, including a parameterised sweep
+asserting every route is closed), `tests/unit/domain/test_access.py`, and
+`tests/e2e/test_the_app_against_the_server.py`, which asserts the plaintext token never
+reaches the database.
+
+**What is still open.** Bootstrap remains unauthenticated, because it is how the first token
+is obtained. On a production box it refuses once a family exists (`409`), which closes it
+after first use; in development it stays open so the tests above can exist. Real accounts,
+and therefore a second family, are TASK-901.
 
 ### 5.2 `MEDIUM` — no rate limiting
 
@@ -205,7 +227,7 @@ owner from subject, which is the hard part; the transition rules are not yet bui
 
 ## 6. Recommended next actions, in order
 
-1. **Add authentication** before a second family (§5.1).
+1. ~~**Add authentication** before a second family (§5.1).~~ Done — TASK-511.
 2. **Pin dependency hashes** and commit the lock file (§5.3).
 3. **Automate the backup** in §2 of the runbook and test a restore.
 4. **Envelope-encrypt media** so key rotation is cheap (§5.5).

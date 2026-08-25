@@ -1,11 +1,29 @@
 openapi: 3.1.0
 info:
   title: Anuvritti API
-  version: 0.1.0
+  version: 0.2.0
   description: >
-    V0 — Family presence, intent & memory platform. Scope frozen to PRD §48.
+    Family presence, intent & memory platform. Scope frozen to PRD §48.
     Every AI-derived field is returned with provenance (PRD §13, §42, ADR-0005).
+
+
+    **Authentication (TASK-511, HARDENING §5.1).** Every operation requires a device
+    bearer token except `POST /families` and `POST /pairing/claim`, which exist to
+    obtain one. The token *is* the family and the member: no request may name another
+    family, and any id in a body or query that disagrees with the token is a 403 rather
+    than a silently redirected write. Clients should simply omit those ids.
+
+
+    **Time is a phrase, never a count (TASK-507).** `Spark.saved` and
+    `Suggestion.elapsed` carry the elapsed time already worded ("8 months ago"). The
+    exact number of days is not on the wire anywhere, so no interface can render one.
+
+
+    **Idempotent capture (TASK-509).** Every capture endpoint accepts an
+    `Idempotency-Key`, so a phone replaying an offline queue cannot create duplicates.
 servers: [{ url: /v1 }]
+
+security: [{ deviceToken: [] }]
 
 paths:
   /health: { get: { summary: Liveness, responses: { "200": { description: ok } } } }
@@ -14,13 +32,61 @@ paths:
 
   /families:
     post:
-      summary: Create the family (bootstrap)
+      summary: Bootstrap — create the family and pair the device that created it
+      operationId: bootstrapFamily
+      description: >
+        The founding device is paired by this act rather than by a second call: a window
+        between "the family exists" and "the family is protected" is a window someone else
+        can walk through. The returned token is shown exactly once.
+
+
+        On a production box this closes after the first family (409). Second families
+        arrive in TASK-901 with real accounts.
+      security: []
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreateFamily" } } } }
-      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Family" } } } } }
+      responses:
+        "201": { description: created and paired, content: { application/json: { schema: { $ref: "#/components/schemas/Bootstrap" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /pairing/codes:
+    post:
+      summary: Show a pairing code on a device that is already trusted
+      operationId: openPairing
+      description: Eight Crockford characters, single use, ten minutes, attempt-limited.
+      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/PairingCode" } } } } }
+
+  /pairing/claim:
+    post:
+      summary: Turn a typed pairing code into a paired device
+      operationId: claimPairing
+      description: >
+        Wrong, malformed, expired, already-claimed and locked-out all answer identically
+        with `PAIRING_FAILED`. Telling them apart tells a caller which codes exist.
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ClaimPairing" } } } }
+      responses:
+        "201": { description: paired, content: { application/json: { schema: { $ref: "#/components/schemas/Claimed" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /devices:
+    get:
+      summary: What is paired, so a parent can decide what to revoke
+      operationId: listDevices
+      responses: { "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Device" } } } } } }
+
+  /devices/{device_id}:
+    delete:
+      summary: Cut a lost phone off
+      operationId: revokeDevice
+      parameters: [{ name: device_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: revoked, content: { application/json: { schema: { $ref: "#/components/schemas/Device" } } } }
+        "404": { $ref: "#/components/responses/Error" }
 
   /families/{family_id}/children:
     post:
       summary: Add a child profile
+      operationId: addChild
       parameters: [{ $ref: "#/components/parameters/FamilyId" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreateChild" } } } }
       responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Child" } } } } }
@@ -28,13 +94,16 @@ paths:
   /sparks:
     post:
       summary: Universal Capture (PRD §11, §48 F1) — target < 10s, no long form
+      operationId: captureSpark
       description: Accepts url | text | screenshot | photo | voice. AI enrichment runs inline.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CaptureSpark" } } } }
       responses:
         "201": { description: "Saved ✨", content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } }
         "422": { $ref: "#/components/responses/Error" }
     get:
       summary: Safe Vault search (PRD §48 F5) — natural-ish queries, no folders
+      operationId: searchSparks
       parameters:
         - { name: q, in: query, schema: { type: string }, description: "e.g. 'toys I saved', 'things about space'" }
         - { name: intent, in: query, schema: { $ref: "#/components/schemas/IntentType" } }
@@ -46,12 +115,15 @@ paths:
 
   /sparks/{spark_id}:
     get:
+      summary: One Spark
+      operationId: getSpark
       parameters: [{ $ref: "#/components/parameters/SparkId" }]
       responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } }, "404": { $ref: "#/components/responses/Error" } }
 
   /sparks/{spark_id}/why:
     post:
       summary: Optional human "Why" (PRD §12, §48 F3) — always skippable
+      operationId: recordWhy
       parameters: [{ $ref: "#/components/parameters/SparkId" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RecordWhy" } } } }
       responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } } }
@@ -59,6 +131,7 @@ paths:
   /sparks/{spark_id}/override:
     post:
       summary: Human correction of an AI field. The human always wins (PRD §13).
+      operationId: overrideField
       parameters: [{ $ref: "#/components/parameters/SparkId" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OverrideField" } } } }
       responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } } }
@@ -66,25 +139,29 @@ paths:
   /sparks/{spark_id}/done:
     post:
       summary: '"Did this happen?" → Spark becomes a Moment (PRD §15, §48 F7)'
+      operationId: markAsDone
       description: Every attachment is optional. "Nothing" is a valid answer — no journaling burden.
-      parameters: [{ $ref: "#/components/parameters/SparkId" }]
+      parameters:
+        - { $ref: "#/components/parameters/SparkId" }
+        - { $ref: "#/components/parameters/IdempotencyKey" }
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/MarkAsDone" } } } }
       responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Moment" } } } }, "409": { $ref: "#/components/responses/Error" } }
 
   /return/worth-bringing-back:
     get:
       summary: Worth Bringing Back (PRD §14, §48 F6)
+      operationId: worthBringingBack
       description: >
         Returns at most `max_suggestions_per_day` items. An empty list is normal and silent.
         Payload contains no urgency, no counters, no guilt (PRD §8.5, enforced by test).
       parameters:
-        - { name: family_id, in: query, required: true, schema: { type: string } }
         - { name: child_id, in: query, schema: { type: string } }
       responses: { "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Suggestion" } } } } } }
 
   /return/{spark_id}/respond:
     post:
       summary: Maybe later / Let's do it / Not relevant anymore
+      operationId: respondToSuggestion
       parameters: [{ $ref: "#/components/parameters/SparkId" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SuggestionResponse" } } } }
       responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } } }
@@ -92,41 +169,83 @@ paths:
   /little-things:
     post:
       summary: Little Things — one-tap capture, no structure (PRD §17, §48 F8)
+      operationId: captureLittleThing
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CaptureLittleThing" } } } }
       responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/LittleThing" } } } } }
 
   /right-now:
     get:
       summary: Get today's Right Now prompt (PRD §18, §48 F9)
-      parameters: [{ name: family_id, in: query, required: true, schema: { type: string } }]
+      operationId: todaysPrompt
       responses: { "200": { description: ok, content: { application/json: { schema: { type: object, properties: { prompt: { type: string } } } } } } }
     post:
       summary: Answer a Right Now prompt
+      operationId: captureRightNow
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CaptureRightNow" } } } }
       responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/RightNow" } } } } }
 
   /media:
     post:
       summary: Upload media (encrypted at rest, PRD §44)
+      operationId: uploadMedia
       requestBody: { required: true, content: { multipart/form-data: { schema: { type: object, properties: { family_id: { type: string }, kind: { type: string }, file: { type: string, format: binary } } } } } }
       responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Media" } } } }, "413": { $ref: "#/components/responses/Error" }, "415": { $ref: "#/components/responses/Error" } }
+
+  /media/{media_id}:
+    get:
+      summary: Download media
+      operationId: downloadMedia
+      description: >
+        Decrypted on the way out and never cached (`Cache-Control: private, no-store`).
+        Media belonging to another family answers `MEDIA_NOT_FOUND` — the same answer an id
+        that never existed gets, so the response cannot be used to discover a stranger's
+        photograph is there.
+      parameters: [{ name: media_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: the bytes, content: { "*/*": { schema: { type: string, format: binary } } } }
+        "404": { $ref: "#/components/responses/Error" }
 
   /families/{family_id}/export:
     get:
       summary: Export everything (PRD §44 — non-negotiable)
+      operationId: exportFamily
       parameters: [{ $ref: "#/components/parameters/FamilyId" }]
       responses: { "200": { description: complete archive, content: { application/json: { schema: { $ref: "#/components/schemas/FamilyExport" } } } } }
 
   /families/{family_id}:
+    get:
+      summary: The family, its members and its children
+      operationId: getFamily
+      parameters: [{ $ref: "#/components/parameters/FamilyId" }]
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Family" } } } } }
     delete:
       summary: Delete everything, including media bytes (PRD §44)
+      operationId: deleteFamily
       parameters: [{ $ref: "#/components/parameters/FamilyId" }]
       responses: { "200": { description: deleted, content: { application/json: { schema: { type: object, additionalProperties: { type: integer } } } } } }
 
 components:
+  securitySchemes:
+    deviceToken:
+      type: http
+      scheme: bearer
+      description: >
+        A device token from bootstrap or pairing. Opaque, 256 bits, prefixed `anv_`.
+        Only its SHA-256 fingerprint is stored server-side.
   parameters:
     FamilyId: { name: family_id, in: path, required: true, schema: { type: string } }
     SparkId:  { name: spark_id,  in: path, required: true, schema: { type: string } }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 200 }
+      description: >
+        Replay protection. The same key with the same body returns the first response
+        verbatim; the same key with a different body is a 409. Rejected requests are not
+        pinned to their key, so a corrected retry can reuse it.
   responses:
     Error:
       description: Error
@@ -173,7 +292,71 @@ components:
 
     AgeRange:
       type: object
+      required: [min_years, max_years]
       properties: { min_years: { type: integer }, max_years: { type: integer } }
+
+    Device:
+      type: object
+      description: >
+        A paired device as a parent deciding what to revoke would need to see it. No token,
+        no fingerprint, no request count. `last_seen_at` is the only usage fact kept.
+      required: [id, display_name, created_at, last_seen_at, revoked]
+      properties:
+        id: { type: string }
+        display_name: { type: string, example: "the old iPad" }
+        created_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time, nullable: true }
+        revoked: { type: boolean }
+
+    IssuedDevice:
+      allOf:
+        - $ref: "#/components/schemas/Device"
+        - type: object
+          properties:
+            token:
+              type: string
+              example: "anv_..."
+              description: >
+                The one moment this exists in plaintext. It is never returned again — store
+                it in the platform keychain and treat losing it as needing to pair again.
+
+    Bootstrap:
+      type: object
+      description: The family, and the token for the device that just created it.
+      required: [id, name, members, children, device]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        members: { type: array, items: { $ref: "#/components/schemas/Member" } }
+        children: { type: array, items: { $ref: "#/components/schemas/Child" } }
+        device: { $ref: "#/components/schemas/IssuedDevice" }
+
+    PairingCode:
+      type: object
+      required: [code, expires_in_seconds]
+      properties:
+        code: { type: string, example: "K7QM-2X9B", description: Shown, never stored in this form }
+        expires_in_seconds: { type: integer, example: 600 }
+
+    ClaimPairing:
+      type: object
+      required: [code, device_name]
+      properties:
+        code:
+          type: string
+          maxLength: 200
+          description: >
+            As typed. Case, spaces and dashes are forgiven, and O/I/L are read as 0/1/1.
+            Deliberately has no minimum length: a 422 for an empty code and a 401 for a
+            wrong one are two different answers, and the difference is a hint.
+        device_name: { type: string, maxLength: 60, example: "Mum's phone" }
+
+    Claimed:
+      type: object
+      required: [device, family]
+      properties:
+        device: { $ref: "#/components/schemas/IssuedDevice" }
+        family: { $ref: "#/components/schemas/Family" }
 
     CreateFamily:
       type: object
@@ -182,6 +365,7 @@ components:
 
     Family:
       type: object
+      required: [id, name, members, children]
       properties:
         id: { type: string }
         name: { type: string }
@@ -190,6 +374,7 @@ components:
 
     Member:
       type: object
+      required: [id, display_name, role]
       properties:
         id: { type: string }
         display_name: { type: string }
@@ -202,6 +387,7 @@ components:
 
     Child:
       type: object
+      required: [id, display_name, date_of_birth, age_years]
       properties:
         id: { type: string }
         display_name: { type: string }
@@ -210,10 +396,15 @@ components:
 
     CaptureSpark:
       type: object
-      required: [family_id, owner_id, source]
+      required: [source]
+      description: >
+        `family_id` and `owner_id` are optional and should be omitted: the token already
+        says who this is. They are still *accepted*, and a value that disagrees with the
+        token is a 403 rather than a silently redirected write, so a client with a stale id
+        finds out rather than writing into the right family by luck.
       properties:
-        family_id: { type: string }
-        owner_id: { type: string }
+        family_id: { type: string, nullable: true }
+        owner_id: { type: string, nullable: true }
         subject_child_id: { type: string, nullable: true }
         source:
           type: object
@@ -230,6 +421,7 @@ components:
 
     Spark:
       type: object
+      required: [id, family_id, owner_id, title, source, intent, category, tags, status, visibility, saved, created_at]
       properties:
         id: { type: string }
         family_id: { type: string }
@@ -253,7 +445,18 @@ components:
         why: { type: object, nullable: true, properties: { text: { type: string, nullable: true }, voice_media_id: { type: string, nullable: true }, recorded_at: { type: string, format: date-time } } }
         status: { $ref: "#/components/schemas/SparkStatus" }
         visibility: { $ref: "#/components/schemas/Visibility" }
-        created_at: { type: string, format: date-time }
+        saved:
+          type: string
+          x-anuvritti-brand: Elapsed
+          example: "8 months ago"
+          description: >
+            How long ago this was saved, already worded (PRD §8.5, TASK-507). The server
+            does the arithmetic so no interface is ever handed the number.
+        created_at:
+          type: string
+          format: date-time
+          description: >
+            For ordering and for the export. Not for display — `saved` is the display form.
 
     RecordWhy:
       type: object
@@ -272,10 +475,18 @@ components:
       description: >
         PRD §14/§48 F6. Contains no urgency, no counts, no streaks. `reason` is warm
         and factual; `actions` are exactly the three the PRD names.
+      required: [spark, reason, elapsed, actions]
       properties:
         spark: { $ref: "#/components/schemas/Spark" }
         reason: { type: string, example: "You saved this 8 months ago. He may be ready now." }
-        days_since_capture: { type: integer }
+        elapsed:
+          type: string
+          x-anuvritti-brand: Elapsed
+          example: "8 months ago"
+          description: >
+            Replaces `days_since_capture`, removed in TASK-507. It was the one field on the
+            whole wire that handed an interface a number about a family's own life, and
+            every interesting misuse of this product starts with rendering it.
         actions: { type: array, items: { type: string, enum: [maybe_later, lets_do_it, not_relevant_anymore] } }
 
     SuggestionResponse:
@@ -295,6 +506,7 @@ components:
 
     Moment:
       type: object
+      required: [id, spark_id, happened_on, created_at]
       properties:
         id: { type: string }
         spark_id: { type: string }
@@ -306,16 +518,16 @@ components:
 
     CaptureLittleThing:
       type: object
-      required: [family_id, author_id]
       properties:
-        family_id: { type: string }
-        author_id: { type: string }
+        family_id: { type: string, nullable: true }
+        author_id: { type: string, nullable: true }
         subject_child_id: { type: string, nullable: true }
         text: { type: string, nullable: true }
         audio_media_id: { type: string, nullable: true }
 
     LittleThing:
       type: object
+      required: [id, created_at]
       properties:
         id: { type: string }
         text: { type: string, nullable: true }
@@ -324,15 +536,16 @@ components:
 
     CaptureRightNow:
       type: object
-      required: [family_id, child_id, prompt, answer]
+      required: [child_id, answer]
       properties:
-        family_id: { type: string }
+        family_id: { type: string, nullable: true }
         child_id: { type: string }
         prompt: { type: string }
         answer: { type: string }
 
     RightNow:
       type: object
+      required: [id, child_id, prompt, answer, captured_at]
       properties:
         id: { type: string }
         child_id: { type: string }
@@ -342,6 +555,7 @@ components:
 
     Media:
       type: object
+      required: [id, kind, mime_type, byte_size, encrypted]
       properties:
         id: { type: string }
         kind: { type: string }

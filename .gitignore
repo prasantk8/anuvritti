@@ -6,6 +6,16 @@
 packages/world/dist/
 node_modules/
 
+# --- Native projects, written by `expo prebuild` from app.json. Committing them would
+#     make app.json advisory: a plugin change would stop taking effect and nobody would
+#     know why. `packages/client/src/generated/` is deliberately NOT here - it is small,
+#     it is read during review, and tests/design fails if it drifts from the contract.
+apps/*/ios/
+apps/*/android/
+apps/*/.expo/
+apps/*/dist/
+*.tsbuildinfo
+
 # --- A family's own material. Never, under any circumstances, in version control.
 # `var/` is the runtime directory, and ANUVRITTI_MEDIA_DIR lives inside it. Do not
 # add a bare `media/` rule here: it matches at any depth and silently swallows

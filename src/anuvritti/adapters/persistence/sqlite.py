@@ -23,6 +23,7 @@ from anuvritti.adapters.persistence.mapping import (
     spark_to_row,
 )
 from anuvritti.adapters.persistence.schema import GuardedConnection
+from anuvritti.domain.access import Device, PairingRequest
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import Family
 from anuvritti.domain.media import MediaObject
@@ -33,8 +34,10 @@ from anuvritti.domain.values import IntentType, SparkStatus
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import (
     ChildId,
+    DeviceId,
     FamilyId,
     MediaId,
+    MemberId,
     MomentId,
     SparkId,
 )
@@ -80,6 +83,11 @@ class SqliteUnitOfWork:
 class SqliteFamilyRepository:
     def __init__(self, connection: GuardedConnection) -> None:
         self._db = connection
+
+    def count(self) -> int:
+        """How many families this box holds. A production box closes its door after one."""
+        row = self._db.execute("SELECT COUNT(*) AS n FROM family").fetchone()
+        return int(row["n"]) if row else 0
 
     def get(self, family_id: FamilyId) -> Result[Family, DomainError]:
         row = self._db.execute("SELECT * FROM family WHERE id = ?", (str(family_id),)).fetchone()
@@ -446,3 +454,175 @@ class SqliteEventPublisher:
     def delete_for_family(self, family_id: FamilyId) -> int:
         cursor = self._db.execute("DELETE FROM domain_event WHERE family_id = ?", (str(family_id),))
         return cursor.rowcount
+
+
+class SqliteDeviceRepository:
+    """Paired devices (TASK-511).
+
+    Every lookup is by fingerprint. The plaintext token is never a query parameter, so it
+    cannot reach a slow-query log, an EXPLAIN, or a `.dump` of the archive.
+    """
+
+    def __init__(self, connection: GuardedConnection) -> None:
+        self._db = connection
+
+    def get(self, device_id: DeviceId) -> Result[Device, DomainError]:
+        row = self._db.execute("SELECT * FROM device WHERE id = ?", (str(device_id),)).fetchone()
+        if row is None:
+            return Err(DomainError(ErrorCode.MEMBER_NOT_FOUND, "no such device"))
+        return Ok(_row_to_device(row))
+
+    def save(self, device: Device) -> Result[Device, DomainError]:
+        self._db.execute(
+            "INSERT INTO device (id, family_id, member_id, display_name, token_fingerprint, "
+            "created_at, last_seen_at, revoked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET display_name = excluded.display_name, "
+            "last_seen_at = excluded.last_seen_at, revoked_at = excluded.revoked_at",
+            (
+                str(device.id),
+                str(device.family_id),
+                str(device.member_id),
+                device.display_name,
+                device.token_fingerprint,
+                device.created_at.isoformat(),
+                device.last_seen_at.isoformat() if device.last_seen_at else None,
+                device.revoked_at.isoformat() if device.revoked_at else None,
+            ),
+        )
+        return Ok(device)
+
+    def find_by_fingerprint(self, fingerprint: str) -> Result[Device | None, DomainError]:
+        row = self._db.execute(
+            "SELECT * FROM device WHERE token_fingerprint = ?", (fingerprint,)
+        ).fetchone()
+        return Ok(_row_to_device(row) if row is not None else None)
+
+    def list_for_family(self, family_id: FamilyId) -> Result[Sequence[Device], DomainError]:
+        rows = self._db.execute(
+            "SELECT * FROM device WHERE family_id = ? ORDER BY created_at",
+            (str(family_id),),
+        ).fetchall()
+        return Ok([_row_to_device(r) for r in rows])
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        cursor = self._db.execute("DELETE FROM device WHERE family_id = ?", (str(family_id),))
+        return Ok(cursor.rowcount)
+
+
+class SqlitePairingRepository:
+    """Open codes and the attempt ledger."""
+
+    def __init__(self, connection: GuardedConnection) -> None:
+        self._db = connection
+
+    def save(self, request: PairingRequest) -> Result[PairingRequest, DomainError]:
+        self._db.execute(
+            "INSERT INTO pairing_request (code_fingerprint, family_id, member_id, created_at, "
+            "expires_at, claimed_at) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(code_fingerprint) DO UPDATE SET claimed_at = excluded.claimed_at",
+            (
+                request.code_fingerprint,
+                str(request.family_id),
+                str(request.member_id),
+                request.created_at.isoformat(),
+                request.expires_at.isoformat(),
+                request.claimed_at.isoformat() if request.claimed_at else None,
+            ),
+        )
+        return Ok(request)
+
+    def find_by_fingerprint(self, fingerprint: str) -> Result[PairingRequest | None, DomainError]:
+        row = self._db.execute(
+            "SELECT * FROM pairing_request WHERE code_fingerprint = ?", (fingerprint,)
+        ).fetchone()
+        if row is None:
+            return Ok(None)
+        return Ok(
+            PairingRequest(
+                code_fingerprint=row["code_fingerprint"],
+                family_id=FamilyId(row["family_id"]),
+                member_id=MemberId(row["member_id"]),
+                created_at=datetime.fromisoformat(row["created_at"]),
+                expires_at=datetime.fromisoformat(row["expires_at"]),
+                claimed_at=(
+                    datetime.fromisoformat(row["claimed_at"]) if row["claimed_at"] else None
+                ),
+            )
+        )
+
+    def record_attempt(self, *, succeeded: bool, at: datetime) -> None:
+        self._db.execute(
+            "INSERT INTO pairing_attempt (succeeded, occurred_at) VALUES (?, ?)",
+            (1 if succeeded else 0, at.isoformat()),
+        )
+
+    def failures_since(self, since: datetime) -> int:
+        row = self._db.execute(
+            "SELECT COUNT(*) AS n FROM pairing_attempt WHERE succeeded = 0 AND occurred_at >= ?",
+            (since.isoformat(),),
+        ).fetchone()
+        return int(row["n"]) if row else 0
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        cursor = self._db.execute(
+            "DELETE FROM pairing_request WHERE family_id = ?", (str(family_id),)
+        )
+        return Ok(cursor.rowcount)
+
+
+class SqliteIdempotencyStore:
+    """What a replayed capture is answered from (TASK-509).
+
+    Scoped by family as well as key, so one family's key can never surface another family's
+    response - the same isolation rule the token enforces, applied to the cache in front of it.
+    """
+
+    def __init__(self, connection: GuardedConnection) -> None:
+        self._db = connection
+
+    def recall(
+        self, key: str, *, family_id: FamilyId
+    ) -> Result[tuple[int, str, str] | None, DomainError]:
+        row = self._db.execute(
+            "SELECT status_code, response_json, request_fingerprint FROM idempotency "
+            "WHERE key = ? AND family_id = ?",
+            (key, str(family_id)),
+        ).fetchone()
+        if row is None:
+            return Ok(None)
+        return Ok((int(row["status_code"]), row["response_json"], row["request_fingerprint"]))
+
+    def remember(
+        self,
+        key: str,
+        *,
+        family_id: FamilyId,
+        request_fingerprint: str,
+        status_code: int,
+        response_json: str,
+        at: datetime,
+    ) -> Result[None, DomainError]:
+        self._db.execute(
+            "INSERT INTO idempotency (key, family_id, request_fingerprint, status_code, "
+            "response_json, created_at) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(key, family_id) DO NOTHING",
+            (key, str(family_id), request_fingerprint, status_code, response_json, at.isoformat()),
+        )
+        return Ok(None)
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        cursor = self._db.execute("DELETE FROM idempotency WHERE family_id = ?", (str(family_id),))
+        return Ok(cursor.rowcount)
+
+
+def _row_to_device(row: sqlite3.Row) -> Device:
+    return Device(
+        id=DeviceId(row["id"]),
+        family_id=FamilyId(row["family_id"]),
+        member_id=MemberId(row["member_id"]),
+        display_name=row["display_name"],
+        token_fingerprint=row["token_fingerprint"],
+        created_at=datetime.fromisoformat(row["created_at"]),
+        last_seen_at=datetime.fromisoformat(row["last_seen_at"]) if row["last_seen_at"] else None,
+        revoked_at=datetime.fromisoformat(row["revoked_at"]) if row["revoked_at"] else None,
+    )

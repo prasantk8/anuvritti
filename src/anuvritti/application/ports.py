@@ -12,6 +12,7 @@ from datetime import datetime
 from types import TracebackType
 from typing import Protocol, runtime_checkable
 
+from anuvritti.domain.access import Device, PairingRequest
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import Family
 from anuvritti.domain.media import MediaObject
@@ -22,6 +23,7 @@ from anuvritti.domain.values import IntentType, SourceRef, SparkStatus
 from anuvritti.shared.errors import DomainError
 from anuvritti.shared.identity import (
     ChildId,
+    DeviceId,
     FamilyId,
     MediaId,
     MomentId,
@@ -33,6 +35,8 @@ from anuvritti.shared.result import Result
 @runtime_checkable
 class FamilyRepository(Protocol):
     def get(self, family_id: FamilyId) -> Result[Family, DomainError]: ...
+
+    def count(self) -> int: ...
 
     def save(self, family: Family) -> Result[Family, DomainError]: ...
 
@@ -163,3 +167,68 @@ class UnitOfWork(Protocol):
     def commit(self) -> None: ...
 
     def rollback(self) -> None: ...
+
+
+@runtime_checkable
+class DeviceRepository(Protocol):
+    """Paired devices. HARDENING 5.1.
+
+    Lookup is by *fingerprint*, never by token: the plaintext must not reach a query, a slow
+    query log or a database backup. The application hashes, the repository indexes.
+    """
+
+    def get(self, device_id: DeviceId) -> Result[Device, DomainError]: ...
+
+    def save(self, device: Device) -> Result[Device, DomainError]: ...
+
+    def find_by_fingerprint(self, fingerprint: str) -> Result[Device | None, DomainError]: ...
+
+    def list_for_family(self, family_id: FamilyId) -> Result[Sequence[Device], DomainError]: ...
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
+
+
+@runtime_checkable
+class PairingRepository(Protocol):
+    """Open pairing codes, and the attempt ledger that makes a short code safe."""
+
+    def save(self, request: PairingRequest) -> Result[PairingRequest, DomainError]: ...
+
+    def find_by_fingerprint(
+        self, fingerprint: str
+    ) -> Result[PairingRequest | None, DomainError]: ...
+
+    def record_attempt(self, *, succeeded: bool, at: datetime) -> None: ...
+
+    def failures_since(self, since: datetime) -> int: ...
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
+
+
+@runtime_checkable
+class IdempotencyStore(Protocol):
+    """Replay protection for capture (PRD 11 - capture must survive a lost signal).
+
+    A phone that saved offline replays its queue when the signal returns, and it cannot know
+    whether the request that timed out was actually applied. The key makes the second attempt
+    return the first attempt's answer instead of creating a second Spark.
+    """
+
+    def recall(
+        self, key: str, *, family_id: FamilyId
+    ) -> Result[tuple[int, str, str] | None, DomainError]:
+        """`(status_code, response_json, request_fingerprint)` for a key already seen."""
+        ...
+
+    def remember(
+        self,
+        key: str,
+        *,
+        family_id: FamilyId,
+        request_fingerprint: str,
+        status_code: int,
+        response_json: str,
+        at: datetime,
+    ) -> Result[None, DomainError]: ...
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...

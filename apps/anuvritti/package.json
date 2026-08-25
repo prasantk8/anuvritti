@@ -1,0 +1,40 @@
+{
+  "name": "@anuvritti/app",
+  "version": "0.2.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "prebuild": "expo prebuild --clean",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "expo": "~57.0.16",
+    "expo-router": "~7.0.0",
+    "expo-constants": "~57.0.3",
+    "expo-linking": "~57.0.7",
+    "expo-secure-store": "~57.0.1",
+    "expo-sqlite": "~57.0.1",
+    "expo-crypto": "~57.0.0",
+    "expo-file-system": "~57.0.0",
+    "expo-sharing": "~57.0.15",
+    "expo-status-bar": "~57.0.0",
+    "expo-font": "~57.0.0",
+    "@expo-google-fonts/newsreader": "^0.4.2",
+    "@expo-google-fonts/ibm-plex-sans": "^0.4.2",
+    "@expo-google-fonts/ibm-plex-mono": "^0.4.2",
+    "@react-native-community/netinfo": "^12.0.0",
+    "react": "19.2.0",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.20.0",
+    "react-native-reanimated": "~4.2.0",
+    "react-native-gesture-handler": "~2.30.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.0",
+    "typescript": "~5.9.2"
+  }
+}

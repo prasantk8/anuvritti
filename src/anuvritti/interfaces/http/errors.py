@@ -22,6 +22,8 @@ STATUS_BY_CODE: Final[dict[ErrorCode, int]] = {
     ErrorCode.MEDIA_NOT_FOUND: 404,
     ErrorCode.SPARK_INVALID_TRANSITION: 409,
     ErrorCode.SPARK_ARCHIVED: 409,
+    ErrorCode.UNAUTHENTICATED: 401,
+    ErrorCode.PAIRING_FAILED: 401,
     ErrorCode.PERMISSION_DENIED: 403,
     ErrorCode.CAPTURE_SOURCE_INVALID: 422,
     ErrorCode.MEDIA_TOO_LARGE: 413,

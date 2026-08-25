@@ -1,0 +1,14 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@anuvritti/client": ["../../packages/client/src/index.ts"],
+      "@anuvritti/world": ["../../packages/world/src/index.ts"]
+    }
+  },
+  "include": ["app", "src", "test", "*.ts"]
+}

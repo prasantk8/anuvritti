@@ -10,6 +10,7 @@ These tests read what `packages/world` actually emitted, not a description of it
 from __future__ import annotations
 
 import ast
+import json
 import re
 from pathlib import Path
 
@@ -169,10 +170,72 @@ class TestElapsedTimeIsNeverANumber:
         offenders = sorted(f for f in fields if any(bad in f.lower() for bad in TALLY_FIELDS))
         assert not offenders, f"PRD 53: these reach a client as numbers to display: {offenders}"
 
+    def test_the_wire_carries_no_tally_in_a_hand_written_payload_either(self):
+        """The half the field scan above could not see, and where the leak actually was.
+
+        `render_suggestion` used to put `days_since_capture` straight into a dict literal.
+        It is not an annotated model field, so scanning `AnnAssign` never touched it - the
+        test passed for a year while the number went out on every suggestion. Renderers
+        build their payloads by hand, so the keys have to be read out of the literals.
+        """
+        schemas = (SRC / "anuvritti" / "interfaces" / "http" / "schemas.py").read_text()
+        tree = ast.parse(schemas)
+        keys = {
+            key.value.lower()
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name.startswith("render_")
+            for literal in ast.walk(node)
+            if isinstance(literal, ast.Dict)
+            for key in literal.keys
+            if isinstance(key, ast.Constant) and isinstance(key.value, str)
+        }
+        assert keys, "the renderers build dicts; if this is empty the scan found nothing"
+        offenders = sorted(k for k in keys if any(bad in k for bad in TALLY_FIELDS))
+        assert not offenders, f"PRD 53: rendered straight onto the wire as numbers: {offenders}"
+
+    def test_a_rendered_suggestion_says_how_long_it_has_been_in_words(self):
+        """The positive form of the rule, measured on a real payload rather than on source.
+
+        A parent is handed a phrase. There is no field anywhere in the response from which
+        an interface could reconstruct "247" without being told the date it was saved.
+        """
+        from tests.design.wire import a_suggestion_rendered_after
+
+        payload = a_suggestion_rendered_after(days=247)
+        assert payload["elapsed"] == "8 months ago"
+        assert payload["spark"]["saved"] == "8 months ago"
+        assert "247" not in json.dumps(payload)
+
+        # A whitelist rather than a range check, so it fails loudly the day someone adds
+        # a number rather than quietly passing because the number happened to be small.
+        allowed = {"confidence", "min_years", "max_years"}
+        unexpected = {path: value for path, value in _numeric_paths(payload) if path not in allowed}
+        assert not unexpected, (
+            f"every number a parent receives is a confidence or an age. These are neither, "
+            f"so they are counts about a family's own life: {unexpected}"
+        )
+
     def test_the_interface_renders_no_raw_elapsed_count(self):
         text = _interface_text()
         for pattern in (r"\d+\s+days ago", r"\d+\s+hours ago", r"\bday \d+\b"):
             assert not re.search(pattern, text, re.I), f"interface renders {pattern!r} literally"
+
+
+def _numeric_paths(payload: object, key: str = "") -> list[tuple[str, float]]:
+    """Every numeric value in a response, paired with the key it arrived under.
+
+    Booleans are excluded deliberately: `True` is an `int` in Python and a flag is not a
+    tally, so counting it would make this test noisy enough to be turned off.
+    """
+    if isinstance(payload, bool):
+        return []
+    if isinstance(payload, int | float):
+        return [(key, float(payload))]
+    if isinstance(payload, dict):
+        return [pair for k, v in payload.items() for pair in _numeric_paths(v, k)]
+    if isinstance(payload, list):
+        return [pair for v in payload for pair in _numeric_paths(v, key)]
+    return []
 
 
 def _words(name: str) -> str:

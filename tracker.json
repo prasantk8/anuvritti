@@ -634,7 +634,7 @@
     {
       "name": "Phase 5: The Surface",
       "owner": "Design Lead / Principal Mobile Engineer",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-501",
@@ -722,7 +722,9 @@
           "prd_refs": [
             "PRD 48"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "packages/client: a Python generator emits the typed surface from docs/contracts/openapi.yaml (22 operations, 32 schemas) plus a hand-written zero-dependency runtime - transport, Result envelope, session, queue. Generated output is committed and tests/design/test_generated_client.py fails on drift. tests/integration/test_contract_conformance.py compares the contract to the routed application both ways and found GET /media/{media_id} and GET /families/{family_id} undocumented on its first run.",
+          "completed_at": "2026-08-25"
         },
         {
           "id": "TASK-506",
@@ -739,7 +741,9 @@
             "PRD 12",
             "PRD 56"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "apps/anuvritti/src/components/Spark.tsx. Front is what was saved, back is why. The flip is the only motion allowed past the design system's ceiling, and it is announced to a screen reader because a rotation is not an event one can observe.",
+          "completed_at": "2026-08-25"
         },
         {
           "id": "TASK-507",
@@ -755,7 +759,9 @@
             "PRD 8.5",
             "PRD 56"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "days_since_capture removed from the wire; Spark.saved and Suggestion.elapsed carry the phrase. Instant and Elapsed are branded in the generated client, and packages/client contains no Date.parse, new Date, Date.now, getTime or valueOf - asserted by a test that also mutation-checks its own regexes.",
+          "completed_at": "2026-08-25"
         },
         {
           "id": "TASK-508",
@@ -771,7 +777,9 @@
             "PRD 11",
             "PRD 48"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "expo-sharing's first-party config plugin (verified against the published 57.0.15 tarball) covers iOS share extension and Android SEND in one declaration. readShare() is a pure function with no expo import and 20 tests.",
+          "completed_at": "2026-08-25"
         },
         {
           "id": "TASK-509",
@@ -785,7 +793,9 @@
           "prd_refs": [
             "PRD 8.2"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "Idempotency-Key on all four capture endpoints, storing a request fingerprint so a reused key with a different body is a CONFLICT rather than a silent success. Client queue enqueues without touching the network, classifies failure rather than counting it, and jitters its backoff.",
+          "completed_at": "2026-08-25"
         },
         {
           "id": "TASK-510",
@@ -801,7 +811,9 @@
             "PRD 13",
             "PRD 48"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "The chip cycles through a likelihood-ordered permutation of the six intents; every cycle is proven to visit all six and return. Optimistic, so the word changes before the server answers.",
+          "completed_at": "2026-08-25"
         },
         {
           "id": "TASK-511",
@@ -816,7 +828,9 @@
             "PRD 44",
             "HARDENING 5.1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "Bearer device tokens; the token is the family. Bootstrap pairs the founding device in the same call that creates the family. Codes are 8 Crockford characters, single use, ten minutes, five global attempts. Only SHA-256 fingerprints are stored. Every failure mode answers identically. 52 integration tests.",
+          "completed_at": "2026-08-25"
         },
         {
           "id": "TASK-512",
@@ -832,7 +846,9 @@
             "PRD 14",
             "PRD 8.5"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "whatToBringBack returns one or nothing, and its type has no field a count could be built from.",
+          "completed_at": "2026-08-25"
         },
         {
           "id": "TASK-513",
@@ -848,7 +864,9 @@
           "prd_refs": [
             "PRD 54"
           ],
-          "status": "pending"
+          "status": "completed",
+          "notes": "tests/e2e/test_the_app_against_the_server.py runs the real generated TypeScript client against the real ASGI application over a real socket, with the server's clock advanced eight months mid-story. docs/DEVICE.md is the four-item checklist for what genuinely needs hardware.",
+          "completed_at": "2026-08-25"
         }
       ]
     },

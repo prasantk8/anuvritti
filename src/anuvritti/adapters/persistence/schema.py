@@ -16,7 +16,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Final
 
-SCHEMA_VERSION: Final = 1
+SCHEMA_VERSION: Final = 2
 
 _MIGRATIONS: Final[tuple[str, ...]] = (
     """
@@ -152,6 +152,60 @@ _MIGRATIONS: Final[tuple[str, ...]] = (
     );
 
     CREATE INDEX IF NOT EXISTS idx_event_family ON domain_event(family_id, occurred_at);
+    """,
+    """
+    -- TASK-511. Paired devices close HARDENING 5.1: the token is the family.
+    --
+    -- Only fingerprints are stored. A stolen copy of this file yields no token and no
+    -- pairing code - which is the point of keeping the archive in one portable file.
+    CREATE TABLE IF NOT EXISTS device (
+        id                 TEXT PRIMARY KEY,
+        family_id          TEXT NOT NULL REFERENCES family(id) ON DELETE CASCADE,
+        member_id          TEXT NOT NULL,
+        display_name       TEXT NOT NULL,
+        token_fingerprint  TEXT NOT NULL UNIQUE,
+        created_at         TEXT NOT NULL,
+        last_seen_at       TEXT,
+        revoked_at         TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_device_family ON device(family_id);
+
+    CREATE TABLE IF NOT EXISTS pairing_request (
+        code_fingerprint  TEXT PRIMARY KEY,
+        family_id         TEXT NOT NULL REFERENCES family(id) ON DELETE CASCADE,
+        member_id         TEXT NOT NULL,
+        created_at        TEXT NOT NULL,
+        expires_at        TEXT NOT NULL,
+        claimed_at        TEXT
+    );
+
+    -- The attempt ledger. A wrong guess matches no code, so there is no per-code counter
+    -- to increment; the limit has to live here, across the whole pairing window.
+    CREATE TABLE IF NOT EXISTS pairing_attempt (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        succeeded    INTEGER NOT NULL,
+        occurred_at  TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pairing_attempt_at ON pairing_attempt(occurred_at);
+
+    -- TASK-509. What a phone that saved with no signal replays into.
+    --
+    -- `request_fingerprint` is what makes a replay safe rather than merely quiet: the same
+    -- key carrying a different body is a client bug, and answering it with the first
+    -- request's Spark would silently lose the second one.
+    CREATE TABLE IF NOT EXISTS idempotency (
+        key                  TEXT NOT NULL,
+        family_id            TEXT NOT NULL REFERENCES family(id) ON DELETE CASCADE,
+        request_fingerprint  TEXT NOT NULL,
+        status_code          INTEGER NOT NULL,
+        response_json        TEXT NOT NULL,
+        created_at           TEXT NOT NULL,
+        PRIMARY KEY (key, family_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_idempotency_family ON idempotency(family_id);
     """,
 )
 
