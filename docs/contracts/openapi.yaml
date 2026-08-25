@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Anuvritti API
-  version: 0.2.0
+  version: 0.3.0
   description: >
     Family presence, intent & memory platform. Scope frozen to PRD §48.
     Every AI-derived field is returned with provenance (PRD §13, §42, ADR-0005).
@@ -186,6 +186,44 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CaptureRightNow" } } } }
       responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/RightNow" } } } } }
 
+  /voice:
+    post:
+      summary: Keep a recording (PRD §12, §17, §24)
+      operationId: keepVoiceNote
+      description: >
+        The bytes are already at `POST /media`; this says how long they are and what, if
+        anything, the handset's own recogniser made of them. There is no minimum duration
+        and there never will be — PRD §24 says nothing is rejected for being unpolished,
+        and a validator with a floor in it is that promise quietly undone.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/KeepVoiceNote" } } } }
+      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/VoiceNote" } } } }, "404": { $ref: "#/components/responses/Error" }, "415": { $ref: "#/components/responses/Error" } }
+    get:
+      summary: The Papa Voice Vault — every recording, newest first (PRD §21)
+      operationId: listVoiceNotes
+      description: >
+        No total, no unheard count and no cursor. This is a shelf, and a shelf does not
+        tell you how far behind you are (PRD §8.5).
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Vault" } } } } }
+
+  /voice/{media_id}:
+    get:
+      summary: One recording and whatever is known about what is in it
+      operationId: getVoiceNote
+      parameters: [{ $ref: "#/components/parameters/MediaId" }]
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/VoiceNote" } } } }, "404": { $ref: "#/components/responses/Error" } }
+
+  /voice/{media_id}/transcript:
+    post:
+      summary: Correct what the machine misheard (PRD §8.7)
+      operationId: correctTranscript
+      description: >
+        The only way to produce a `HUMAN` transcript. Permanent — no later run of a better
+        model overrides it — and it never touches the audio.
+      parameters: [{ $ref: "#/components/parameters/MediaId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CorrectTranscript" } } } }
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/VoiceNote" } } } }, "404": { $ref: "#/components/responses/Error" } }
+
   /media:
     post:
       summary: Upload media (encrypted at rest, PRD §44)
@@ -237,6 +275,7 @@ components:
   parameters:
     FamilyId: { name: family_id, in: path, required: true, schema: { type: string } }
     SparkId:  { name: spark_id,  in: path, required: true, schema: { type: string } }
+    MediaId:  { name: media_id,  in: path, required: true, schema: { type: string } }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -442,7 +481,18 @@ components:
         age_range: { $ref: "#/components/schemas/Attributed" }
         category: { $ref: "#/components/schemas/Attributed" }
         tags: { type: array, items: { type: string } }
-        why: { type: object, nullable: true, properties: { text: { type: string, nullable: true }, voice_media_id: { type: string, nullable: true }, recorded_at: { type: string, format: date-time } } }
+        why:
+          type: object
+          nullable: true
+          description: >
+            PRD §12. `voice` rides inside the why rather than beside it, because that is
+            the relationship: the recording is the answer and the text is a second, lesser
+            way of giving it.
+          properties:
+            text: { type: string, nullable: true }
+            voice_media_id: { type: string, nullable: true }
+            voice: { $ref: "#/components/schemas/VoiceNote" }
+            recorded_at: { type: string, format: date-time }
         status: { $ref: "#/components/schemas/SparkStatus" }
         visibility: { $ref: "#/components/schemas/Visibility" }
         saved:
@@ -527,12 +577,91 @@ components:
 
     LittleThing:
       type: object
+      description: >
+        PRD §17. `voice` comes before `text` on purpose: the recording is the artifact and
+        the words are a lesser way of giving the same answer (TASK-602).
       required: [id, created_at]
       properties:
         id: { type: string }
-        text: { type: string, nullable: true }
+        voice: { $ref: "#/components/schemas/VoiceNote" }
         audio_media_id: { type: string, nullable: true }
+        text: { type: string, nullable: true }
         created_at: { type: string, format: date-time }
+
+    Transcript:
+      type: object
+      description: >
+        PRD §8.7. Words that stand in for a recording in a search box, and nowhere else.
+        `source` is never `DEFAULT`: a transcript is either a machine's reading or a
+        person's statement, and the object exists so a client cannot render the words
+        without the provenance sitting beside them.
+      required: [text, source, confidence, engine, made_at]
+      properties:
+        text: { type: string }
+        source: { type: string, enum: [AI, HUMAN] }
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: >
+            Strictly below 1.0 for a machine reading, exactly 1.0 for a human one.
+            Certainty belongs to the person who was in the room.
+        engine:
+          type: string
+          example: device-speech
+          description: Who said so. `hand` when a person typed it.
+        made_at: { type: string, format: date-time }
+
+    VoiceNote:
+      type: object
+      description: >
+        A recording that was kept (PRD §12, §17, §21). Identified by its media id, because
+        the recording *is* the record — there is no shape here that can describe a
+        transcript whose audio has gone.
+      required: [media_id, duration_seconds, recorded_at]
+      properties:
+        media_id: { type: string }
+        duration_seconds:
+          type: number
+          description: >
+            Measured, not described. The one number on this wire that is a property of the
+            artifact rather than a fact about a family, the way a photograph has
+            dimensions — TASK-707 cuts a film against it.
+        recorded_at: { type: string, format: date-time }
+        transcript: { $ref: "#/components/schemas/Transcript" }
+
+    Vault:
+      type: object
+      description: PRD §21. Deliberately has no count field of any kind.
+      required: [recordings]
+      properties:
+        recordings: { type: array, items: { $ref: "#/components/schemas/VoiceNote" } }
+
+    KeepVoiceNote:
+      type: object
+      required: [media_id, duration_seconds]
+      properties:
+        family_id: { type: string, nullable: true }
+        author_id: { type: string, nullable: true }
+        media_id: { type: string }
+        duration_seconds:
+          type: number
+          description: >
+            No minimum, deliberately. A half-second clip of someone starting to say
+            something and giving up is a real thing that happened (PRD §24).
+        heard_text:
+          type: string
+          nullable: true
+          description: >
+            What the handset's own recogniser made of it. Stored with `AI` provenance
+            whatever the phone believes about itself.
+        heard_confidence: { type: number, minimum: 0, maximum: 1, nullable: true }
+
+    CorrectTranscript:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
 
     CaptureRightNow:
       type: object

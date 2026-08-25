@@ -12,6 +12,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from anuvritti.adapters.intent.heuristic import HeuristicIntentEngine
+from anuvritti.adapters.intent.spoken import SpokenIntentEngine
 from anuvritti.adapters.media.filesystem import EncryptedFilesystemMediaStore
 from anuvritti.adapters.persistence.schema import GuardedConnection, connect, migrate
 from anuvritti.adapters.persistence.sqlite import (
@@ -26,7 +27,9 @@ from anuvritti.adapters.persistence.sqlite import (
     SqliteRightNowRepository,
     SqliteSparkRepository,
     SqliteUnitOfWork,
+    SqliteVoiceNoteRepository,
 )
+from anuvritti.adapters.transcription.local import LocalTranscriber, SpeechModel
 from anuvritti.application.access import (
     AuthenticateDeviceUseCase,
     ClaimPairingUseCase,
@@ -48,6 +51,12 @@ from anuvritti.application.returning import (
     RespondToSuggestionUseCase,
 )
 from anuvritti.application.vault import SearchVaultUseCase
+from anuvritti.application.voice import (
+    CorrectTranscriptUseCase,
+    GetVoiceNoteUseCase,
+    KeepVoiceNoteUseCase,
+    ListVoiceNotesUseCase,
+)
 from anuvritti.config.settings import Settings
 from anuvritti.domain.access import CODE_TTL
 from anuvritti.domain.return_engine import ReturnEngine
@@ -72,6 +81,7 @@ class Container:
     moments: SqliteMomentRepository
     little_things: SqliteLittleThingRepository
     right_now: SqliteRightNowRepository
+    voice_notes: SqliteVoiceNoteRepository
     media: EncryptedFilesystemMediaStore
     events: SqliteEventPublisher
     uow: SqliteUnitOfWork
@@ -88,6 +98,10 @@ class Container:
     mark_as_done: MarkAsDoneUseCase
     capture_little_thing: CaptureLittleThingUseCase
     capture_right_now: CaptureRightNowUseCase
+    keep_voice_note: KeepVoiceNoteUseCase
+    correct_transcript: CorrectTranscriptUseCase
+    list_voice_notes: ListVoiceNotesUseCase
+    get_voice_note: GetVoiceNoteUseCase
     export_family: ExportFamilyDataUseCase
     delete_family: DeleteFamilyDataUseCase
     pair_device: PairDeviceUseCase
@@ -107,12 +121,20 @@ def build_container(
     clock: Clock | None = None,
     ids: IdGenerator | None = None,
     random: RandomSource | None = None,
+    speech: SpeechModel | None = None,
 ) -> Container:
     """Wire the application.
 
     `clock`, `ids` and `random` are injectable so tests are deterministic. `random` is the
     one that must never be defaulted anywhere but here: a predictable source would make
     every device token in the family guessable.
+
+    `speech` defaults to `None`, which means every recording is kept and none is indexed.
+    That is the shipping configuration, not a stub: a wrong transcript is a plausible lie
+    attached to a piece of family history, and the recording it belongs to loses nothing by
+    being unindexed. A family that installs a local model passes it here and gets a search
+    box; there is no setting that sends audio anywhere else, because there is no adapter
+    that could (`adapters/transcription/local.py`).
     """
     clock = clock or SystemClock()
     ids = ids or Uuid7IdGenerator()
@@ -129,6 +151,7 @@ def build_container(
     moments = SqliteMomentRepository(connection)
     little_things = SqliteLittleThingRepository(connection)
     right_now = SqliteRightNowRepository(connection)
+    voice_notes = SqliteVoiceNoteRepository(connection)
     events = SqliteEventPublisher(connection)
     uow = SqliteUnitOfWork(connection)
     devices = SqliteDeviceRepository(connection)
@@ -142,6 +165,8 @@ def build_container(
         max_bytes=settings.max_media_bytes,
         allowed_mime_types=settings.allowed_media_types,
     )
+
+    transcriber = LocalTranscriber(media=media, model=speech, clock=clock)
 
     pair_device = PairDeviceUseCase(
         devices=devices, events=events, clock=clock, ids=ids, random=random, uow=uow
@@ -159,6 +184,7 @@ def build_container(
         moments=moments,
         little_things=little_things,
         right_now=right_now,
+        voice_notes=voice_notes,
         media=media,
         events=events,
         uow=uow,
@@ -168,7 +194,9 @@ def build_container(
         capture_spark=CaptureSparkUseCase(
             families=families,
             sparks=sparks,
-            intent_engine=HeuristicIntentEngine(),
+            # A decorator, not a replacement: captions still go through the engine built
+            # for captions, and only a transcript gets the spoken layer (TASK-604).
+            intent_engine=SpokenIntentEngine(HeuristicIntentEngine()),
             events=events,
             clock=clock,
             ids=ids,
@@ -215,12 +243,27 @@ def build_container(
             ids=ids,
             uow=uow,
         ),
+        keep_voice_note=KeepVoiceNoteUseCase(
+            families=families,
+            media=media,
+            voice_notes=voice_notes,
+            transcriber=transcriber,
+            events=events,
+            clock=clock,
+            uow=uow,
+        ),
+        correct_transcript=CorrectTranscriptUseCase(
+            voice_notes=voice_notes, events=events, clock=clock, uow=uow
+        ),
+        list_voice_notes=ListVoiceNotesUseCase(voice_notes=voice_notes),
+        get_voice_note=GetVoiceNoteUseCase(voice_notes=voice_notes),
         export_family=ExportFamilyDataUseCase(
             families=families,
             sparks=sparks,
             moments=moments,
             little_things=little_things,
             right_now=right_now,
+            voice_notes=voice_notes,
             media=media,
             events=events,
             clock=clock,
@@ -231,6 +274,7 @@ def build_container(
             moments=moments,
             little_things=little_things,
             right_now=right_now,
+            voice_notes=voice_notes,
             media=media,
             events=events,
             clock=clock,

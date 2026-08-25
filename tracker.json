@@ -873,14 +873,14 @@
     {
       "name": "Phase 6: Voice",
       "owner": "Principal Mobile Engineer / Senior Staff Backend Engineer",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-601",
           "role": "Principal Mobile Engineer",
           "description": "Hold to talk with a live waveform; release saves. Five seconds is the target, not a minimum.",
           "module_path": "apps/mobile/src/voice/HoldToTalk.tsx",
-          "verification_command": "npm --prefix apps/mobile test -- voice",
+          "verification_command": "npm --prefix apps/anuvritti exec -- node --test apps/anuvritti/test/voice.test.ts",
           "dependencies": [
             "TASK-513"
           ],
@@ -888,14 +888,23 @@
             "PRD 12",
             "PRD 17"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/voice/recording.ts",
+            "apps/anuvritti/src/voice/waveform.ts",
+            "apps/anuvritti/src/voice/keep.ts",
+            "apps/anuvritti/src/components/HoldToTalk.tsx",
+            "apps/anuvritti/test/voice.test.ts",
+            "apps/anuvritti/app.json",
+            "apps/anuvritti/package.json"
+          ]
         },
         {
           "id": "TASK-602",
           "role": "Principal Mobile Engineer",
           "description": "The recording is the artifact and the transcript is only an index: voice always renders above text and text never replaces it.",
           "module_path": "apps/mobile/src/voice/Playback.tsx",
-          "verification_command": "npm --prefix apps/mobile test -- playback",
+          "verification_command": "npm --prefix apps/anuvritti exec -- node --test apps/anuvritti/test/playback.test.ts",
           "dependencies": [
             "TASK-601"
           ],
@@ -903,14 +912,22 @@
             "PRD 12",
             "PRD 8.7"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/voice/playback.ts",
+            "apps/anuvritti/src/components/VoiceNote.tsx",
+            "apps/anuvritti/src/components/Spark.tsx",
+            "apps/anuvritti/test/playback.test.ts",
+            "src/anuvritti/interfaces/http/schemas.py",
+            "docs/contracts/openapi.yaml"
+          ]
         },
         {
           "id": "TASK-603",
           "role": "Senior Staff Backend Engineer",
           "description": "Transcriber port and an on-device adapter that makes no network call, so PRD 44's no-public-model default stays absolute rather than configured.",
           "module_path": "src/anuvritti/application/ports.py",
-          "verification_command": ".venv/bin/python -m pytest tests/unit/adapters/test_transcriber.py -q",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/adapters/test_transcriber.py tests/constitution/test_no_public_model.py -q",
           "dependencies": [
             "TASK-601"
           ],
@@ -918,7 +935,22 @@
             "PRD 44",
             "PRD 39"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/voice.py",
+            "src/anuvritti/adapters/transcription/local.py",
+            "src/anuvritti/application/voice.py",
+            "src/anuvritti/application/ports.py",
+            "src/anuvritti/adapters/persistence/schema.py",
+            "src/anuvritti/adapters/persistence/sqlite.py",
+            "src/anuvritti/adapters/persistence/mapping.py",
+            "src/anuvritti/interfaces/http/app.py",
+            "src/anuvritti/interfaces/http/container.py",
+            "tests/unit/domain/test_voice.py",
+            "tests/unit/adapters/test_transcriber.py",
+            "tests/constitution/test_no_public_model.py",
+            "tests/integration/test_voice.py"
+          ]
         },
         {
           "id": "TASK-604",
@@ -933,14 +965,18 @@
             "PRD 13",
             "PRD 48"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/adapters/intent/spoken.py",
+            "tests/unit/adapters/test_heuristic_voice.py"
+          ]
         },
         {
           "id": "TASK-605",
           "role": "Principal Mobile Engineer",
           "description": "Little Things and the seed of the Papa Voice Vault - and the reason to record: every clip becomes a line in this year's film.",
           "module_path": "apps/mobile/src/presence",
-          "verification_command": "npm --prefix apps/mobile test -- presence",
+          "verification_command": "npm --prefix apps/anuvritti exec -- node --test apps/anuvritti/test/presence.test.ts",
           "dependencies": [
             "TASK-602"
           ],
@@ -948,7 +984,16 @@
             "PRD 17",
             "PRD 21"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/model/vault.ts",
+            "apps/anuvritti/app/vault.tsx",
+            "apps/anuvritti/app/index.tsx",
+            "apps/anuvritti/src/provider.tsx",
+            "apps/anuvritti/src/api.ts",
+            "packages/client/src/runtime/queue.ts",
+            "apps/anuvritti/test/presence.test.ts"
+          ]
         },
         {
           "id": "TASK-606",
@@ -962,7 +1007,12 @@
           "prd_refs": [
             "PRD 24"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "tests/constitution/test_preserve_imperfection.py",
+            "docs/DEVICE.md",
+            "packages/client/test/e2e/golden-path.ts"
+          ]
         }
       ]
     },
@@ -1324,7 +1374,13 @@
     "TASK-501",
     "TASK-502",
     "TASK-503",
-    "TASK-504"
+    "TASK-504",
+    "TASK-601",
+    "TASK-602",
+    "TASK-603",
+    "TASK-604",
+    "TASK-605",
+    "TASK-606"
   ],
   "blocked_tasks": []
 }

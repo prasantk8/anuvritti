@@ -160,6 +160,12 @@ class TestTelemetryIsNotASecondArchive:
             "category",
             "reason_key",
             "prompt",
+            # TASK-603. Both are system-chosen keys with small closed ranges: an engine
+            # name ("whisper.cpp-tiny", "device-speech", "hand") and an AttributionSource.
+            # Neither can carry a sentence, and together they are what lets the audit trail
+            # say which readings a machine made without recording what it heard.
+            "engine",
+            "source",
         }
         tree = ast.parse(Path(events.__file__).read_text())
         offenders: list[str] = []

@@ -26,7 +26,7 @@ export type Instant = string & { readonly __instant: unique symbol };
  */
 export type Elapsed = string & { readonly __elapsed: unique symbol };
 
-export const API_VERSION = "0.2.0";
+export const API_VERSION = "0.3.0";
 
 // ---------------------------------------------------------------- schemas
 export interface ErrorEnvelope {
@@ -149,6 +149,7 @@ export interface Spark {
   readonly why?: {
     readonly text?: string | null;
     readonly voice_media_id?: string | null;
+    readonly voice?: VoiceNote;
     readonly recorded_at?: Instant;
   };
   readonly status: SparkStatus;
@@ -198,11 +199,43 @@ export interface CaptureLittleThing {
   readonly text?: string | null;
   readonly audio_media_id?: string | null;
 }
+/** PRD §17. `voice` comes before `text` on purpose: the recording is the artifact and the words are a lesser way of giving the same answer (TASK-602). */
 export interface LittleThing {
   readonly id: string;
-  readonly text?: string | null;
+  readonly voice?: VoiceNote;
   readonly audio_media_id?: string | null;
+  readonly text?: string | null;
   readonly created_at: Instant;
+}
+/** PRD §8.7. Words that stand in for a recording in a search box, and nowhere else. `source` is never `DEFAULT`: a transcript is either a machine's reading or a person's statement, and the object exists so a client cannot render the words without the provenance sitting beside them. */
+export interface Transcript {
+  readonly text: string;
+  readonly source: "AI" | "HUMAN";
+  readonly confidence: number;
+  readonly engine: string;
+  readonly made_at: Instant;
+}
+/** A recording that was kept (PRD §12, §17, §21). Identified by its media id, because the recording *is* the record — there is no shape here that can describe a transcript whose audio has gone. */
+export interface VoiceNote {
+  readonly media_id: string;
+  readonly duration_seconds: number;
+  readonly recorded_at: Instant;
+  readonly transcript?: Transcript;
+}
+/** PRD §21. Deliberately has no count field of any kind. */
+export interface Vault {
+  readonly recordings: readonly VoiceNote[];
+}
+export interface KeepVoiceNote {
+  readonly family_id?: string | null;
+  readonly author_id?: string | null;
+  readonly media_id: string;
+  readonly duration_seconds: number;
+  readonly heard_text?: string | null;
+  readonly heard_confidence?: number | null;
+}
+export interface CorrectTranscript {
+  readonly text: string;
 }
 export interface CaptureRightNow {
   readonly family_id?: string | null;
@@ -256,6 +289,10 @@ export const OPERATIONS = {
   captureLittleThing: { method: "POST", path: "/little-things", pathParams: [], queryParams: [], hasBody: true, idempotent: true, open: false },
   todaysPrompt: { method: "GET", path: "/right-now", pathParams: [], queryParams: [], hasBody: false, idempotent: false, open: false },
   captureRightNow: { method: "POST", path: "/right-now", pathParams: [], queryParams: [], hasBody: true, idempotent: true, open: false },
+  keepVoiceNote: { method: "POST", path: "/voice", pathParams: [], queryParams: [], hasBody: true, idempotent: true, open: false },
+  listVoiceNotes: { method: "GET", path: "/voice", pathParams: [], queryParams: [], hasBody: false, idempotent: false, open: false },
+  getVoiceNote: { method: "GET", path: "/voice/{media_id}", pathParams: ["media_id"], queryParams: [], hasBody: false, idempotent: false, open: false },
+  correctTranscript: { method: "POST", path: "/voice/{media_id}/transcript", pathParams: ["media_id"], queryParams: [], hasBody: true, idempotent: false, open: false },
   uploadMedia: { method: "POST", path: "/media", pathParams: [], queryParams: [], hasBody: true, idempotent: false, open: false },
   downloadMedia: { method: "GET", path: "/media/{media_id}", pathParams: ["media_id"], queryParams: [], hasBody: false, idempotent: false, open: false },
   exportFamily: { method: "GET", path: "/families/{family_id}/export", pathParams: ["family_id"], queryParams: [], hasBody: false, idempotent: false, open: false },
@@ -295,6 +332,13 @@ export interface Contract {
   readonly prompt?: string;
 }>>;
   captureRightNow(body: CaptureRightNow, options?: RequestOptions): Promise<Result<RightNow>>;
+  /** The bytes are already at `POST /media`; this says how long they are and what, if anything, the handset's own recogniser made of them. There is no minimum duration and there never will be — PRD §24 says nothing is rejected for being unpolished, and a validator with a floor in it is that promise quietly undone. */
+  keepVoiceNote(body: KeepVoiceNote, options?: RequestOptions): Promise<Result<VoiceNote>>;
+  /** No total, no unheard count and no cursor. This is a shelf, and a shelf does not tell you how far behind you are (PRD §8.5). */
+  listVoiceNotes(options?: CallOptions): Promise<Result<Vault>>;
+  getVoiceNote(mediaId: string, options?: CallOptions): Promise<Result<VoiceNote>>;
+  /** The only way to produce a `HUMAN` transcript. Permanent — no later run of a better model overrides it — and it never touches the audio. */
+  correctTranscript(mediaId: string, body: CorrectTranscript, options?: CallOptions): Promise<Result<VoiceNote>>;
   uploadMedia(body: FormData, options?: CallOptions): Promise<Result<Media>>;
   /** Decrypted on the way out and never cached (`Cache-Control: private, no-store`). Media belonging to another family answers `MEDIA_NOT_FOUND` — the same answer an id that never existed gets, so the response cannot be used to discover a stranger's photograph is there. */
   downloadMedia(mediaId: string, options?: CallOptions): Promise<Result<Uint8Array>>;

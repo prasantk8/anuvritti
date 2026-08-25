@@ -31,6 +31,7 @@ export type QueueableOperation =
   | "captureSpark"
   | "captureLittleThing"
   | "captureRightNow"
+  | "keepVoiceNote"
   | "markAsDone";
 
 export interface QueuedCapture {

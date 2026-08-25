@@ -1,6 +1,6 @@
 {
   "name": "@anuvritti/client",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "The Anuvritti API as typed calls. Generated from docs/contracts/openapi.yaml; zero dependencies, zero build step.",

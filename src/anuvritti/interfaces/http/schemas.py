@@ -16,6 +16,7 @@ from anuvritti.domain.presence import LittleThing, RightNowSnapshot
 from anuvritti.domain.return_engine import Suggestion, describe_elapsed
 from anuvritti.domain.spark import Spark
 from anuvritti.domain.values import IntentType, SourceKind, Visibility
+from anuvritti.domain.voice import VoiceNote
 
 V0Intent = Literal["DO", "BUY", "WATCH", "READ", "TEACH", "REMEMBER"]
 
@@ -104,6 +105,33 @@ class CaptureRightNowRequest(Strict):
     prompt: str | None = Field(default=None, max_length=400)
 
 
+# ---------------------------------------------------------------------- voice
+class KeepVoiceNoteRequest(Strict):
+    """The recording is already uploaded; this says how long it is and what it may say.
+
+    `duration_seconds` has no `ge` bound below zero-ish and deliberately no minimum at all.
+    PRD 24: nothing is rejected for being unpolished, and a Pydantic `gt=0.5` here would be
+    the whole constitution quietly undone by a validator. The domain rejects a *negative*
+    duration, which is a broken client rather than a short recording.
+
+    `heard_text` is what the handset's own recogniser made of it. It is stored with machine
+    provenance whatever the phone believes about itself (PRD 8.7).
+    """
+
+    family_id: str | None = None
+    author_id: str | None = None
+    media_id: str
+    duration_seconds: float
+    heard_text: str | None = Field(default=None, max_length=20_000)
+    heard_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class CorrectTranscriptRequest(Strict):
+    """What was actually said. Permanent, and it never touches the audio."""
+
+    text: str = Field(min_length=1, max_length=20_000)
+
+
 # ------------------------------------------------------------------- pairing
 class ClaimPairingRequest(Strict):
     """Eight characters read off a phone already inside the house, and a name for this one.
@@ -123,13 +151,17 @@ class ClaimPairingRequest(Strict):
 
 
 # ------------------------------------------------------------------ renderers
-def render_spark(spark: Spark, *, now: datetime) -> dict[str, Any]:
+def render_spark(spark: Spark, *, now: datetime, voice: VoiceNote | None = None) -> dict[str, Any]:
     """Provenance is always on the wire (PRD 13, 42). It is not an optional expansion.
 
     `saved` is the other half of TASK-507. The server does the arithmetic and hands over the
     *phrase*, because a client that receives a day count will eventually render one - not out
     of malice, but because "247" is right there and the deadline is Friday. `created_at` stays
     for ordering and for the export; the interface never needs to subtract it from anything.
+
+    `voice` is the recording behind the why, when the caller has it to hand. It rides inside
+    `why` rather than beside it because that is the relationship: the recording *is* the
+    answer, and the text is a second, lesser way of giving the same answer (TASK-602).
     """
     return {
         "id": str(spark.id),
@@ -149,7 +181,7 @@ def render_spark(spark: Spark, *, now: datetime) -> dict[str, Any]:
         "category": spark.category.to_dict(),
         "age_range": spark.age_range.to_dict() if spark.age_range else None,
         "tags": list(spark.tags),
-        "why": spark.why.to_dict() if spark.why else None,
+        "why": _render_why(spark, voice=voice),
         "status": spark.status.value,
         "visibility": spark.visibility.value,
         "saved": describe_elapsed(spark.days_since_capture(now)),
@@ -157,7 +189,28 @@ def render_spark(spark: Spark, *, now: datetime) -> dict[str, Any]:
     }
 
 
-def render_suggestion(suggestion: Suggestion, *, now: datetime) -> dict[str, Any]:
+def render_voice(note: VoiceNote) -> dict[str, Any]:
+    """A recording, and whatever is known about what is in it.
+
+    `duration_seconds` is a real number on the wire, and it is the one number in this file
+    that is not a scorecard: it is a property of the artifact, the way a photograph has
+    dimensions. TASK-707 will measure a film against it, so it has to be measured rather
+    than described - `describe_elapsed` exists for time that has *passed*, not for length.
+
+    `transcript` is nested rather than flattened so that a client physically cannot render
+    the words without the provenance sitting in the same object (PRD 8.7).
+    """
+    return {
+        "media_id": str(note.media_id),
+        "duration_seconds": note.duration_seconds,
+        "recorded_at": note.recorded_at.isoformat(),
+        "transcript": note.transcript.to_dict() if note.transcript else None,
+    }
+
+
+def render_suggestion(
+    suggestion: Suggestion, *, now: datetime, voice: VoiceNote | None = None
+) -> dict[str, Any]:
     """PRD 8.5 - no counters, no urgency, no score on the wire.
 
     The score is a ranking device, not something to show a parent about their own child.
@@ -168,7 +221,7 @@ def render_suggestion(suggestion: Suggestion, *, now: datetime) -> dict[str, Any
     overdue", then a badge. `elapsed` is the same fact with the precision deliberately gone.
     """
     return {
-        "spark": render_spark(suggestion.spark, now=now),
+        "spark": render_spark(suggestion.spark, now=now, voice=voice),
         "reason": suggestion.reason,
         "elapsed": describe_elapsed(suggestion.days_since_capture),
         "actions": list(suggestion.actions),
@@ -202,11 +255,25 @@ def render_moment(moment: Moment) -> dict[str, Any]:
     }
 
 
-def render_little_thing(thing: LittleThing) -> dict[str, Any]:
+def _render_why(spark: Spark, *, voice: VoiceNote | None) -> dict[str, Any] | None:
+    if spark.why is None:
+        return None
+    return {**spark.why.to_dict(), "voice": render_voice(voice) if voice else None}
+
+
+def render_little_thing(thing: LittleThing, *, voice: VoiceNote | None = None) -> dict[str, Any]:
+    """PRD 17. `voice` first in the object, and `text` after it.
+
+    Key order in JSON is not semantics and every client is free to ignore it. It is still
+    written this way, because the shape of a payload is the first thing anyone reads when
+    they build a screen against it, and this one should read as: there is a recording, and
+    there are some words about it.
+    """
     return {
         "id": str(thing.id),
-        "text": thing.text,
+        "voice": render_voice(voice) if voice else None,
         "audio_media_id": thing.audio_media_id,
+        "text": thing.text,
         "created_at": thing.created_at.isoformat(),
     }
 
@@ -254,8 +321,10 @@ __all__ = [
     "CaptureRightNowRequest",
     "CaptureSparkRequest",
     "ClaimPairingRequest",
+    "CorrectTranscriptRequest",
     "CreateChildRequest",
     "CreateFamilyRequest",
+    "KeepVoiceNoteRequest",
     "MarkAsDoneRequest",
     "OverrideFieldRequest",
     "RecordWhyRequest",
@@ -271,4 +340,5 @@ __all__ = [
     "render_right_now",
     "render_spark",
     "render_suggestion",
+    "render_voice",
 ]

@@ -16,7 +16,8 @@ from anuvritti.domain.media import MediaKind, MediaObject
 from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
 from anuvritti.domain.spark import Spark
-from anuvritti.domain.values import IntentType, MemberRole, SparkStatus
+from anuvritti.domain.values import Confidence, IntentType, MemberRole, SparkStatus
+from anuvritti.domain.voice import Transcript, VoiceNote
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import (
     ChildId,
@@ -290,7 +291,61 @@ class NullUnitOfWork:
 
 
 class NullTranscriber:
-    """V0 keeps the voice and transcribes nothing (PRD 44, local-first)."""
+    """Keeps the voice and transcribes nothing (PRD 44, local-first).
 
-    def transcribe(self, media_id: MediaId) -> Result[str | None, DomainError]:
+    The shipping default, not a stub - see `adapters/transcription/local.py`.
+    """
+
+    def transcribe(self, media_id: MediaId) -> Result[Transcript | None, DomainError]:
         return Ok(None)
+
+
+class DeafTranscriber:
+    """A transcriber that always fails. Nothing it does may cost a family a recording."""
+
+    def transcribe(self, media_id: MediaId) -> Result[Transcript | None, DomainError]:
+        return Err(DomainError(ErrorCode.VALIDATION_FAILED, "the model fell over"))
+
+
+class StubTranscriber:
+    """Hears whatever the test put in its mouth, with honest machine provenance."""
+
+    def __init__(self, text: str, *, confidence: float = 0.7, engine: str = "stub") -> None:
+        self._text = text
+        self._confidence = confidence
+        self._engine = engine
+        self.calls: list[str] = []
+
+    def transcribe(self, media_id: MediaId) -> Result[Transcript | None, DomainError]:
+        self.calls.append(str(media_id))
+        return Transcript.machine(
+            self._text,
+            confidence=Confidence(self._confidence),
+            engine=self._engine,
+            at=datetime(2026, 1, 13, 21, 40, tzinfo=UTC),
+        )
+
+
+class InMemoryVoiceNoteRepository:
+    def __init__(self) -> None:
+        self._items: dict[str, VoiceNote] = {}
+
+    def get(self, media_id: MediaId) -> Result[VoiceNote, DomainError]:
+        found = self._items.get(str(media_id))
+        if found is None:
+            return Err(DomainError(ErrorCode.MEDIA_NOT_FOUND, "no recording with that id"))
+        return Ok(found)
+
+    def save(self, note: VoiceNote) -> Result[VoiceNote, DomainError]:
+        self._items[str(note.media_id)] = note.with_events_cleared()
+        return Ok(note)
+
+    def list_for_family(self, family_id: FamilyId) -> Result[Sequence[VoiceNote], DomainError]:
+        kept = [n for n in self._items.values() if n.family_id == family_id]
+        return Ok(sorted(kept, key=lambda n: n.recorded_at, reverse=True))
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        doomed = [k for k, n in self._items.items() if n.family_id == family_id]
+        for key in doomed:
+            del self._items[key]
+        return Ok(len(doomed))

@@ -39,7 +39,8 @@ describe("the generated surface", () => {
 
     // A deliberate tripwire. Changing this number should be a decision someone made about
     // the API's surface, not something that drifted in with a regeneration.
-    assert.equal(methods.length, 22);
+    // 22 at v0.2.0; 26 at v0.3.0, when voice arrived (TASK-601..606).
+    assert.equal(methods.length, 26);
   });
 
   it("builds the url from the contract's own path template", async () => {
@@ -191,6 +192,10 @@ describe("idempotency", () => {
       "captureLittleThing",
       "captureRightNow",
       "captureSpark",
+      // Keeping a recording is replayable for the same reason capture is: the phone that
+      // held the button has already lost the audio buffer, so a retry that creates a
+      // second note would be the only copy of the mistake.
+      "keepVoiceNote",
       "markAsDone",
     ]);
   });

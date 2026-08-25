@@ -19,6 +19,7 @@ from anuvritti.adapters.persistence.mapping import (
     row_to_moment,
     row_to_right_now,
     row_to_spark,
+    row_to_voice_note,
     rows_to_family,
     spark_to_row,
 )
@@ -31,6 +32,7 @@ from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
 from anuvritti.domain.spark import Spark
 from anuvritti.domain.values import IntentType, SparkStatus
+from anuvritti.domain.voice import VoiceNote
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import (
     ChildId,
@@ -330,6 +332,74 @@ class SqliteLittleThingRepository:
 
     def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
         cursor = self._db.execute("DELETE FROM little_thing WHERE family_id = ?", (str(family_id),))
+        return Ok(cursor.rowcount)
+
+
+class SqliteVoiceNoteRepository:
+    """Recordings, keyed by the recording (TASK-603).
+
+    `save` is a full upsert of every transcript column, including back to NULL. That is
+    deliberate: a transcript is a field of the aggregate, so persisting a note whose
+    transcript was cleared has to clear it here too. The alternative - only ever writing
+    non-null words - is how a corrected transcript quietly reverts to the machine's guess
+    the next time anything touches the row.
+    """
+
+    def __init__(self, connection: GuardedConnection) -> None:
+        self._db = connection
+
+    def get(self, media_id: MediaId) -> Result[VoiceNote, DomainError]:
+        row = self._db.execute(
+            "SELECT * FROM voice_note WHERE media_id = ?", (str(media_id),)
+        ).fetchone()
+        if row is None:
+            return Err(
+                DomainError(
+                    ErrorCode.MEDIA_NOT_FOUND,
+                    "no recording with that id",
+                    {"media_id": str(media_id)},
+                )
+            )
+        return Ok(row_to_voice_note(row))
+
+    def save(self, note: VoiceNote) -> Result[VoiceNote, DomainError]:
+        transcript = note.transcript
+        self._db.execute(
+            "INSERT INTO voice_note (media_id, family_id, author_id, duration_seconds, "
+            "recorded_at, transcript_text, transcript_source, transcript_confidence, "
+            "transcript_engine, transcript_made_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(media_id) DO UPDATE SET "
+            "transcript_text = excluded.transcript_text, "
+            "transcript_source = excluded.transcript_source, "
+            "transcript_confidence = excluded.transcript_confidence, "
+            "transcript_engine = excluded.transcript_engine, "
+            "transcript_made_at = excluded.transcript_made_at",
+            (
+                str(note.media_id),
+                str(note.family_id),
+                str(note.author_id),
+                note.duration_seconds,
+                note.recorded_at.isoformat(),
+                transcript.text if transcript else None,
+                transcript.source.value if transcript else None,
+                transcript.confidence.value if transcript else None,
+                transcript.engine if transcript else None,
+                transcript.made_at.isoformat() if transcript else None,
+            ),
+        )
+        return Ok(note)
+
+    def list_for_family(self, family_id: FamilyId) -> Result[Sequence[VoiceNote], DomainError]:
+        """Newest first, and never counted. PRD 21 is an archive, not an inbox."""
+        rows = self._db.execute(
+            "SELECT * FROM voice_note WHERE family_id = ? ORDER BY recorded_at DESC, media_id DESC",
+            (str(family_id),),
+        ).fetchall()
+        return Ok([row_to_voice_note(r) for r in rows])
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        cursor = self._db.execute("DELETE FROM voice_note WHERE family_id = ?", (str(family_id),))
         return Ok(cursor.rowcount)
 
 

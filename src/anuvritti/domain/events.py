@@ -161,3 +161,26 @@ class FamilyDataDeleted(DomainEvent):
 
     def payload(self) -> dict[str, Any]:
         return {"deleted_counts": dict(self.deleted_counts)}
+
+
+@dataclass(frozen=True, slots=True)
+class VoiceNoteKept(DomainEvent):
+    """A recording was kept (PRD 12, 17, 21).
+
+    The payload is empty, and that is the interesting part. The obvious field to put here
+    is the duration, and it is exactly the field that must not be here: an audit log with
+    durations in it becomes an audit log someone can total, and "you recorded 4 minutes
+    this month" is a scorecard about a parent's attention to their own child (PRD 8.5).
+    The duration lives on the recording, where the film that needs it can measure it.
+    """
+
+
+@dataclass(frozen=True, slots=True)
+class VoiceNoteIndexed(DomainEvent):
+    """A transcript was attached. `source` is the PRD 8.7 distinction, on the audit trail."""
+
+    engine: str
+    source: str
+
+    def payload(self) -> dict[str, Any]:
+        return {"engine": self.engine, "source": self.source}

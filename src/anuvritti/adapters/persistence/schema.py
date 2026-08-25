@@ -16,7 +16,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Final
 
-SCHEMA_VERSION: Final = 2
+SCHEMA_VERSION: Final = 3
 
 _MIGRATIONS: Final[tuple[str, ...]] = (
     """
@@ -206,6 +206,34 @@ _MIGRATIONS: Final[tuple[str, ...]] = (
     );
 
     CREATE INDEX IF NOT EXISTS idx_idempotency_family ON idempotency(family_id);
+    """,
+    """
+    -- TASK-603. The recording is the artifact; the transcript is only an index.
+    --
+    -- The primary key is the media id, not a surrogate. That is the schema refusing to
+    -- represent a transcript whose audio has gone: there is no row to hold one. It also
+    -- means a media row deleted for a family takes its words with it, rather than leaving
+    -- behind a paraphrase of something a parent said about their child.
+    --
+    -- Provenance is four discrete columns, the same shape ADR-0005 uses for every other
+    -- inferred field, so no serializer can drop it and leave a machine's reading looking
+    -- like a quotation.
+    CREATE TABLE IF NOT EXISTS voice_note (
+        media_id              TEXT PRIMARY KEY,
+        family_id             TEXT NOT NULL REFERENCES family(id) ON DELETE CASCADE,
+        author_id             TEXT NOT NULL,
+        duration_seconds      REAL NOT NULL,
+        recorded_at           TEXT NOT NULL,
+
+        transcript_text       TEXT,
+        transcript_source     TEXT,
+        transcript_confidence REAL,
+        transcript_engine     TEXT,
+        transcript_made_at    TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_voice_note_family
+        ON voice_note(family_id, recorded_at DESC);
     """,
 )
 

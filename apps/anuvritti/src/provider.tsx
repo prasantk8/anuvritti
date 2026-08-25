@@ -23,6 +23,18 @@ const DEFAULT_BASE_URL = process.env.EXPO_PUBLIC_ANUVRITTI_URL ?? "http://localh
 interface Anuvritti extends Wired {
   /** The last thing that was saved, so a screen can say "Saved." about something specific. */
   readonly justSaved: string | null;
+  /** Where the family's server is, for the one thing the client cannot hand over: a media
+   *  URL for a native audio player, which takes a string and fetches the bytes itself. */
+  readonly baseUrl: string;
+  /**
+   * Today, as `YYYY-MM-DD`.
+   *
+   * A calendar date, not a duration — it picks which question the recorder offers. The
+   * distinction matters because `packages/client` forbids `Date` outright (TASK-507), and
+   * the reason is subtraction: two dates make a day count and a day count about a family's
+   * own life is the one number this product must never render. A single date cannot.
+   */
+  readonly today: string;
   acknowledge(): void;
   drain(): Promise<void>;
 }
@@ -105,7 +117,14 @@ export function AnuvrittiProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<Anuvritti | null>(
     () =>
       wired
-        ? { ...wired, justSaved, acknowledge: () => setJustSaved(null), drain }
+        ? {
+            ...wired,
+            justSaved,
+            baseUrl: DEFAULT_BASE_URL,
+            today: new Date().toISOString().slice(0, 10),
+            acknowledge: () => setJustSaved(null),
+            drain,
+          }
         : null,
     [drain, justSaved, wired]
   );

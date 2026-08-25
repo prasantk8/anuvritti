@@ -4,13 +4,19 @@
 generated client against the real server over a real socket. It covers pairing, capture,
 the offline queue, idempotent replay, the Return Engine, and export.
 
-It cannot cover four things, because all four require hardware:
+Since Phase 6 it also runs the voice path: a recording uploaded, kept, indexed by the
+handset's own reading, brought back eight months later, played back byte for byte, and
+corrected by hand.
+
+It cannot cover five things, because all five require hardware:
 
 1. **The share sheet.** Whether Anuvritti appears in it, and what arrives when it is tapped.
 2. **The flip.** Whether a Spark reads as an object you turn over.
 3. **The keychain.** Whether the token survives a cold start, and whether the share
    extension can read the one the app wrote.
 4. **Ten seconds.** Whether capture actually takes fewer than ten of them, measured.
+5. **The microphone.** Whether holding a button and speaking feels like a microphone
+   rather than like a form — and whether the waveform is telling the truth.
 
 This is that checklist. It is short on purpose: everything checkable without a device is
 already a test, and a manual step that could have been automated is a step that stops being
@@ -98,6 +104,44 @@ The whole reason the queue exists, and the one test a simulator cannot honestly 
       (PRD §11). Write the three numbers down. If it is over, the number to look at first is
       the app's cold-start time, not the network.
 
+### 5. Holding the button, and the waveform
+
+The two halves of this that no assertion can reach are *whether it feels like a microphone*
+and *whether the waveform is honest*. Everything else about hold-to-talk is a pure function
+in `src/voice/` and is already tested.
+
+- [ ] Grant the microphone. The permission sheet quotes `app.json`: it says the recordings
+      stay on the family's own server, and that has to still be true when you read it.
+- [ ] **Tap** the button — a quick tap, not a hold. **Nothing is recorded.** Not a short
+      recording, not a discarded one: the vault is unchanged. (This is the arming
+      threshold. It filters the gesture; it must never filter a recording.)
+- [ ] Hold it and say one word. Let go. **It is kept**, and it appears on the shelf.
+- [ ] Hold it, say nothing at all for three seconds, let go. **That is kept too.** Silence
+      is a recording (PRD §24), and there is nowhere in the product that says otherwise.
+- [ ] While recording, **stop talking for two seconds.** The waveform gets small; it does
+      **not** go flat. A flat line reads as "it stopped recording", and a parent who
+      believes that will start over or stop to check.
+- [ ] Speak normally. The bars use most of the height, not a twentieth of it. If they are
+      tiny, the dBFS mapping is wrong — see `FLOOR_DB` in `src/voice/waveform.ts`.
+- [ ] The timer counts **up** and there is nothing counting down.
+- [ ] **Call the phone from another one while recording.** The recording so far is *kept*,
+      not lost. Check the shelf.
+- [ ] Force-quit mid-recording. This is the one case that loses audio and the checklist
+      says so honestly: the file is whatever the encoder had flushed.
+- [ ] Record with no network. The **upload** fails, and the app says the recording is
+      still on the phone rather than saying "saved". That is the one place on this path
+      where "Saved." would be a lie.
+- [ ] Turn the network on. It goes up, once — not twice. (`keepVoiceNote` is replayable;
+      the media upload is not, and does not need to be.)
+- [ ] Play a recording back. The words underneath say **"It sounded like"** or **"Maybe"**,
+      never nothing — a machine's reading is never presented as a quotation.
+- [ ] Correct a transcript. The hedge disappears, the audio still plays, and the length is
+      unchanged.
+- [ ] VoiceOver / TalkBack: the button announces "Recording." on start and "Saved." on
+      release. The waveform is hidden from the accessibility tree — it says nothing useful
+      and would otherwise be sixty-four unlabelled views.
+- [ ] Record something on a **second paired device**. It appears in the vault on the first.
+
 ## What must never appear
 
 If any of these is on the screen, a constitution test has been defeated and the fix is the
@@ -110,6 +154,10 @@ test, not just the pixel:
 - [ ] Red, on anything that is not a deletion.
 - [ ] More than one suggestion under Worth Bringing Back.
 - [ ] Any hint that there were others — "2 more", "next", a pager.
+- [ ] A count of recordings, anywhere on the vault — including "3 this month".
+- [ ] A "re-record", "retake", "discard" or "too short" affordance on the recorder.
+- [ ] A transcript rendered without a player above it.
+- [ ] A machine's transcript shown as a quotation, with no hedge and no attribution.
 
 ## When something fails
 

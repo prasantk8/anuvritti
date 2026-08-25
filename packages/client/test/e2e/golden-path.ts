@@ -27,6 +27,8 @@ interface State {
   familyId: string;
   childId: string;
   sparkId: string;
+  /** The recording behind the why. Phase two plays it back eight months later. */
+  voiceMediaId: string;
 }
 
 function loadState(): State {
@@ -52,6 +54,19 @@ function fileBackedTokens(initial: string | null): TokenStore & { current: strin
     },
   };
   return store;
+}
+
+/**
+ * A few hundred bytes standing in for a voice memo.
+ *
+ * Deterministic, so phase two can assert the bytes came back *unchanged* - which is the
+ * only way to prove nothing trimmed, normalised or re-encoded them on the way through
+ * (PRD §24). A random blob would prove only that something of the right length came back.
+ */
+function clip(): Uint8Array {
+  const header = [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20];
+  const body = Array.from({ length: 512 }, (_, index) => (index * 37) % 256);
+  return new Uint8Array([...header, ...body]);
 }
 
 function say(line: string): void {
@@ -152,12 +167,43 @@ async function january(): Promise<void> {
   assert.equal(replayed.id, spark.id, "a replayed key returns the original Spark");
   say("replay produced no duplicate");
 
-  // --- REMEMBER. Five seconds of why. --------------------------------------------------
+  // --- REMEMBER. Five seconds of why, in his own voice. ---------------------------------
+  //
+  // The whole of Phase 6 through the real wire: the bytes go up, the note says what they
+  // are, and the transcript the handset heard arrives with them - carrying machine
+  // provenance whatever the phone believes about itself (PRD §8.7).
+  const audio = new FormData();
+  audio.append("file", new Blob([clip()], { type: "audio/mp4" }), "why.m4a");
+  const media = unwrap(await api.uploadMedia(audio), "uploadMedia");
+
+  const kept = unwrap(
+    await api.keepVoiceNote(
+      {
+        media_id: media.id,
+        // Four and a bit seconds. PRD §12 says five is what a why usually is; nothing
+        // anywhere in this stack requires it to be.
+        duration_seconds: 4.2,
+        heard_text: "I want to see his face when it launches.",
+        heard_confidence: 0.7,
+      },
+      { idempotencyKey: "voice-0001" }
+    ),
+    "keepVoiceNote"
+  );
+  assert.equal(kept.duration_seconds, 4.2);
+  assert.equal(kept.transcript?.source, "AI", "the phone's own reading is still a reading");
+  assert.ok(kept.transcript!.confidence < 1, "and it never claims certainty");
+  say(`recorded: ${kept.duration_seconds}s, heard as "${kept.transcript?.text}"`);
+
   const withWhy = unwrap(
-    await api.recordWhy(spark.id, { text: "I want to see his face when it launches." }),
+    await api.recordWhy(spark.id, {
+      text: "I want to see his face when it launches.",
+      voice_media_id: media.id,
+    }),
     "recordWhy"
   );
   assert.equal(withWhy.why?.text, "I want to see his face when it launches.");
+  assert.equal(withWhy.why?.voice?.media_id, media.id, "the why carries the recording itself");
 
   // --- Nothing is suggested while it is still fresh. -----------------------------------
   assert.deepEqual(
@@ -172,6 +218,7 @@ async function january(): Promise<void> {
     familyId: family.id,
     childId: child.id,
     sparkId: spark.id,
+    voiceMediaId: media.id,
   });
 }
 
@@ -201,6 +248,35 @@ async function september(): Promise<void> {
   assert.ok(!asText.includes("days_since"), "no day count on the wire");
   assert.ok(!asText.includes("247"), "and not smuggled in as a value either");
   assert.ok(!asText.includes('"score"'), "no score about a family's own child");
+
+  // --- The recording is still the artifact, eight months on. ---------------------------
+  //
+  // Not "there is a row saying he said something". The bytes come back, byte for byte,
+  // and the words are still labelled as the machine's reading of them.
+  assert.equal(brought.spark.why?.voice?.media_id, state.voiceMediaId, "the why still has it");
+
+  const heard = brought.spark.why!.voice!;
+  assert.equal(heard.duration_seconds, 4.2, "measured, not described - TASK-707 cuts against it");
+  assert.equal(heard.transcript?.source, "AI");
+
+  const audio = unwrap(await api.downloadMedia(state.voiceMediaId), "downloadMedia");
+  assert.deepEqual([...audio], [...clip()], "his actual voice, unchanged and untrimmed");
+  say(`played back: ${audio.byteLength} bytes, still his own voice`);
+
+  // A parent fixes what the machine misheard. Permanent, and the audio is untouched.
+  const corrected = unwrap(
+    await api.correctTranscript(state.voiceMediaId, {
+      text: "I want to see his face when it goes up.",
+    }),
+    "correctTranscript"
+  );
+  assert.equal(corrected.transcript?.source, "HUMAN", "a person said so; that is the end of it");
+  assert.equal(corrected.duration_seconds, 4.2, "and the recording is exactly as long");
+
+  const vault = unwrap(await api.listVoiceNotes(), "listVoiceNotes");
+  assert.deepEqual(Object.keys(vault), ["recordings"], "the vault has no count of any kind");
+  assert.equal(vault.recordings.length, 1);
+  say("the vault holds it, and says nothing about how many there are");
 
   // --- LIVE. ---------------------------------------------------------------------------
   const planned = unwrap(
@@ -237,6 +313,13 @@ async function september(): Promise<void> {
   // --- And the family can take all of it and leave. -------------------------------------
   const archive = unwrap(await api.exportFamily(state.familyId), "export");
   assert.equal(archive.moments?.length, 1);
+  const recordings = (archive as { recordings?: { transcript?: { source: string } }[] }).recordings;
+  assert.equal(recordings?.length, 1, "the recording is in the archive they take with them");
+  assert.equal(
+    recordings?.[0]?.transcript?.source,
+    "HUMAN",
+    "and twenty years from now they can still tell which sentences he actually said"
+  );
   say("exported, and it is all there");
 }
 

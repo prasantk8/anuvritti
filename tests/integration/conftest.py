@@ -17,6 +17,7 @@ from anuvritti.adapters.persistence.sqlite import (
     SqliteRightNowRepository,
     SqliteSparkRepository,
     SqliteUnitOfWork,
+    SqliteVoiceNoteRepository,
 )
 from anuvritti.domain.family import ChildProfile, Family, Member
 from anuvritti.domain.values import MemberRole
@@ -45,6 +46,7 @@ def repos(db: GuardedConnection):
             self.moments = SqliteMomentRepository(db)
             self.little_things = SqliteLittleThingRepository(db)
             self.right_now = SqliteRightNowRepository(db)
+            self.voice_notes = SqliteVoiceNoteRepository(db)
             self.media_catalogue = SqliteMediaCatalogue(db)
             self.events = SqliteEventPublisher(db)
             self.uow = SqliteUnitOfWork(db)

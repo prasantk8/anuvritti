@@ -30,7 +30,9 @@ import Animated, {
 import type { Spark as SparkData } from "@anuvritti/client";
 import { INTENT_SAID, intentOf, isUncertain, savedSentence } from "@anuvritti/client";
 
+import { whyFrom } from "../voice/playback.ts";
 import type { World } from "../world.ts";
+import { VoiceNote } from "./VoiceNote.tsx";
 
 /** `flip` is the one duration allowed past the motion ceiling, and this is why it exists. */
 const FLIP_MS = 620;
@@ -44,9 +46,19 @@ export interface SparkProps {
   readonly onCorrect?: () => void;
   /** What the chip should say right now, which may be ahead of the server. */
   readonly sayingIntent?: string;
+  /** Where media lives, so the back face can play a recorded why (TASK-602). */
+  readonly baseUrl?: string;
 }
 
-export function Spark({ spark, world, flipped, onFlip, onCorrect, sayingIntent }: SparkProps) {
+export function Spark({
+  spark,
+  world,
+  flipped,
+  onFlip,
+  onCorrect,
+  sayingIntent,
+  baseUrl,
+}: SparkProps) {
   const turn = useSharedValue(flipped ? 1 : 0);
   const styles = sheet(world);
 
@@ -80,6 +92,7 @@ export function Spark({ spark, world, flipped, onFlip, onCorrect, sayingIntent }
     opacity: progress.value < 0.5 ? 0 : 1,
   }));
 
+  const said = whyFrom(spark.why ?? {});
   const guess = intentOf(spark);
   const chipSays = sayingIntent ?? (guess ? INTENT_SAID[guess.value] : null);
   const uncertain = guess ? isUncertain(spark.intent) : false;
@@ -137,9 +150,21 @@ export function Spark({ spark, world, flipped, onFlip, onCorrect, sayingIntent }
         style={[styles.face, styles.back, backStyle]}
         pointerEvents={flipped ? "auto" : "none"}
       >
-        {spark.why?.text ? (
+        {said.voice || said.text ? (
           <>
-            <Text style={styles.why}>{spark.why.text}</Text>
+            {/*
+              TASK-602. When there is a recording it goes first and the words go under it,
+              because the recording *is* the answer and the transcript is a second, lesser
+              way of giving it. `whyFrom` decides that; this only lays it out in that order.
+            */}
+            {said.voice && spark.why?.voice && baseUrl ? (
+              <VoiceNote
+                note={spark.why.voice}
+                world={world}
+                sourceUrl={`${baseUrl}/v1/media/${spark.why.voice.media_id}`}
+              />
+            ) : null}
+            {said.text ? <Text style={styles.why}>{said.text}</Text> : null}
             <Text style={styles.whoSaid}>{savedSentence(spark.saved)}</Text>
           </>
         ) : (
@@ -173,6 +198,7 @@ function sheet(world: World) {
       // The reverse of a Spark is lifted, because it is the side you turned it over to see.
       backgroundColor: world.color["surface-lifted"],
       justifyContent: "center",
+      gap: world.space[3],
       ...world.shadow.lifted,
     },
     title: {

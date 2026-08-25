@@ -3,7 +3,7 @@
     "name": "Anuvritti",
     "slug": "anuvritti",
     "scheme": "anuvritti",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -21,6 +21,12 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Anuvritti records your voice so your child can hear it later. Recordings stay on your family's own server."
+        }
+      ],
       [
         "expo-sharing",
         {

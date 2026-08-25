@@ -62,6 +62,11 @@ export async function wire(baseUrl: string): Promise<Wired> {
         return anuvritti.api.captureLittleThing(entry.body as never, options);
       case "captureRightNow":
         return anuvritti.api.captureRightNow(entry.body as never, options);
+      case "keepVoiceNote":
+        // Replayable for the same reason a capture is, and more urgently: the phone that
+        // held the button has already released its audio buffer, so a retry that created a
+        // second note would be the only copy of the mistake.
+        return anuvritti.api.keepVoiceNote(entry.body as never, options);
       case "markAsDone":
         return anuvritti.api.markAsDone(entry.pathArgs[0]!, entry.body as never, options);
       default: {

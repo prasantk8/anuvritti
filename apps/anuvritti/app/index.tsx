@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "expo-router";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -27,7 +28,7 @@ export default function Today() {
   const world = useWorld();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
-  const { anuvritti, justSaved, acknowledge } = useAnuvritti();
+  const { anuvritti, justSaved, acknowledge, baseUrl } = useAnuvritti();
 
   const [suggestions, setSuggestions] = useState<readonly Suggestion[]>([]);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
@@ -122,6 +123,7 @@ export default function Today() {
                   : bringingBack.suggestion.spark.id
               )
             }
+            baseUrl={baseUrl}
           />
 
           <View style={styles.answers}>
@@ -141,6 +143,17 @@ export default function Today() {
         <Text style={styles.nothing}>{said ?? NOTHING_TODAY}</Text>
       )}
 
+      {/*
+        The way through to the recorder. A line of text rather than a tab bar or a floating
+        button: it is a place to go, not a thing to keep up with, and a persistent control
+        for it would be one more piece of the screen implying something is owed.
+      */}
+      <Link href="/vault" asChild>
+        <Pressable accessibilityRole="link" style={styles.toVault}>
+          <Text style={styles.toVaultText}>Say something out loud →</Text>
+        </Pressable>
+      </Link>
+
       <View style={styles.vault}>
         {sparks.map((spark) => (
           <View key={spark.id} style={styles.slot}>
@@ -151,6 +164,7 @@ export default function Today() {
               onFlip={() => setFlipped((current) => (current === spark.id ? null : spark.id))}
               onCorrect={() => correct(spark)}
               sayingIntent={corrections[spark.id] ?? undefined}
+              baseUrl={baseUrl}
             />
           </View>
         ))}
@@ -184,6 +198,12 @@ function sheet(world: World) {
       fontFamily: world.font.body,
       fontSize: world.type.fine,
       color: world.color["ink-quiet"],
+    },
+    toVault: { paddingVertical: world.space[2] },
+    toVaultText: {
+      fontFamily: world.font.body,
+      fontSize: world.type.body,
+      color: world.color.indigo,
     },
     bringingBack: { gap: world.space[4] },
     reason: {

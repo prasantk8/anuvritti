@@ -35,6 +35,12 @@ from anuvritti.application.returning import (
     WorthBringingBackQuery,
 )
 from anuvritti.application.vault import SearchVaultQuery
+from anuvritti.application.voice import (
+    CorrectTranscriptCommand,
+    GetVoiceNoteQuery,
+    KeepVoiceNoteCommand,
+    ListVoiceNotesQuery,
+)
 from anuvritti.config.logging import configure_logging, get_logger
 from anuvritti.config.settings import Settings
 from anuvritti.domain.family import ChildProfile, Family, Member
@@ -46,6 +52,7 @@ from anuvritti.domain.values import (
     SourceRef,
     SparkStatus,
 )
+from anuvritti.domain.voice import VoiceNote
 from anuvritti.interfaces.http import idempotency
 from anuvritti.interfaces.http.auth import (
     UNAUTHENTICATED,
@@ -62,8 +69,10 @@ from anuvritti.interfaces.http.schemas import (
     CaptureRightNowRequest,
     CaptureSparkRequest,
     ClaimPairingRequest,
+    CorrectTranscriptRequest,
     CreateChildRequest,
     CreateFamilyRequest,
+    KeepVoiceNoteRequest,
     MarkAsDoneRequest,
     OverrideFieldRequest,
     RecordWhyRequest,
@@ -77,6 +86,7 @@ from anuvritti.interfaces.http.schemas import (
     render_right_now,
     render_spark,
     render_suggestion,
+    render_voice,
 )
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import (
@@ -395,7 +405,14 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
         found = _spark_in_family(box, identity, spark_id)
         if found.is_err():
             return error_response(found.unwrap_err())
-        return JSONResponse(content=render_spark(found.unwrap(), now=box.clock.now()))
+        spark = found.unwrap()
+        return JSONResponse(
+            content=render_spark(
+                spark,
+                now=box.clock.now(),
+                voice=_voice_behind(box, spark.why.voice_media_id if spark.why else None),
+            )
+        )
 
     @app.post("/v1/sparks/{spark_id}/why")
     def record_why(
@@ -414,7 +431,14 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
         )
         if result.is_err():
             return error_response(result.unwrap_err())
-        return JSONResponse(content=render_spark(result.unwrap(), now=box.clock.now()))
+        spark = result.unwrap()
+        return JSONResponse(
+            content=render_spark(
+                spark,
+                now=box.clock.now(),
+                voice=_voice_behind(box, spark.why.voice_media_id if spark.why else None),
+            )
+        )
 
     @app.post("/v1/sparks/{spark_id}/override")
     def override_field(
@@ -508,7 +532,19 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
         if result.is_err():
             return error_response(result.unwrap_err())
         now = box.clock.now()
-        return JSONResponse(content=[render_suggestion(s, now=now) for s in result.unwrap()])
+        # The recording rides along with the suggestion. This is the screen where it matters
+        # most: "you said this, in your own voice, eight months ago" is the entire argument
+        # the Return Engine is making, and a transcript of it is a weaker argument.
+        return JSONResponse(
+            content=[
+                render_suggestion(
+                    s,
+                    now=now,
+                    voice=_voice_behind(box, s.spark.why.voice_media_id if s.spark.why else None),
+                )
+                for s in result.unwrap()
+            ]
+        )
 
     @app.post("/v1/return/{spark_id}/respond")
     def respond_to_suggestion(
@@ -554,7 +590,11 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
             )
             if result.is_err():
                 return error_response(result.unwrap_err())
-            return JSONResponse(status_code=201, content=render_little_thing(result.unwrap()))
+            thing = result.unwrap()
+            return JSONResponse(
+                status_code=201,
+                content=render_little_thing(thing, voice=_voice_behind(box, thing.audio_media_id)),
+            )
 
         return idempotency.replay_or_perform(
             store=box.idempotency,
@@ -610,6 +650,90 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
             payload=body.model_dump(mode="json"),
             perform=perform,
         )
+
+    # ------------------------------------------------------------------- voice
+    @app.post("/v1/voice", status_code=201)
+    def keep_voice_note(
+        body: KeepVoiceNoteRequest,
+        identity: DeviceIdentity = me,
+        idempotency_key: str | None = _IDEMPOTENCY_KEY,
+        box: Container = box_dep,
+    ) -> Response:
+        """Keep a recording (PRD 12, 17, 24).
+
+        Two requests, not one: the bytes go to `POST /v1/media` and this says what they
+        are. That looks like a wasted round trip against the ten-second budget in PRD 11,
+        and it is the opposite - the upload is the slow part, so it starts the moment the
+        button is released, while the parent is still deciding whether to say anything
+        about it. A single multipart call would have to wait for both.
+        """
+        same_family(identity, body.family_id)
+        same_member(identity, body.author_id)
+
+        def perform() -> Response:
+            result = box.keep_voice_note.execute(
+                KeepVoiceNoteCommand(
+                    family_id=identity.family_id,
+                    author_id=identity.member_id,
+                    media_id=MediaId(body.media_id),
+                    duration_seconds=body.duration_seconds,
+                    heard_text=body.heard_text,
+                    heard_confidence=body.heard_confidence,
+                )
+            )
+            if result.is_err():
+                return error_response(result.unwrap_err())
+            return JSONResponse(status_code=201, content=render_voice(result.unwrap()))
+
+        return idempotency.replay_or_perform(
+            store=box.idempotency,
+            clock=box.clock,
+            key=idempotency_key,
+            family_id=identity.family_id,
+            endpoint="POST /v1/voice",
+            payload=body.model_dump(mode="json"),
+            perform=perform,
+        )
+
+    @app.get("/v1/voice")
+    def list_voice_notes(identity: DeviceIdentity = me, box: Container = box_dep) -> Response:
+        """The Papa Voice Vault (PRD 21). Newest first, and no count of them.
+
+        There is no `total`, no `unheard` and no cursor. This is a shelf, and a shelf does
+        not tell you how far behind you are.
+        """
+        result = box.list_voice_notes.execute(ListVoiceNotesQuery(identity.family_id))
+        if result.is_err():  # pragma: no cover - a list query over one's own family
+            return error_response(result.unwrap_err())
+        return JSONResponse(content={"recordings": [render_voice(n) for n in result.unwrap()]})
+
+    @app.get("/v1/voice/{media_id}")
+    def get_voice_note(
+        media_id: str, identity: DeviceIdentity = me, box: Container = box_dep
+    ) -> Response:
+        result = box.get_voice_note.execute(
+            GetVoiceNoteQuery(family_id=identity.family_id, media_id=MediaId(media_id))
+        )
+        if result.is_err():
+            return error_response(result.unwrap_err())
+        return JSONResponse(content=render_voice(result.unwrap()))
+
+    @app.post("/v1/voice/{media_id}/transcript")
+    def correct_transcript(
+        media_id: str,
+        body: CorrectTranscriptRequest,
+        identity: DeviceIdentity = me,
+        box: Container = box_dep,
+    ) -> Response:
+        """A parent fixes what the machine misheard. The audio is not touched (PRD 24)."""
+        result = box.correct_transcript.execute(
+            CorrectTranscriptCommand(
+                family_id=identity.family_id, media_id=MediaId(media_id), text=body.text
+            )
+        )
+        if result.is_err():
+            return error_response(result.unwrap_err())
+        return JSONResponse(content=render_voice(result.unwrap()))
 
     # ------------------------------------------------------------------- media
     @app.post("/v1/media", status_code=201)
@@ -676,6 +800,21 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
         return JSONResponse(content=result.unwrap())
 
     return app
+
+
+def _voice_behind(box: Container, media_id: str | None) -> VoiceNote | None:
+    """The recording behind a why or a little thing, when there is one.
+
+    A missing note is not an error and not a 404: the audio is the artifact and it is
+    perfectly reachable at `/v1/media/{id}` without a `voice_note` row - a family archive
+    restored from a V0 backup has recordings and no notes at all. The screen falls back to
+    a player with no waveform and no transcript, which is a worse screen and still a true
+    one, and that is exactly the right failure for this to have.
+    """
+    if not media_id:
+        return None
+    found = box.voice_notes.get(MediaId(media_id))
+    return found.unwrap() if found.is_ok() else None
 
 
 def _spark_in_family(box: Container, identity: DeviceIdentity, spark_id: str) -> Result[Any, Any]:

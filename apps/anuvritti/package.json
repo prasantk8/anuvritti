@@ -1,6 +1,6 @@
 {
   "name": "@anuvritti/app",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -13,6 +13,7 @@
   "dependencies": {
     "expo": "~57.0.16",
     "expo-router": "~7.0.0",
+    "expo-audio": "~57.0.4",
     "expo-constants": "~57.0.3",
     "expo-linking": "~57.0.7",
     "expo-secure-store": "~57.0.1",

@@ -30,6 +30,12 @@ DEFAULT_ALLOWED_MEDIA_TYPES: Final[frozenset[str]] = frozenset(
         "image/heic",
         "audio/mpeg",
         "audio/mp4",
+        # The same container under the two names phones actually send. An `.m4a` recorded
+        # by `expo-audio` is `audio/mp4` by the book, and both iOS and Android hand over
+        # `audio/x-m4a` often enough that refusing it would 415 a real recording - which is
+        # the one failure on this path that loses the thing rather than delaying it.
+        "audio/x-m4a",
+        "audio/m4a",
         "audio/aac",
         "audio/wav",
         "audio/webm",

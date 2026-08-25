@@ -191,5 +191,125 @@ network and replaying it without duplicating it.
 `docs/DEVICE.md` is the remainder — four things that genuinely need hardware, and it is short
 because everything checkable without a device is already a test.
 
-**Next: TASK-601** — hold to talk. Phase 6 begins, and Phase 7's `filmkit` extraction is
-unblocked by TASK-501.
+### Phase 6 complete — Voice (TASK-601 to 606)
+
+**48/68. `make check`: 1,664 Python tests, 168 TypeScript tests, 96.90% domain coverage.**
+
+#### One rule, held in four places
+
+> The recording is the artifact. The transcript is only an index.
+
+That reads as a UI preference and it is a data rule, because every downstream pressure runs
+the other way: text is searchable, diffable, cheap to render and easy to summarise, and a
+4.2-second m4a of a man laughing halfway through a sentence is none of those. Every system
+that has stored both has ended up treating the text as the record.
+
+So it is held where it cannot be argued with:
+
+* **The aggregate is the recording.** `VoiceNote`'s identity is the `MediaId` of the audio,
+  not a surrogate key. There is no constructor that produces a note without audio.
+* **The table agrees.** `voice_note.media_id` is the primary key, so there is no row that can
+  hold a paraphrase of something a parent said whose audio has gone.
+* **Attaching a transcript cannot reach the audio.** `indexed_by(transcript)` takes one
+  argument. No store, no path, no id is in scope.
+* **The client's type has no shape for the wrong screen.** `Playback.player` is
+  non-nullable and `Playback.words` is not.
+
+#### Nothing is rejected for being unpolished
+
+PRD §24 is written about content and it is really about engineering, because the ways a
+system quietly polishes a recording are all small and all reasonable: a minimum duration so
+a stray tap does not make an empty note, a silence trim, a loudness normalisation, a
+re-record button, discarding audio once a transcript exists.
+
+`tests/constitution/test_preserve_imperfection.py` scans for all five, in the shapes they
+would actually be written — a named constant, an inline `duration < 0.5`, a Pydantic `ge`,
+a verb, a string on a button — and mutation-checks every scanner against the exact line
+someone would write. There is one distinction it draws carefully, and it is the whole
+design of hold-to-talk:
+
+> The **gesture** may have a threshold. The **recording** may not.
+
+A press arms for 200ms before any audio is captured, so a tap never produces a recording —
+not a discarded one, not a short one, none. That filters an input. Once audio exists it is
+kept: half a second, silence, an interruption by a phone call, all of it.
+
+#### "No public-model training by default" is no longer a default
+
+The load-bearing word in PRD §44 was *default*, and a default is a setting. It is now
+structural: `tests/constitution/test_no_public_model.py` walks the transitive import graph
+of everything under `anuvritti.adapters` and fails the build if `socket`, `http`,
+`urllib.request`, `httpx` or a vendor SDK appears. A **static** walk, because a runtime
+check fires on the request that already sent the audio.
+
+The `SpeechModel` port takes bytes and a mime type and nothing else — no id, no store, no
+session, no URL. An adapter behind it can still do something foolish with the bytes; it
+cannot be handed the address of anywhere to send them. The shipping default returns
+nothing at all, and that is a complete answer: a wrong transcript is a plausible lie
+attached to a piece of family history, and the recording loses nothing by being unindexed.
+
+#### Speaking earns what typing earns
+
+PRD §13's intent list is eight first-person sentences, and `HeuristicIntentEngine` was
+built for captions — nouns and product names, where "buy" is a button label rather than
+something a person wants. Run a transcript through it alone and speaking earns *less*
+understanding than typing, which makes voice the expensive way to save something.
+
+`SpokenIntentEngine` decorates it for `VOICE` sources only, and handles the three things
+captions never do:
+
+1. **People correct themselves.** "I want him to watch this — no, actually I want to do
+   this with him." Matches are weighted by where they fall; the last statement wins.
+2. **People negate.** The caption engine reads "I don't want to buy him another one" as
+   BUY, which is worse than reading nothing. Negation is scoped to its clause, a phrase
+   carrying its own negation is immune ("I don't want to forget this" is the most emphatic
+   REMEMBER there is), and a negated intent **vetoes** the caption's score rather than
+   merely failing to add to it — refusing to add is not enough when the score is already there.
+3. **People hesitate.** Fillers are stripped, so a hesitant parent is not read as a less
+   certain one. "actually" is deliberately *not* a filler: it is the word carrying the
+   correction.
+
+`tests/unit/adapters/test_heuristic_voice.py` asserts parity in the strong direction — the
+same words spoken are never understood *worse* than the same words typed — and that closed
+the gap at its cause: a transcript is now passed to the inner engine as the parent's own
+words, which is what it is.
+
+#### The vault has no count
+
+`GET /v1/voice` returns `{recordings: [...]}` and nothing else. `shelve` groups by month
+and neither the shelf nor a period carries a length that means anything but "rows to draw",
+so a badge would need a field that does not exist. `VoiceNoteKept` carries no duration
+either — the obvious payload field, and the one that would make the audit trail totalable.
+
+The reason to record is stated once, in the present tense, at the moment it is most true:
+after a recording is kept, *"That's in this year's film."* Phase 7 compiles from what is
+already in the archive, so it is a statement rather than a promise.
+
+#### Verified against the tarball, again
+
+`expo-audio@57.0.4`, unpacked and read rather than recalled. Three facts that recall would
+have got wrong, each of which would have shipped a silent bug:
+
+* `useAudioRecorderState(recorder, interval)` **polls**, default 500ms. A waveform at that
+  rate is four bars for a two-second recording — a still image. The app uses 60ms.
+* `metering` is absent unless `isMeteringEnabled: true`, and **neither** `RecordingPresets`
+  sets it. The presets alone give a permanently flat waveform.
+* `RecordingPresets.HIGH_QUALITY` is 44.1kHz **stereo** at 128kbps: a stereo recording of a
+  mono source at four times the bitrate speech needs. The app's own preset is mono at
+  32kbps — a five-second why is about 20KB, which matters because these are kept forever.
+
+The `.m4a` mime type is the other one worth writing down: `audio/mp4` by the book, but both
+platforms hand over `audio/x-m4a` often enough that the server now accepts all three. A 415
+here is the one failure on this path that loses a thing rather than delaying it.
+
+#### End to end, including the voice
+
+The cross-language E2E now records a why in January and plays it back in September: the
+bytes go up, the note says what they are, the handset's reading arrives with machine
+provenance, the recording comes back **byte for byte** eight months later — which is how
+the test proves nothing trimmed or re-encoded it — a parent corrects the transcript by
+hand, and the export carries both the audio and who said which words.
+
+**Next: TASK-701** — extract `filmkit`. Phase 7 turns a year of these recordings into the
+film they were always for, and TASK-707 will measure narration against the
+`duration_seconds` this phase started recording.

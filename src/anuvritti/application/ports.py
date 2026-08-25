@@ -20,6 +20,7 @@ from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
 from anuvritti.domain.spark import Inference, Spark
 from anuvritti.domain.values import IntentType, SourceRef, SparkStatus
+from anuvritti.domain.voice import Transcript, VoiceNote
 from anuvritti.shared.errors import DomainError
 from anuvritti.shared.identity import (
     ChildId,
@@ -134,10 +135,38 @@ class IntentEngine(Protocol):
 
 
 @runtime_checkable
-class Transcriber(Protocol):
-    """Speech to text. V0 stores audio and transcribes nothing (PRD 44, local-first)."""
+class VoiceNoteRepository(Protocol):
+    """Recordings, keyed by the recording (PRD 21).
 
-    def transcribe(self, media_id: MediaId) -> Result[str | None, DomainError]: ...
+    There is no `save_transcript`. A transcript is a field on a `VoiceNote`, so the only
+    way to store one is to store the recording it belongs to - which is what stops a
+    transcript from ever outliving its audio in this schema.
+    """
+
+    def get(self, media_id: MediaId) -> Result[VoiceNote, DomainError]: ...
+
+    def save(self, note: VoiceNote) -> Result[VoiceNote, DomainError]: ...
+
+    def list_for_family(self, family_id: FamilyId) -> Result[Sequence[VoiceNote], DomainError]: ...
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
+
+
+@runtime_checkable
+class Transcriber(Protocol):
+    """Speech to an index (PRD 44, local-first).
+
+    Returning `Ok(None)` is a first-class answer and the default one: no transcript is
+    strictly better than a wrong transcript, because the recording is the artifact and
+    loses nothing by being unindexed.
+
+    The return type is a `Transcript`, not a `str`, so an adapter physically cannot hand
+    back words without saying which engine produced them and how sure it was. A bare
+    string would arrive at the wire indistinguishable from something a parent typed, which
+    is the exact failure PRD 8.7 names: AI inference silently becoming family history.
+    """
+
+    def transcribe(self, media_id: MediaId) -> Result[Transcript | None, DomainError]: ...
 
 
 @runtime_checkable

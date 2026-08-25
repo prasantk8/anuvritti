@@ -61,6 +61,7 @@ from tests.support.fakes import (
     InMemoryMomentRepository,
     InMemoryRightNowRepository,
     InMemorySparkRepository,
+    InMemoryVoiceNoteRepository,
     NullUnitOfWork,
     RecordingEventPublisher,
     build_family,
@@ -417,6 +418,7 @@ class TestPrivacyFailures:
             "moments": InMemoryMomentRepository(),
             "little_things": InMemoryLittleThingRepository(),
             "right_now": InMemoryRightNowRepository(),
+            "voice_notes": InMemoryVoiceNoteRepository(),
             "media": InMemoryMediaStore(),
         }
         parts.update(overrides)
@@ -431,6 +433,7 @@ class TestPrivacyFailures:
             ("moments", InMemoryMomentRepository, "list_for_family"),
             ("little_things", InMemoryLittleThingRepository, "list_for_family"),
             ("right_now", InMemoryRightNowRepository, "list_for_family"),
+            ("voice_notes", InMemoryVoiceNoteRepository, "list_for_family"),
             ("media", InMemoryMediaStore, "list_for_family"),
         ],
     )
@@ -445,6 +448,7 @@ class TestPrivacyFailures:
             "moments": InMemoryMomentRepository(),
             "little_things": InMemoryLittleThingRepository(),
             "right_now": InMemoryRightNowRepository(),
+            "voice_notes": InMemoryVoiceNoteRepository(),
             "media": InMemoryMediaStore(),
         }
         parts.update(overrides)
@@ -466,6 +470,7 @@ class TestPrivacyFailures:
             ("moments", InMemoryMomentRepository),
             ("little_things", InMemoryLittleThingRepository),
             ("right_now", InMemoryRightNowRepository),
+            ("voice_notes", InMemoryVoiceNoteRepository),
         ],
     )
     def test_a_failed_deletion_rolls_back(self, part, factory):

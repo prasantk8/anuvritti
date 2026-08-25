@@ -25,6 +25,7 @@ from anuvritti.application.ports import (
     RightNowRepository,
     SparkRepository,
     UnitOfWork,
+    VoiceNoteRepository,
 )
 from anuvritti.domain.events import FamilyDataDeleted, FamilyDataExported
 from anuvritti.domain.spark import Spark
@@ -79,6 +80,7 @@ class ExportFamilyDataUseCase:
         moments: MomentRepository,
         little_things: LittleThingRepository,
         right_now: RightNowRepository,
+        voice_notes: VoiceNoteRepository,
         media: MediaStore,
         events: EventPublisher,
         clock: Clock,
@@ -88,6 +90,7 @@ class ExportFamilyDataUseCase:
         self._moments = moments
         self._little_things = little_things
         self._right_now = right_now
+        self._voice_notes = voice_notes
         self._media = media
         self._events = events
         self._clock = clock
@@ -111,6 +114,9 @@ class ExportFamilyDataUseCase:
         right_now = self._right_now.list_for_family(query.family_id)
         if right_now.is_err():
             return Err(right_now.unwrap_err())
+        voice_notes = self._voice_notes.list_for_family(query.family_id)
+        if voice_notes.is_err():
+            return Err(voice_notes.unwrap_err())
         media = self._media.list_for_family(query.family_id)
         if media.is_err():
             return Err(media.unwrap_err())
@@ -166,6 +172,20 @@ class ExportFamilyDataUseCase:
                 }
                 for s in right_now.unwrap()
             ],
+            # PRD 21. The recording is the artifact, so what the export carries is the
+            # media id to fetch the bytes with - plus the transcript *and* who made it, so
+            # that a family reading this file in twenty years can tell which sentences their
+            # father said and which ones a program guessed at (PRD 8.7).
+            "recordings": [
+                {
+                    "media_id": str(n.media_id),
+                    "recorded_by": str(n.author_id),
+                    "recorded_on": n.recorded_at.date().isoformat(),
+                    "duration_seconds": n.duration_seconds,
+                    "transcript": n.transcript.to_dict() if n.transcript else None,
+                }
+                for n in voice_notes.unwrap()
+            ],
             # An index of the media, never the bytes. The bytes are downloaded separately
             # so an export never becomes a second, unencrypted copy of the archive.
             "media_manifest": [m.to_dict() for m in media.unwrap()],
@@ -201,6 +221,7 @@ class DeleteFamilyDataUseCase:
         moments: MomentRepository,
         little_things: LittleThingRepository,
         right_now: RightNowRepository,
+        voice_notes: VoiceNoteRepository,
         media: MediaStore,
         events: EventPublisher,
         clock: Clock,
@@ -211,6 +232,7 @@ class DeleteFamilyDataUseCase:
         self._moments = moments
         self._little_things = little_things
         self._right_now = right_now
+        self._voice_notes = voice_notes
         self._media = media
         self._events = events
         self._clock = clock
@@ -235,6 +257,7 @@ class DeleteFamilyDataUseCase:
                 ("sparks", self._sparks),
                 ("little_things", self._little_things),
                 ("right_now", self._right_now),
+                ("recordings", self._voice_notes),
             ):
                 deleted = repository.delete_for_family(command.family_id)
                 if deleted.is_err():

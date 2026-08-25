@@ -28,6 +28,7 @@ from anuvritti.domain.values import (
     SparkStatus,
     Visibility,
 )
+from anuvritti.domain.voice import Transcript, VoiceNote
 from anuvritti.shared.identity import (
     ChildId,
     FamilyId,
@@ -185,6 +186,37 @@ def row_to_right_now(row: sqlite3.Row) -> RightNowSnapshot:
         prompt=row["prompt"],
         answer=row["answer"],
         captured_at=_require_dt(row["captured_at"]),
+    )
+
+
+def row_to_voice_note(row: sqlite3.Row) -> VoiceNote:
+    """A recording, and the transcript only if all five of its columns survived.
+
+    Partial provenance is treated as no transcript rather than as a transcript with gaps.
+    A row with words but no engine would render as something a person said, which is the
+    one mistake this table is shaped to prevent (PRD 8.7).
+    """
+    return VoiceNote(
+        media_id=MediaId(row["media_id"]),
+        family_id=FamilyId(row["family_id"]),
+        author_id=MemberId(row["author_id"]),
+        duration_seconds=float(row["duration_seconds"]),
+        recorded_at=_require_dt(row["recorded_at"]),
+        transcript=_row_to_transcript(row),
+    )
+
+
+def _row_to_transcript(row: sqlite3.Row) -> Transcript | None:
+    if not row["transcript_text"] or not row["transcript_engine"]:
+        return None
+    if row["transcript_source"] is None or row["transcript_confidence"] is None:
+        return None
+    return Transcript(
+        text=row["transcript_text"],
+        source=AttributionSource(row["transcript_source"]),
+        confidence=Confidence(float(row["transcript_confidence"])),
+        engine=row["transcript_engine"],
+        made_at=_require_dt(row["transcript_made_at"]),
     )
 
 
