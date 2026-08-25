@@ -1,0 +1,1312 @@
+{
+  "version": "1.0",
+  "project": "Anuvritti - V0 complete, V1 Make It Magical",
+  "prd": "docs/PRD.md",
+  "architecture": "docs/ARCHITECTURE.md",
+  "contracts": [
+    "docs/contracts/openapi.yaml",
+    "docs/contracts/events.md",
+    "docs/contracts/errors.md"
+  ],
+  "scope_note": "V0 (Phases 1-4) is complete and hardened: PRD 48 features 1-9, PRD 49 exclusions enforced as tests. V1 (Phases 5-9) is PRD 50 'Make It Magical'. Decisions taken 2026-08-25: native iOS and Android together via Expo, because the design tokens are then TypeScript and CSS and the same visual language renders both the app and the film's Chromium scenes; the Surface first, with Voice and the Memory Compiler to follow immediately after rather than eventually; and the rendering core extracted from autovideo-engine into a shared filmkit package rather than vendored or called across a file contract.",
+  "phases": [
+    {
+      "name": "Phase 1: Foundations",
+      "owner": "Architect/DevOps",
+      "status": "completed",
+      "tasks": [
+        {
+          "id": "TASK-101",
+          "role": "Principal Systems Architect",
+          "description": "Project scaffold and toolchain: pyproject.toml (src layout, py3.12), pytest+coverage config, ruff, mypy strict, requirements.txt/-dev, Makefile.",
+          "module_path": "pyproject.toml",
+          "verification_command": ".venv/bin/python -m pytest tests/foundation/test_toolchain.py -q",
+          "dependencies": [],
+          "prd_refs": [
+            "CLAUDE.md 1"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "pyproject.toml",
+            "Makefile",
+            "requirements.txt",
+            "requirements-dev.txt",
+            ".gitignore",
+            "tests/foundation/test_toolchain.py"
+          ]
+        },
+        {
+          "id": "TASK-102",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Shared kernel: Result/Ok/Err (Either), DomainError code catalog matching docs/contracts/errors.md, typed identifiers, Clock and IdGenerator ports.",
+          "module_path": "src/anuvritti/shared",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/shared -q",
+          "dependencies": [
+            "TASK-101"
+          ],
+          "prd_refs": [
+            "CLAUDE.md 1",
+            "ADR-0002"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/shared/result.py",
+            "src/anuvritti/shared/errors.py",
+            "src/anuvritti/shared/identity.py",
+            "src/anuvritti/shared/clock.py"
+          ]
+        },
+        {
+          "id": "TASK-103",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "12-factor Settings loaded from env only (zero secrets in repo) plus structured JSON logging with request correlation and PII-safe fields.",
+          "module_path": "src/anuvritti/config",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/config -q",
+          "dependencies": [
+            "TASK-102"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "CLAUDE.md 1"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/config/settings.py",
+            "src/anuvritti/config/logging.py",
+            ".env.example"
+          ]
+        },
+        {
+          "id": "TASK-104",
+          "role": "Principal Systems Architect",
+          "description": "Executable architecture fitness function: assert domain imports stdlib only and the dependency rule (interfaces -> application -> domain) is never violated.",
+          "module_path": "tests/architecture",
+          "verification_command": ".venv/bin/python -m pytest tests/architecture -q",
+          "dependencies": [
+            "TASK-102"
+          ],
+          "prd_refs": [
+            "ADR-0001"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "tests/architecture/test_dependency_rule.py",
+            "tests/architecture/test_scope_discipline.py"
+          ]
+        },
+        {
+          "id": "TASK-105",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Harden scripts/orchestrate.sh: fix the phase-name word-splitting bug (jq output iterated unquoted), add tracker.json schema validation, dependency-gate tasks so a task cannot start before its dependencies are completed, and record changed files per task.",
+          "module_path": "scripts/orchestrate.sh",
+          "verification_command": "bash -n scripts/orchestrate.sh && .venv/bin/python -m pytest tests/foundation/test_orchestrator.py -q",
+          "dependencies": [
+            "TASK-101"
+          ],
+          "prd_refs": [
+            "CLAUDE.md 3"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "scripts/orchestrate.sh",
+            "scripts/tracker.py",
+            "tests/foundation/test_orchestrator.py"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 2: Core Engine",
+      "owner": "Core Engineer",
+      "status": "completed",
+      "tasks": [
+        {
+          "id": "TASK-201",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Domain value objects: IntentType (six V0 intents gated via v0_set), SparkStatus, SourceKind, Visibility, MemberRole, AgeRange, Confidence, SourceRef, and Attributed[T] carrying value/source/confidence/human_override.",
+          "module_path": "src/anuvritti/domain/values.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_values.py -q",
+          "dependencies": [
+            "TASK-102"
+          ],
+          "prd_refs": [
+            "PRD 10",
+            "PRD 13",
+            "PRD 42",
+            "PRD 48 F4",
+            "ADR-0005"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/values.py",
+            "tests/unit/domain/test_values.py"
+          ]
+        },
+        {
+          "id": "TASK-202",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Family aggregate: Family, Member, ChildProfile with age computation, role-based permission checks and visibility rules (owner vs subject separation per child data rights).",
+          "module_path": "src/anuvritti/domain/family.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_family.py -q",
+          "dependencies": [
+            "TASK-201"
+          ],
+          "prd_refs": [
+            "PRD 26",
+            "PRD 44",
+            "PRD 45"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/family.py",
+            "tests/unit/domain/test_family.py"
+          ]
+        },
+        {
+          "id": "TASK-203",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Spark aggregate: capture, apply_inference with provenance, record_why, override_field, mark_suggested, snooze, archive, plan, experience. Full lifecycle state machine returning Err(InvalidTransition) - never raising. Emits domain events.",
+          "module_path": "src/anuvritti/domain/spark.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_spark.py -q",
+          "dependencies": [
+            "TASK-201"
+          ],
+          "prd_refs": [
+            "PRD 9",
+            "PRD 10",
+            "PRD 12",
+            "PRD 13",
+            "PRD 43"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/spark.py",
+            "src/anuvritti/domain/events.py",
+            "tests/unit/domain/test_spark.py"
+          ]
+        },
+        {
+          "id": "TASK-204",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Remaining entities: Moment (Spark -> lived life, all evidence optional), LittleThing, RightNowSnapshot, MediaObject.",
+          "module_path": "src/anuvritti/domain/moment.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_moment.py tests/unit/domain/test_presence.py -q",
+          "dependencies": [
+            "TASK-203"
+          ],
+          "prd_refs": [
+            "PRD 15",
+            "PRD 17",
+            "PRD 18",
+            "PRD 48 F7-F9"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/moment.py",
+            "src/anuvritti/domain/presence.py",
+            "src/anuvritti/domain/media.py"
+          ]
+        },
+        {
+          "id": "TASK-205",
+          "role": "Principal Systems Architect",
+          "description": "Application ports: SparkRepository, MomentRepository, FamilyRepository, LittleThingRepository, RightNowRepository, MediaStore, IntentEngine, Transcriber, EventPublisher, UnitOfWork - all Result-typed Protocols.",
+          "module_path": "src/anuvritti/application/ports.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_ports.py -q",
+          "dependencies": [
+            "TASK-204"
+          ],
+          "prd_refs": [
+            "ADR-0001",
+            "PRD 63.4"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/ports.py",
+            "tests/unit/application/test_ports.py"
+          ]
+        },
+        {
+          "id": "TASK-206",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Return Engine domain service: pure weighted scoring (age_fit, maturation, occasion_fit, intent_actionability, why_present, novelty) plus constitutional dampers (snooze cooldown, archived exclusion, daily cap, no-guilt reason text).",
+          "module_path": "src/anuvritti/domain/return_engine.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_return_engine.py -q",
+          "dependencies": [
+            "TASK-203"
+          ],
+          "prd_refs": [
+            "PRD 14",
+            "PRD 8.5",
+            "PRD 48 F6"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/return_engine.py",
+            "tests/unit/domain/test_return_engine.py"
+          ]
+        },
+        {
+          "id": "TASK-207",
+          "role": "Senior Staff Backend Engineer",
+          "description": "HeuristicIntentEngine adapter: deterministic, offline, lexicon-driven inference of intent/category/age_range/tags/title with calibrated confidence. No network call.",
+          "module_path": "src/anuvritti/adapters/intent/heuristic.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/adapters/test_heuristic_intent.py -q",
+          "dependencies": [
+            "TASK-205"
+          ],
+          "prd_refs": [
+            "PRD 13",
+            "PRD 8.1",
+            "ADR-0004"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/adapters/intent/heuristic.py",
+            "tests/unit/adapters/test_heuristic_intent.py"
+          ]
+        },
+        {
+          "id": "TASK-208",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Capture use cases: CaptureSpark (universal capture, inline enrichment, under-10s no-form path), RecordWhy, OverrideAiField.",
+          "module_path": "src/anuvritti/application/capture.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_capture.py -q",
+          "dependencies": [
+            "TASK-205",
+            "TASK-207"
+          ],
+          "prd_refs": [
+            "PRD 11",
+            "PRD 12",
+            "PRD 48 F1-F3"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/capture.py",
+            "tests/support/fakes.py"
+          ]
+        },
+        {
+          "id": "TASK-209",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Safe Vault search use case: keyword + facet retrieval answering the PRD example queries (toys I saved, things for age 3, funny things, things about space, things to do outside, things I wanted to teach him). No folders.",
+          "module_path": "src/anuvritti/application/vault.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_vault.py -q",
+          "dependencies": [
+            "TASK-208"
+          ],
+          "prd_refs": [
+            "PRD 48 F5"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/vault.py",
+            "tests/unit/application/test_vault.py"
+          ]
+        },
+        {
+          "id": "TASK-210",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Return use cases: GetWorthBringingBack (scores, caps, marks suggested, builds guilt-free reason) and RespondToSuggestion (maybe_later | lets_do_it | not_relevant_anymore).",
+          "module_path": "src/anuvritti/application/returning.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_returning.py -q",
+          "dependencies": [
+            "TASK-206",
+            "TASK-208"
+          ],
+          "prd_refs": [
+            "PRD 14",
+            "PRD 48 F6"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/returning.py",
+            "tests/unit/application/test_returning.py"
+          ]
+        },
+        {
+          "id": "TASK-211",
+          "role": "Senior Staff Backend Engineer",
+          "description": "MarkAsDone use case: Spark -> Moment with every attachment optional (nothing is a valid answer), emitting MomentCreated with days_from_capture for the Intent->Moment metric.",
+          "module_path": "src/anuvritti/application/moments.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_moments.py -q",
+          "dependencies": [
+            "TASK-210"
+          ],
+          "prd_refs": [
+            "PRD 15",
+            "PRD 48 F7",
+            "PRD 53"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/moments.py",
+            "tests/unit/application/test_moments.py"
+          ]
+        },
+        {
+          "id": "TASK-212",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Presence use cases: CaptureLittleThing (one tap, no structure) and Right Now prompt selection + CaptureRightNow snapshot.",
+          "module_path": "src/anuvritti/application/presence.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_presence.py -q",
+          "dependencies": [
+            "TASK-205"
+          ],
+          "prd_refs": [
+            "PRD 17",
+            "PRD 18",
+            "PRD 48 F8-F9"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/presence.py",
+            "tests/unit/application/test_presence.py"
+          ]
+        },
+        {
+          "id": "TASK-213",
+          "role": "Senior Staff Backend Engineer",
+          "description": "SQLite persistence: idempotent migrations, WAL, UnitOfWork, and repositories for family/spark/moment/little_thing/right_now/media/domain_event. Provenance stored as discrete columns, never a blob.",
+          "module_path": "src/anuvritti/adapters/persistence",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_sqlite_repositories.py -q",
+          "dependencies": [
+            "TASK-205",
+            "TASK-204"
+          ],
+          "prd_refs": [
+            "PRD 42",
+            "ADR-0003",
+            "ADR-0005"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/adapters/persistence/schema.py",
+            "src/anuvritti/adapters/persistence/mapping.py",
+            "src/anuvritti/adapters/persistence/sqlite.py",
+            "tests/integration/test_sqlite_repositories.py"
+          ]
+        },
+        {
+          "id": "TASK-214",
+          "role": "Senior Staff Backend Engineer",
+          "description": "EncryptedFilesystemMediaStore: content-addressed, Fernet encryption at rest with key from env, MIME allow-list, size cap, and byte-level delete.",
+          "module_path": "src/anuvritti/adapters/media",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_media_store.py -q",
+          "dependencies": [
+            "TASK-205",
+            "TASK-103"
+          ],
+          "prd_refs": [
+            "PRD 44"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/adapters/media/filesystem.py",
+            "tests/integration/test_media_store.py"
+          ]
+        },
+        {
+          "id": "TASK-215",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Family data rights use cases: ExportEverything (complete readable archive + media manifest) and DeleteEverything (hard delete including media bytes), both emitting audit events.",
+          "module_path": "src/anuvritti/application/privacy.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_privacy_rights.py -q",
+          "dependencies": [
+            "TASK-213",
+            "TASK-214"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 45"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/privacy.py",
+            "tests/integration/test_privacy_rights.py"
+          ]
+        },
+        {
+          "id": "TASK-216",
+          "role": "Senior Staff Backend Engineer",
+          "description": "FastAPI interface adapter implementing docs/contracts/openapi.yaml, DomainError->HTTP mapping per the error catalog, and the composition root wiring all adapters.",
+          "module_path": "src/anuvritti/interfaces/http",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_http_api.py -q",
+          "dependencies": [
+            "TASK-209",
+            "TASK-211",
+            "TASK-212",
+            "TASK-215"
+          ],
+          "prd_refs": [
+            "docs/contracts/openapi.yaml"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/interfaces/http/app.py",
+            "src/anuvritti/interfaces/http/container.py",
+            "src/anuvritti/interfaces/http/schemas.py",
+            "src/anuvritti/interfaces/http/errors.py",
+            "src/anuvritti/interfaces/http/observability.py",
+            "src/anuvritti/interfaces/http/asgi.py",
+            "tests/integration/test_http_api.py"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 3: Resilience",
+      "owner": "QA/SRE",
+      "status": "completed",
+      "tasks": [
+        {
+          "id": "TASK-301",
+          "role": "Principal QA Automation Engineer",
+          "description": "E2E golden path: capture a reel -> AI infers -> why recorded -> months pass (frozen clock) -> Worth Bringing Back surfaces it -> lets_do_it -> mark done -> Moment exists and Intent->Moment metric increments.",
+          "module_path": "tests/e2e/test_golden_path.py",
+          "verification_command": ".venv/bin/python -m pytest tests/e2e -q",
+          "dependencies": [
+            "TASK-216"
+          ],
+          "prd_refs": [
+            "PRD 15",
+            "PRD 48",
+            "PRD 54"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "tests/e2e/test_golden_path.py"
+          ]
+        },
+        {
+          "id": "TASK-302",
+          "role": "Principal QA Automation Engineer",
+          "description": "Ethical Constitution as executable tests: no guilt/urgency vocabulary in suggestions, no streaks/scores/leaderboards on the wire, daily suggestion cap honoured, no location or screen-monitoring field accepted anywhere, PRD 49 non-scope absent from the codebase.",
+          "module_path": "tests/constitution",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution -q",
+          "dependencies": [
+            "TASK-216"
+          ],
+          "prd_refs": [
+            "PRD 8.5",
+            "PRD 46",
+            "PRD 47",
+            "PRD 49"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "tests/constitution/test_no_guilt.py",
+            "tests/constitution/test_no_surveillance.py",
+            "tests/constitution/test_v0_scope.py",
+            "tests/constitution/test_ai_honesty.py",
+            "src/anuvritti/config/logging.py"
+          ]
+        },
+        {
+          "id": "TASK-303",
+          "role": "Principal QA Automation Engineer",
+          "description": "Resilience and edge cases: link-rot (external source disappears, Spark keeps meaning), idempotent capture, clock boundaries, empty/oversized media, unicode, concurrent writes.",
+          "module_path": "tests/integration/test_resilience.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration -q",
+          "dependencies": [
+            "TASK-216"
+          ],
+          "prd_refs": [
+            "PRD 43",
+            "PRD 44"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "tests/integration/test_resilience.py",
+            "src/anuvritti/adapters/persistence/schema.py",
+            "src/anuvritti/adapters/persistence/sqlite.py"
+          ]
+        },
+        {
+          "id": "TASK-304",
+          "role": "Principal QA Automation Engineer",
+          "description": "Coverage gate: enforce >=90% on domain+application and >=80% overall in pytest config, so CI fails below threshold.",
+          "module_path": "pyproject.toml",
+          "verification_command": ".venv/bin/python -m pytest -q --cov=anuvritti --cov-fail-under=90",
+          "dependencies": [
+            "TASK-301",
+            "TASK-302",
+            "TASK-303"
+          ],
+          "prd_refs": [
+            "CLAUDE.md 1"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "tests/unit/application/test_failure_paths.py",
+            "tests/foundation/test_coverage_gates.py"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 4: Release",
+      "owner": "SRE",
+      "status": "completed",
+      "tasks": [
+        {
+          "id": "TASK-401",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Observability: /health, /ready, /metrics (Prometheus text incl. anti-metrics), request-id middleware, JSON access logs with no PII bodies.",
+          "module_path": "src/anuvritti/interfaces/http/observability.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_observability.py -q",
+          "dependencies": [
+            "TASK-216"
+          ],
+          "prd_refs": [
+            "PRD 53",
+            "PRD 63.4"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/interfaces/http/observability.py",
+            "tests/integration/test_observability.py"
+          ]
+        },
+        {
+          "id": "TASK-402",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Container: multi-stage Dockerfile on slim base, non-root user, no build toolchain in final layer, healthcheck, .dockerignore.",
+          "module_path": "Dockerfile",
+          "verification_command": ".venv/bin/python -m pytest tests/foundation/test_container_hardening.py -q",
+          "dependencies": [
+            "TASK-401"
+          ],
+          "prd_refs": [
+            "CLAUDE.md 1"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Dockerfile",
+            ".dockerignore",
+            "tests/foundation/test_container_hardening.py"
+          ]
+        },
+        {
+          "id": "TASK-403",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "GitHub Actions CI: ruff, mypy strict, pytest with coverage gates, pip-audit, secret scan, docker build - all blocking.",
+          "module_path": ".github/workflows/ci.yml",
+          "verification_command": ".venv/bin/python -m pytest tests/foundation/test_ci_pipeline.py -q",
+          "dependencies": [
+            "TASK-402"
+          ],
+          "prd_refs": [
+            "CLAUDE.md 1"
+          ],
+          "status": "completed",
+          "changed_files": [
+            ".github/workflows/ci.yml",
+            "tests/foundation/test_ci_pipeline.py",
+            "pyproject.toml"
+          ]
+        },
+        {
+          "id": "TASK-404",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Hardening report (docs/HARDENING.md), operator runbook and README covering run/test/export/delete and the 30-day validation protocol.",
+          "module_path": "docs/HARDENING.md",
+          "verification_command": ".venv/bin/python -m pytest tests/foundation/test_docs_present.py -q",
+          "dependencies": [
+            "TASK-403"
+          ],
+          "prd_refs": [
+            "PRD 54",
+            "PRD 63.7"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/HARDENING.md",
+            "docs/RUNBOOK.md",
+            "README.md",
+            "tests/foundation/test_docs_present.py"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 5: The Surface",
+      "owner": "Design Lead / Principal Mobile Engineer",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "TASK-501",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Preserve autovideo-engine before it is refactored: 4,779 lines and 13 test files currently have zero commits. Run its suite, then initialise history. Requires explicit user consent to commit.",
+          "module_path": "../autovideo-engine",
+          "verification_command": "cd ../autovideo-engine && git log --oneline | head -1",
+          "dependencies": [],
+          "prd_refs": [
+            "CLAUDE.md 3"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "/Users/prashantsingh/Projects/autovideo-engine/.gitignore"
+          ]
+        },
+        {
+          "id": "TASK-502",
+          "role": "Design Lead",
+          "description": "packages/world - the Anuvritti design language as code. Colour, type, space, elevation and motion tokens exported as both TypeScript and CSS custom properties, so one visual language serves the native app and the film scenes.",
+          "module_path": "packages/world/src/tokens.ts",
+          "verification_command": "npm --prefix packages/world test",
+          "dependencies": [],
+          "prd_refs": [
+            "PRD 56"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "packages/world/src/tokens.ts",
+            "packages/world/src/color.ts",
+            "packages/world/src/scale.ts",
+            "packages/world/src/css.ts",
+            "packages/world/scripts/build.ts",
+            "packages/world/test/world.test.ts"
+          ]
+        },
+        {
+          "id": "TASK-503",
+          "role": "Design Lead",
+          "description": "world specimen: a living page rendering every token and primitive, so drift between app and film is visible rather than discovered.",
+          "module_path": "packages/world/specimen/index.html",
+          "verification_command": "npm --prefix packages/world run specimen:check",
+          "dependencies": [
+            "TASK-502"
+          ],
+          "prd_refs": [
+            "PRD 56"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "packages/world/specimen/index.html",
+            "packages/world/scripts/check-specimen.ts"
+          ]
+        },
+        {
+          "id": "TASK-504",
+          "role": "Principal QA Automation Engineer",
+          "description": "tests/design - constitution tests for the interface, the pixel equivalent of test_no_guilt.py: no badges, counts, streaks or red dots; urgency colour reserved for destructive actions; elapsed time never rendered as a number.",
+          "module_path": "tests/design/test_no_scorekeeping.py",
+          "verification_command": ".venv/bin/python -m pytest tests/design -q",
+          "dependencies": [
+            "TASK-502"
+          ],
+          "prd_refs": [
+            "PRD 8.5",
+            "PRD 47",
+            "PRD 53"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "tests/design/test_no_scorekeeping.py",
+            "tests/design/world.py",
+            "Makefile"
+          ]
+        },
+        {
+          "id": "TASK-505",
+          "role": "Principal Mobile Engineer",
+          "description": "Expo application for iOS and Android, with a typed API client generated from the existing docs/contracts/openapi.yaml so the wire contract stays single-sourced.",
+          "module_path": "apps/mobile",
+          "verification_command": "npm --prefix apps/mobile test",
+          "dependencies": [
+            "TASK-502"
+          ],
+          "prd_refs": [
+            "PRD 48"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-506",
+          "role": "Principal Mobile Engineer",
+          "description": "The Spark as an object rather than a card: front is what was saved, back is why it was saved. The flip is the product's core gesture.",
+          "module_path": "apps/mobile/src/spark/SparkObject.tsx",
+          "verification_command": "npm --prefix apps/mobile test -- spark",
+          "dependencies": [
+            "TASK-505",
+            "TASK-503"
+          ],
+          "prd_refs": [
+            "PRD 9",
+            "PRD 12",
+            "PRD 56"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-507",
+          "role": "Principal Mobile Engineer",
+          "description": "Time as language, never as a number: bind describe_elapsed semantics through the client so the interface can say 'a Tuesday last spring' and cannot say '247 days'.",
+          "module_path": "apps/mobile/src/time/elapsed.ts",
+          "verification_command": "npm --prefix apps/mobile test -- elapsed",
+          "dependencies": [
+            "TASK-506",
+            "TASK-504"
+          ],
+          "prd_refs": [
+            "PRD 8.5",
+            "PRD 56"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-508",
+          "role": "Principal Mobile Engineer",
+          "description": "Capture under ten seconds: an iOS Share Extension and an Android SEND intent filter that post straight to /v1/sparks and answer with 'Saved.' - the PRD's primary path, native on both platforms.",
+          "module_path": "apps/mobile/share-extension",
+          "verification_command": "npm --prefix apps/mobile test -- capture",
+          "dependencies": [
+            "TASK-505"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 11",
+            "PRD 48"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-509",
+          "role": "Principal Mobile Engineer",
+          "description": "Offline-first capture queue with idempotent replay, so a parent with no signal still saves in under ten seconds.",
+          "module_path": "apps/mobile/src/queue",
+          "verification_command": "npm --prefix apps/mobile test -- queue",
+          "dependencies": [
+            "TASK-508"
+          ],
+          "prd_refs": [
+            "PRD 8.2"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-510",
+          "role": "Principal Mobile Engineer",
+          "description": "One-tap correction: the inferred chip cycles through alternatives and never becomes a form, driving the Attributed override path the domain already models.",
+          "module_path": "apps/mobile/src/spark/InferenceChip.tsx",
+          "verification_command": "npm --prefix apps/mobile test -- inference",
+          "dependencies": [
+            "TASK-506"
+          ],
+          "prd_refs": [
+            "PRD 8.1",
+            "PRD 13",
+            "PRD 48"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-511",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Device pairing authentication - closes HARDENING 5.1 for one family without taking on full multi-tenancy.",
+          "module_path": "src/anuvritti/interfaces/http/auth.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_auth.py -q",
+          "dependencies": [
+            "TASK-505"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "HARDENING 5.1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-512",
+          "role": "Principal Mobile Engineer",
+          "description": "Worth Bringing Back on the phone: at most one suggestion, dismissible forever, no counter and no unread state.",
+          "module_path": "apps/mobile/src/return",
+          "verification_command": "npm --prefix apps/mobile test -- return",
+          "dependencies": [
+            "TASK-507",
+            "TASK-510"
+          ],
+          "prd_refs": [
+            "PRD 14",
+            "PRD 8.5"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-513",
+          "role": "Principal QA Automation Engineer",
+          "description": "On-device end to end: share, saved, returned months later, lived. The golden path from tests/e2e, on real hardware.",
+          "module_path": "apps/mobile/e2e",
+          "verification_command": "npm --prefix apps/mobile run e2e",
+          "dependencies": [
+            "TASK-512",
+            "TASK-509",
+            "TASK-511"
+          ],
+          "prd_refs": [
+            "PRD 54"
+          ],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Phase 6: Voice",
+      "owner": "Principal Mobile Engineer / Senior Staff Backend Engineer",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-601",
+          "role": "Principal Mobile Engineer",
+          "description": "Hold to talk with a live waveform; release saves. Five seconds is the target, not a minimum.",
+          "module_path": "apps/mobile/src/voice/HoldToTalk.tsx",
+          "verification_command": "npm --prefix apps/mobile test -- voice",
+          "dependencies": [
+            "TASK-513"
+          ],
+          "prd_refs": [
+            "PRD 12",
+            "PRD 17"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-602",
+          "role": "Principal Mobile Engineer",
+          "description": "The recording is the artifact and the transcript is only an index: voice always renders above text and text never replaces it.",
+          "module_path": "apps/mobile/src/voice/Playback.tsx",
+          "verification_command": "npm --prefix apps/mobile test -- playback",
+          "dependencies": [
+            "TASK-601"
+          ],
+          "prd_refs": [
+            "PRD 12",
+            "PRD 8.7"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-603",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Transcriber port and an on-device adapter that makes no network call, so PRD 44's no-public-model default stays absolute rather than configured.",
+          "module_path": "src/anuvritti/application/ports.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/adapters/test_transcriber.py -q",
+          "dependencies": [
+            "TASK-601"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 39"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-604",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Voice to intent: transcripts feed the existing heuristic engine so speaking earns the same free categorisation that typing does.",
+          "module_path": "src/anuvritti/adapters/intent/heuristic.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/adapters/test_heuristic_voice.py -q",
+          "dependencies": [
+            "TASK-603"
+          ],
+          "prd_refs": [
+            "PRD 13",
+            "PRD 48"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-605",
+          "role": "Principal Mobile Engineer",
+          "description": "Little Things and the seed of the Papa Voice Vault - and the reason to record: every clip becomes a line in this year's film.",
+          "module_path": "apps/mobile/src/presence",
+          "verification_command": "npm --prefix apps/mobile test -- presence",
+          "dependencies": [
+            "TASK-602"
+          ],
+          "prd_refs": [
+            "PRD 17",
+            "PRD 21"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-606",
+          "role": "Principal QA Automation Engineer",
+          "description": "Constitution test: no recording is ever rejected, trimmed or re-recorded for being unpolished. Preserve imperfection.",
+          "module_path": "tests/constitution/test_preserve_imperfection.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_preserve_imperfection.py -q",
+          "dependencies": [
+            "TASK-605"
+          ],
+          "prd_refs": [
+            "PRD 24"
+          ],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Phase 7: The Memory Compiler",
+      "owner": "Principal Systems Architect / Senior Staff Backend Engineer",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-701",
+          "role": "Principal Systems Architect",
+          "description": "Extract filmkit: narration, timing, timeline, captions, compositor, cache store, browser rendering and manifest lifted out of autovideo-engine into a standalone package with no knowledge of either product.",
+          "module_path": "../filmkit",
+          "verification_command": "cd ../filmkit && python -m pytest -q",
+          "dependencies": [
+            "TASK-501"
+          ],
+          "prd_refs": [
+            "CLAUDE.md 1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-702",
+          "role": "Principal Systems Architect",
+          "description": "autovideo-engine consumes filmkit and its existing test files pass unchanged - the proof that the extraction was faithful rather than a rewrite.",
+          "module_path": "../autovideo-engine/src",
+          "verification_command": "cd ../autovideo-engine && python -m pytest -q",
+          "dependencies": [
+            "TASK-701"
+          ],
+          "prd_refs": [
+            "CLAUDE.md 1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-703",
+          "role": "Principal QA Automation Engineer",
+          "description": "filmkit inherits this project's gates: ruff, mypy strict, coverage at or above ninety per cent.",
+          "module_path": "../filmkit/Makefile",
+          "verification_command": "cd ../filmkit && make check",
+          "dependencies": [
+            "TASK-701"
+          ],
+          "prd_refs": [
+            "CLAUDE.md 1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-704",
+          "role": "Senior Staff Backend Engineer",
+          "description": "FilmCompiler port and a FilmkitFilmCompiler adapter, keeping Chromium and FFmpeg outside the domain and off the family's box.",
+          "module_path": "src/anuvritti/application/ports.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_film.py -q",
+          "dependencies": [
+            "TASK-703"
+          ],
+          "prd_refs": [
+            "PRD 34",
+            "CLAUDE.md 1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-705",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Moments compile to a filmspec plus a bundle of real media, with every scene declaring the source ids it draws from.",
+          "module_path": "src/anuvritti/application/film.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_filmspec.py -q",
+          "dependencies": [
+            "TASK-704"
+          ],
+          "prd_refs": [
+            "PRD 15",
+            "PRD 23",
+            "PRD 34"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-706",
+          "role": "Principal QA Automation Engineer",
+          "description": "Provenance checkpoints: a frame that cannot cite a real Spark, Moment or media id fails the build, and provenance.json ships beside the film. autovideo's evidence rule, applied to a family's memory.",
+          "module_path": "tests/constitution/test_film_provenance.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_film_provenance.py -q",
+          "dependencies": [
+            "TASK-705"
+          ],
+          "prd_refs": [
+            "PRD 8.7",
+            "PRD 47"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-707",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Narration is the parent's own recorded voice, measured never estimated. Synthesis is permitted only for neutral connective tissue and is marked as synthetic wherever it appears.",
+          "module_path": "src/anuvritti/application/film.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_real_voice.py -q",
+          "dependencies": [
+            "TASK-706",
+            "TASK-605"
+          ],
+          "prd_refs": [
+            "PRD 12",
+            "PRD 39",
+            "PRD 47"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-708",
+          "role": "Design Lead",
+          "description": "Film scenes built from packages/world, so the film looks like the app because it is literally the same tokens.",
+          "module_path": "packages/world/scenes",
+          "verification_command": "npm --prefix packages/world run scenes:check",
+          "dependencies": [
+            "TASK-705",
+            "TASK-502"
+          ],
+          "prd_refs": [
+            "PRD 56"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-709",
+          "role": "Senior Staff Backend Engineer",
+          "description": "The Year, In Their Own Voice, and birthday capsules: PRD 34's age four to eighteen, real in month one instead of year eighteen.",
+          "module_path": "src/anuvritti/application/film.py",
+          "verification_command": ".venv/bin/python -m pytest tests/e2e/test_the_year.py -q",
+          "dependencies": [
+            "TASK-707",
+            "TASK-708"
+          ],
+          "prd_refs": [
+            "PRD 34",
+            "PRD 35",
+            "PRD 52"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-710",
+          "role": "Design Lead",
+          "description": "A teaser render from seeded data, so the destination is visible long before there is a year of material.",
+          "module_path": "artifacts/teaser",
+          "verification_command": "test -f artifacts/teaser/teaser.mp4",
+          "dependencies": [
+            "TASK-708"
+          ],
+          "prd_refs": [
+            "PRD 56"
+          ],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Phase 8: Frictionless Meaning",
+      "owner": "Senior Staff Backend Engineer",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-801",
+          "role": "Senior Staff Backend Engineer",
+          "description": "FamilyLexicon: every correction trains that one family's private lexicon on their own device. No shared model, no network, no other family's data.",
+          "module_path": "src/anuvritti/domain/lexicon.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_lexicon.py -q",
+          "dependencies": [
+            "TASK-604"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 13",
+            "PRD 8.1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-802",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Constellations: categories emerge from what a family actually saves and name themselves in the family's own words, instead of a taxonomy the parent must learn.",
+          "module_path": "src/anuvritti/domain/constellation.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_constellation.py -q",
+          "dependencies": [
+            "TASK-801"
+          ],
+          "prd_refs": [
+            "PRD 40",
+            "PRD 41"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-803",
+          "role": "Principal QA Automation Engineer",
+          "description": "The unsorted pile is a first-class state: an uncategorised Spark still returns, on time alone, and is never counted or nagged about.",
+          "module_path": "tests/constitution/test_no_chores.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_no_chores.py -q",
+          "dependencies": [
+            "TASK-802"
+          ],
+          "prd_refs": [
+            "PRD 8.5",
+            "PRD 8.8"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-804",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Email-in ingest, so a grandparent can contribute with nothing installed and nothing learned.",
+          "module_path": "src/anuvritti/adapters/ingest/email.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_email_ingest.py -q",
+          "dependencies": [
+            "TASK-801"
+          ],
+          "prd_refs": [
+            "PRD 27",
+            "PRD 11"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-805",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Semantic search across the family archive, running on device.",
+          "module_path": "src/anuvritti/application/vault.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_semantic_search.py -q",
+          "dependencies": [
+            "TASK-802"
+          ],
+          "prd_refs": [
+            "PRD 21",
+            "PRD 50"
+          ],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Phase 9: Trust and the Second Family",
+      "owner": "Principal SRE & DevSecOps Lead",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-901",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Real authentication and enforced family isolation - HARDENING 5.1 closed completely, which is the gate on any second family existing.",
+          "module_path": "src/anuvritti/interfaces/http/auth.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_isolation.py -q",
+          "dependencies": [
+            "TASK-511"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "HARDENING 5.1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-902",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Co-parent: a second adult with equal standing, not a guest account.",
+          "module_path": "src/anuvritti/domain/family.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_coparent.py -q",
+          "dependencies": [
+            "TASK-901"
+          ],
+          "prd_refs": [
+            "PRD 26",
+            "PRD 51"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-903",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Grandparent mode: contribute and receive, with a surface that assumes nothing about phones.",
+          "module_path": "src/anuvritti/application/presence.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_grandparent.py -q",
+          "dependencies": [
+            "TASK-902",
+            "TASK-804"
+          ],
+          "prd_refs": [
+            "PRD 27"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-904",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Child data rights: the child can hide what they choose now and own the whole record later.",
+          "module_path": "src/anuvritti/application/privacy.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_child_rights.py -q",
+          "dependencies": [
+            "TASK-902"
+          ],
+          "prd_refs": [
+            "PRD 45",
+            "PRD 25",
+            "PRD 24"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-905",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Retention policy, automated backup and a restore that has actually been performed - HARDENING 5.4.",
+          "module_path": "docs/RUNBOOK.md",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_backup.py -q",
+          "dependencies": [
+            "TASK-901"
+          ],
+          "prd_refs": [
+            "HARDENING 5.4",
+            "PRD 44"
+          ],
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "completed_tasks": [
+    "TASK-101",
+    "TASK-102",
+    "TASK-103",
+    "TASK-104",
+    "TASK-105",
+    "TASK-201",
+    "TASK-202",
+    "TASK-203",
+    "TASK-204",
+    "TASK-205",
+    "TASK-206",
+    "TASK-207",
+    "TASK-208",
+    "TASK-209",
+    "TASK-210",
+    "TASK-211",
+    "TASK-212",
+    "TASK-213",
+    "TASK-214",
+    "TASK-215",
+    "TASK-216",
+    "TASK-301",
+    "TASK-302",
+    "TASK-303",
+    "TASK-304",
+    "TASK-401",
+    "TASK-402",
+    "TASK-403",
+    "TASK-404",
+    "TASK-501",
+    "TASK-502",
+    "TASK-503",
+    "TASK-504"
+  ],
+  "blocked_tasks": []
+}

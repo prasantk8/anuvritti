@@ -1,0 +1,362 @@
+openapi: 3.1.0
+info:
+  title: Anuvritti API
+  version: 0.1.0
+  description: >
+    V0 — Family presence, intent & memory platform. Scope frozen to PRD §48.
+    Every AI-derived field is returned with provenance (PRD §13, §42, ADR-0005).
+servers: [{ url: /v1 }]
+
+paths:
+  /health: { get: { summary: Liveness, responses: { "200": { description: ok } } } }
+  /ready:  { get: { summary: Readiness (checks store + media), responses: { "200": { description: ready }, "503": { description: not ready } } } }
+  /metrics: { get: { summary: Prometheus text exposition, responses: { "200": { description: ok } } } }
+
+  /families:
+    post:
+      summary: Create the family (bootstrap)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreateFamily" } } } }
+      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Family" } } } } }
+
+  /families/{family_id}/children:
+    post:
+      summary: Add a child profile
+      parameters: [{ $ref: "#/components/parameters/FamilyId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreateChild" } } } }
+      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Child" } } } } }
+
+  /sparks:
+    post:
+      summary: Universal Capture (PRD §11, §48 F1) — target < 10s, no long form
+      description: Accepts url | text | screenshot | photo | voice. AI enrichment runs inline.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CaptureSpark" } } } }
+      responses:
+        "201": { description: "Saved ✨", content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } }
+        "422": { $ref: "#/components/responses/Error" }
+    get:
+      summary: Safe Vault search (PRD §48 F5) — natural-ish queries, no folders
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: "e.g. 'toys I saved', 'things about space'" }
+        - { name: intent, in: query, schema: { $ref: "#/components/schemas/IntentType" } }
+        - { name: child_id, in: query, schema: { type: string } }
+        - { name: age, in: query, schema: { type: integer }, description: Sparks whose age range contains this age }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/SparkStatus" } }
+        - { name: limit, in: query, schema: { type: integer, default: 25, maximum: 100 } }
+      responses: { "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Spark" } } } } } }
+
+  /sparks/{spark_id}:
+    get:
+      parameters: [{ $ref: "#/components/parameters/SparkId" }]
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } }, "404": { $ref: "#/components/responses/Error" } }
+
+  /sparks/{spark_id}/why:
+    post:
+      summary: Optional human "Why" (PRD §12, §48 F3) — always skippable
+      parameters: [{ $ref: "#/components/parameters/SparkId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RecordWhy" } } } }
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } } }
+
+  /sparks/{spark_id}/override:
+    post:
+      summary: Human correction of an AI field. The human always wins (PRD §13).
+      parameters: [{ $ref: "#/components/parameters/SparkId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OverrideField" } } } }
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } } }
+
+  /sparks/{spark_id}/done:
+    post:
+      summary: '"Did this happen?" → Spark becomes a Moment (PRD §15, §48 F7)'
+      description: Every attachment is optional. "Nothing" is a valid answer — no journaling burden.
+      parameters: [{ $ref: "#/components/parameters/SparkId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/MarkAsDone" } } } }
+      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Moment" } } } }, "409": { $ref: "#/components/responses/Error" } }
+
+  /return/worth-bringing-back:
+    get:
+      summary: Worth Bringing Back (PRD §14, §48 F6)
+      description: >
+        Returns at most `max_suggestions_per_day` items. An empty list is normal and silent.
+        Payload contains no urgency, no counters, no guilt (PRD §8.5, enforced by test).
+      parameters:
+        - { name: family_id, in: query, required: true, schema: { type: string } }
+        - { name: child_id, in: query, schema: { type: string } }
+      responses: { "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Suggestion" } } } } } }
+
+  /return/{spark_id}/respond:
+    post:
+      summary: Maybe later / Let's do it / Not relevant anymore
+      parameters: [{ $ref: "#/components/parameters/SparkId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SuggestionResponse" } } } }
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Spark" } } } } }
+
+  /little-things:
+    post:
+      summary: Little Things — one-tap capture, no structure (PRD §17, §48 F8)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CaptureLittleThing" } } } }
+      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/LittleThing" } } } } }
+
+  /right-now:
+    get:
+      summary: Get today's Right Now prompt (PRD §18, §48 F9)
+      parameters: [{ name: family_id, in: query, required: true, schema: { type: string } }]
+      responses: { "200": { description: ok, content: { application/json: { schema: { type: object, properties: { prompt: { type: string } } } } } } }
+    post:
+      summary: Answer a Right Now prompt
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CaptureRightNow" } } } }
+      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/RightNow" } } } } }
+
+  /media:
+    post:
+      summary: Upload media (encrypted at rest, PRD §44)
+      requestBody: { required: true, content: { multipart/form-data: { schema: { type: object, properties: { family_id: { type: string }, kind: { type: string }, file: { type: string, format: binary } } } } } }
+      responses: { "201": { description: created, content: { application/json: { schema: { $ref: "#/components/schemas/Media" } } } }, "413": { $ref: "#/components/responses/Error" }, "415": { $ref: "#/components/responses/Error" } }
+
+  /families/{family_id}/export:
+    get:
+      summary: Export everything (PRD §44 — non-negotiable)
+      parameters: [{ $ref: "#/components/parameters/FamilyId" }]
+      responses: { "200": { description: complete archive, content: { application/json: { schema: { $ref: "#/components/schemas/FamilyExport" } } } } }
+
+  /families/{family_id}:
+    delete:
+      summary: Delete everything, including media bytes (PRD §44)
+      parameters: [{ $ref: "#/components/parameters/FamilyId" }]
+      responses: { "200": { description: deleted, content: { application/json: { schema: { type: object, additionalProperties: { type: integer } } } } } }
+
+components:
+  parameters:
+    FamilyId: { name: family_id, in: path, required: true, schema: { type: string } }
+    SparkId:  { name: spark_id,  in: path, required: true, schema: { type: string } }
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object }
+
+    IntentType:
+      type: string
+      description: V0 ships six (PRD §48 F4). Others exist in the model but are gated off.
+      enum: [DO, BUY, WATCH, READ, TEACH, REMEMBER]
+
+    SparkStatus:
+      type: string
+      enum: [CAPTURED, WAITING, RELEVANT, SUGGESTED, PLANNED, EXPERIENCED, REMEMBERED, ARCHIVED]
+
+    SourceKind:
+      type: string
+      enum: [URL, TEXT, SCREENSHOT, PHOTO, VOICE]
+
+    Visibility:
+      type: string
+      enum: [PRIVATE, FAMILY, CHILD_VISIBLE]
+
+    Attributed:
+      type: object
+      description: PRD §13/§42 — every AI-derived field carries its provenance.
+      required: [value, source, confidence, human_override]
+      properties:
+        value: {}
+        source: { type: string, enum: [HUMAN, AI, DEFAULT] }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        human_override: { type: boolean }
+
+    AgeRange:
+      type: object
+      properties: { min_years: { type: integer }, max_years: { type: integer } }
+
+    CreateFamily:
+      type: object
+      required: [name, owner_display_name]
+      properties: { name: { type: string }, owner_display_name: { type: string } }
+
+    Family:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        members: { type: array, items: { $ref: "#/components/schemas/Member" } }
+        children: { type: array, items: { $ref: "#/components/schemas/Child" } }
+
+    Member:
+      type: object
+      properties:
+        id: { type: string }
+        display_name: { type: string }
+        role: { type: string, enum: [PARENT, CO_PARENT, CHILD, GRANDPARENT] }
+
+    CreateChild:
+      type: object
+      required: [display_name, date_of_birth]
+      properties: { display_name: { type: string }, date_of_birth: { type: string, format: date } }
+
+    Child:
+      type: object
+      properties:
+        id: { type: string }
+        display_name: { type: string }
+        date_of_birth: { type: string, format: date }
+        age_years: { type: integer }
+
+    CaptureSpark:
+      type: object
+      required: [family_id, owner_id, source]
+      properties:
+        family_id: { type: string }
+        owner_id: { type: string }
+        subject_child_id: { type: string, nullable: true }
+        source:
+          type: object
+          required: [kind]
+          properties:
+            kind: { $ref: "#/components/schemas/SourceKind" }
+            url: { type: string, nullable: true }
+            text: { type: string, nullable: true }
+            creator: { type: string, nullable: true }
+            title: { type: string, nullable: true }
+            media_id: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        visibility: { $ref: "#/components/schemas/Visibility" }
+
+    Spark:
+      type: object
+      properties:
+        id: { type: string }
+        family_id: { type: string }
+        owner_id: { type: string }
+        subject_child_id: { type: string, nullable: true }
+        title: { type: string }
+        note: { type: string, nullable: true }
+        source:
+          type: object
+          description: PRD §43 — a Spark keeps its meaning even if the link dies.
+          properties:
+            kind: { $ref: "#/components/schemas/SourceKind" }
+            url: { type: string, nullable: true }
+            creator: { type: string, nullable: true }
+            title: { type: string, nullable: true }
+            media_id: { type: string, nullable: true }
+        intent: { $ref: "#/components/schemas/Attributed" }
+        age_range: { $ref: "#/components/schemas/Attributed" }
+        category: { $ref: "#/components/schemas/Attributed" }
+        tags: { type: array, items: { type: string } }
+        why: { type: object, nullable: true, properties: { text: { type: string, nullable: true }, voice_media_id: { type: string, nullable: true }, recorded_at: { type: string, format: date-time } } }
+        status: { $ref: "#/components/schemas/SparkStatus" }
+        visibility: { $ref: "#/components/schemas/Visibility" }
+        created_at: { type: string, format: date-time }
+
+    RecordWhy:
+      type: object
+      description: At least one of text / voice_media_id. Voice preferred (PRD §12).
+      properties: { text: { type: string, nullable: true }, voice_media_id: { type: string, nullable: true } }
+
+    OverrideField:
+      type: object
+      required: [field, value]
+      properties:
+        field: { type: string, enum: [intent, age_range, category] }
+        value: {}
+
+    Suggestion:
+      type: object
+      description: >
+        PRD §14/§48 F6. Contains no urgency, no counts, no streaks. `reason` is warm
+        and factual; `actions` are exactly the three the PRD names.
+      properties:
+        spark: { $ref: "#/components/schemas/Spark" }
+        reason: { type: string, example: "You saved this 8 months ago. He may be ready now." }
+        days_since_capture: { type: integer }
+        actions: { type: array, items: { type: string, enum: [maybe_later, lets_do_it, not_relevant_anymore] } }
+
+    SuggestionResponse:
+      type: object
+      required: [response]
+      properties:
+        response: { type: string, enum: [maybe_later, lets_do_it, not_relevant_anymore] }
+
+    MarkAsDone:
+      type: object
+      description: All fields optional — "nothing" is a valid answer (PRD §15).
+      properties:
+        happened_on: { type: string, format: date, nullable: true }
+        reflection: { type: string, nullable: true }
+        photo_media_id: { type: string, nullable: true }
+        audio_media_id: { type: string, nullable: true }
+
+    Moment:
+      type: object
+      properties:
+        id: { type: string }
+        spark_id: { type: string }
+        happened_on: { type: string, format: date }
+        reflection: { type: string, nullable: true }
+        photo_media_id: { type: string, nullable: true }
+        audio_media_id: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    CaptureLittleThing:
+      type: object
+      required: [family_id, author_id]
+      properties:
+        family_id: { type: string }
+        author_id: { type: string }
+        subject_child_id: { type: string, nullable: true }
+        text: { type: string, nullable: true }
+        audio_media_id: { type: string, nullable: true }
+
+    LittleThing:
+      type: object
+      properties:
+        id: { type: string }
+        text: { type: string, nullable: true }
+        audio_media_id: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    CaptureRightNow:
+      type: object
+      required: [family_id, child_id, prompt, answer]
+      properties:
+        family_id: { type: string }
+        child_id: { type: string }
+        prompt: { type: string }
+        answer: { type: string }
+
+    RightNow:
+      type: object
+      properties:
+        id: { type: string }
+        child_id: { type: string }
+        prompt: { type: string }
+        answer: { type: string }
+        captured_at: { type: string, format: date-time }
+
+    Media:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        mime_type: { type: string }
+        byte_size: { type: integer }
+        encrypted: { type: boolean }
+
+    FamilyExport:
+      type: object
+      description: PRD §44 — export everything, in a form the family can actually read.
+      properties:
+        exported_at: { type: string, format: date-time }
+        family: { $ref: "#/components/schemas/Family" }
+        sparks: { type: array, items: { $ref: "#/components/schemas/Spark" } }
+        moments: { type: array, items: { $ref: "#/components/schemas/Moment" } }
+        little_things: { type: array, items: { $ref: "#/components/schemas/LittleThing" } }
+        right_now: { type: array, items: { $ref: "#/components/schemas/RightNow" } }
+        media_manifest: { type: array, items: { $ref: "#/components/schemas/Media" } }

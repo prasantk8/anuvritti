@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Anuvritti World — Specimen</title>
+<link rel="stylesheet" href="../dist/world.css">
+<style>
+  /* Structure only. Every colour, size, space and duration below comes from a token;
+     `npm run specimen:check` fails this page if a raw value creeps in. */
+  .page { max-width: 62rem; margin: 0 auto; padding: var(--w-space-7) var(--w-space-5) var(--w-space-breath); }
+  header { display: flex; flex-direction: column; gap: var(--w-space-2); margin-bottom: var(--w-space-7); }
+  h1 { font-family: var(--w-font-display); font-size: var(--w-size-name); font-weight: var(--w-weight-regular);
+       letter-spacing: var(--w-tracking-name); line-height: var(--w-leading-tight); margin: 0; text-wrap: balance; }
+  .sub { color: var(--w-color-ink-quiet); max-width: var(--w-layout-measure); margin: 0; }
+  section { margin-top: var(--w-space-8); display: flex; flex-direction: column; gap: var(--w-space-4); }
+  h2 { font-family: var(--w-font-body); font-size: var(--w-size-micro); font-weight: var(--w-weight-semibold);
+       text-transform: uppercase; letter-spacing: var(--w-tracking-label); color: var(--w-color-ink-faint);
+       margin: 0; padding-bottom: var(--w-space-2); border-bottom: 1px solid var(--w-color-thread); }
+  h3 { font-family: var(--w-font-display); font-size: var(--w-size-title); font-weight: var(--w-weight-regular);
+       margin: 0; line-height: var(--w-leading-tight); }
+  p { margin: 0; }
+  .note { color: var(--w-color-ink-quiet); font-size: var(--w-size-fine); max-width: var(--w-layout-measure); }
+  .mono { font-family: var(--w-font-mono); font-size: var(--w-size-micro); color: var(--w-color-ink-faint); }
+
+  /* -- palette ------------------------------------------------------------- */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: var(--w-space-3); }
+  .swatch { border: 1px solid var(--w-color-thread); border-radius: var(--w-radius-cut); overflow: hidden;
+            background: var(--w-color-surface); display: flex; flex-direction: column; }
+  .chipfill { height: var(--w-space-8); border-bottom: 1px solid var(--w-color-thread); }
+  .swatch .meta { padding: var(--w-space-3); display: flex; flex-direction: column; gap: var(--w-space-1); }
+  .swatch .name { font-family: var(--w-font-mono); font-size: var(--w-size-micro); }
+  .role { align-self: flex-start; font-size: var(--w-size-micro); text-transform: uppercase;
+          letter-spacing: var(--w-tracking-label); padding: var(--w-space-hair) var(--w-space-2);
+          border-radius: var(--w-radius-round); background: var(--w-color-indigo-wash); color: var(--w-color-indigo); }
+  .role[data-role="voice"] { background: var(--w-color-saffron-wash); color: var(--w-color-saffron); }
+  .role[data-role="destructive"] { background: transparent; color: var(--w-color-unmade);
+                                   box-shadow: inset 0 0 0 1px var(--w-color-unmade); }
+  .swatch .why { font-size: var(--w-size-fine); color: var(--w-color-ink-quiet); line-height: var(--w-leading-read); }
+
+  /* -- type ---------------------------------------------------------------- */
+  .type-row { display: flex; align-items: baseline; gap: var(--w-space-4); padding: var(--w-space-2) 0;
+              border-bottom: 1px solid var(--w-color-thread); }
+  .type-row .label { flex: 0 0 7rem; }
+
+  /* -- scales -------------------------------------------------------------- */
+  .bars { display: flex; flex-direction: column; gap: var(--w-space-2); }
+  .bar { display: flex; align-items: center; gap: var(--w-space-3); }
+  .bar .fill { height: var(--w-space-3); background: var(--w-color-indigo); border-radius: var(--w-radius-edge); }
+  .tiles { display: flex; flex-wrap: wrap; gap: var(--w-space-4); }
+  .tile { width: var(--w-space-9); height: var(--w-space-8); background: var(--w-color-surface-lifted);
+          border: 1px solid var(--w-color-thread); display: grid; place-items: center;
+          font-family: var(--w-font-mono); font-size: var(--w-size-micro); color: var(--w-color-ink-faint); }
+
+  /* -- the Spark, the one object a parent handles -------------------------- */
+  .stage { display: flex; flex-wrap: wrap; gap: var(--w-space-5); align-items: flex-start; }
+  .spark { flex: 0 0 auto; width: 21rem; aspect-ratio: 5 / 4; border: 0; padding: 0; background: transparent;
+           perspective: 1400px; cursor: pointer; font: inherit; text-align: left; }
+  /* `display: block` matters: .inner is a <span>, and width/height do not apply to an
+     inline box, which silently collapses the 3D positioning context to zero height. */
+  .spark .inner { display: block; position: relative; width: 100%; height: 100%;
+                  transform-style: preserve-3d;
+                  transition: transform var(--w-duration-flip) var(--w-easing-move); }
+  .spark[aria-pressed="true"] .inner { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: var(--w-radius-object);
+          border: 1px solid var(--w-color-thread); background: var(--w-color-surface);
+          box-shadow: var(--w-elevation-resting); padding: var(--w-space-4);
+          display: flex; flex-direction: column; gap: var(--w-space-2); }
+  .face.back { transform: rotateY(180deg); background: var(--w-color-surface-lifted);
+               box-shadow: var(--w-elevation-lifted); }
+  .spark:hover .face { box-shadow: var(--w-elevation-lifted); }
+  .spark .title { font-family: var(--w-font-display); font-size: var(--w-size-chapter);
+                  line-height: var(--w-leading-tight); text-wrap: balance; }
+  .spark .when { color: var(--w-color-ink-faint); font-size: var(--w-size-fine); margin-top: auto; }
+  /* The display face's stated meaning is "a single sentence a parent said". A recorded
+     why is exactly that, so it is set in the display face and the app's own words are not. */
+  .spark .why { font-family: var(--w-font-display); font-size: var(--w-size-title);
+                line-height: var(--w-leading-open); color: var(--w-color-ink); }
+  .voiceline { display: flex; align-items: center; gap: var(--w-space-2); color: var(--w-color-saffron);
+               font-size: var(--w-size-fine); }
+  .wave { display: flex; align-items: center; gap: 2px; height: var(--w-space-5); }
+  .wave i { display: block; width: 2px; border-radius: var(--w-radius-round); background: var(--w-color-saffron); }
+
+  /* -- chips, fields, the one destructive action --------------------------- */
+  .chips { display: flex; flex-wrap: wrap; gap: var(--w-space-2); }
+  .chip { font-size: var(--w-size-fine); padding: var(--w-space-2) var(--w-space-3);
+          border-radius: var(--w-radius-round); border: 1px solid var(--w-color-thread-strong);
+          background: var(--w-color-surface); color: var(--w-color-ink-quiet); cursor: pointer;
+          min-height: var(--w-layout-touch); transition: background var(--w-duration-settle) var(--w-easing-move); }
+  .chip[aria-pressed="true"] { background: var(--w-color-indigo-wash); border-color: var(--w-color-indigo);
+                               color: var(--w-color-indigo); }
+  .field { width: 100%; max-width: var(--w-layout-measure); min-height: var(--w-layout-touch);
+           padding: var(--w-space-3); border-radius: var(--w-radius-cut); font: inherit;
+           border: 1px solid var(--w-color-thread-strong); background: var(--w-color-ground-sunk);
+           color: var(--w-color-ink); }
+  .field::placeholder { color: var(--w-color-ink-faint); }
+  .destructive { align-self: flex-start; min-height: var(--w-layout-touch); padding: 0 var(--w-space-4);
+                 border-radius: var(--w-radius-cut); font: inherit; cursor: pointer;
+                 background: transparent; color: var(--w-color-unmade);
+                 border: 1px solid var(--w-color-unmade); }
+
+  /* -- time as language ---------------------------------------------------- */
+  .times { display: flex; flex-direction: column; gap: var(--w-space-3); }
+  .time { display: flex; gap: var(--w-space-4); align-items: baseline; }
+  .time .said { font-family: var(--w-font-display); font-size: var(--w-size-lead); flex: 0 0 14rem; }
+  .time .not { font-family: var(--w-font-mono); font-size: var(--w-size-micro); color: var(--w-color-ink-faint);
+               text-decoration: line-through; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spark .inner { transition-duration: var(--w-duration-flip); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>The Anuvritti World</h1>
+  <p class="sub">Every token and every primitive, on one page. The native app and the film scenes are
+  built from this file's output, so anything that drifts between them shows up here first.</p>
+  <p class="mono">packages/world &middot; specimen</p>
+</header>
+
+<section id="palette">
+  <h2>Colour — indigo dye on undyed cloth</h2>
+  <p class="note">Each token states the role it plays. A colour used outside its role is a design
+  bug the tests can catch, not a matter of taste.</p>
+  <div class="swatches" id="swatches"></div>
+</section>
+
+<section id="type">
+  <h2>Type</h2>
+  <div id="typerows"></div>
+</section>
+
+<section id="spark">
+  <h2>The Spark — the one object a parent handles</h2>
+  <p class="note">Saving captures a thing. Flipping it over shows why it was worth saving. The reverse
+  is the only place the voice colour appears, because it is the only place a person actually spoke.</p>
+  <div class="stage">
+    <button class="spark" aria-pressed="false" aria-label="Flip to see why this was saved">
+      <span class="inner">
+        <span class="face front">
+          <span class="title">A second-hand telescope, in the shop on Brigade Road</span>
+          <span class="when">Saved one winter, when he was four</span>
+        </span>
+        <span class="face back">
+          <span class="why">&ldquo;I never had one growing up. I used to stand at the window and just guess.&rdquo;</span>
+          <span class="voiceline"><span class="wave" data-wave></span> Papa&rsquo;s voice &middot; 11 seconds</span>
+          <span class="when">Nothing here was written by the app</span>
+        </span>
+      </span>
+    </button>
+    <div style="display:flex;flex-direction:column;gap:var(--w-space-3);max-width:var(--w-layout-measure)">
+      <h3>What saving feels like</h3>
+      <p class="note">One share, no form. The app guesses the category and shows its guess as a chip
+      that can be corrected in a single tap — never a required field, never a blocking modal.</p>
+      <div class="chips">
+        <button class="chip" aria-pressed="true">Wonder</button>
+        <button class="chip" aria-pressed="false">Books</button>
+        <button class="chip" aria-pressed="false">Someday</button>
+        <button class="chip" aria-pressed="false">Unsorted</button>
+      </div>
+      <input class="field" placeholder="Say why, or leave it — it keeps either way">
+      <button class="destructive">Erase this permanently</button>
+      <p class="note">The only red in the product. Reserved for what cannot be undone.</p>
+    </div>
+  </div>
+</section>
+
+<section id="time">
+  <h2>Time as language</h2>
+  <p class="note">Elapsed time is never rendered as a number. A count invites arithmetic, and
+  arithmetic about your own child is guilt with a unit attached.</p>
+  <div class="times" id="times"></div>
+</section>
+
+<section id="space">
+  <h2>Space, edge, elevation</h2>
+  <div class="bars" id="spacebars"></div>
+  <div class="tiles" id="radii"></div>
+  <div class="tiles" id="elevations"></div>
+</section>
+
+<section id="motion">
+  <h2>Motion</h2>
+  <p class="note">Everything is capped at the considered duration. The flip is the single exception,
+  because turning an object over is the gesture the product is built around.</p>
+  <div class="bars" id="durations"></div>
+</section>
+
+</div>
+
+<script type="module">
+// The specimen renders itself from the emitted CSS, so it can never describe a token
+// the stylesheet does not actually define.
+import { COLORS, FONTS, TYPE_SIZE, SPACE, RADIUS, ELEVATION, DURATION } from "../dist/tokens.js";
+
+const css = getComputedStyle(document.documentElement);
+const v = (n) => css.getPropertyValue(n).trim();
+
+document.getElementById("swatches").innerHTML = COLORS.map((c) => `
+  <div class="swatch">
+    <div class="chipfill" style="background: var(--w-color-${c.name})"></div>
+    <div class="meta">
+      <span class="name">--w-color-${c.name}</span>
+      <span class="role" data-role="${c.role}">${c.role}</span>
+      <span class="why">${c.meaning}</span>
+    </div>
+  </div>`).join("");
+
+document.getElementById("typerows").innerHTML = FONTS.map((f) => `
+  <div class="type-row">
+    <span class="label mono">${f.name}</span>
+    <span style="font-family: var(--w-font-${f.name}); font-size: var(--w-size-title)">
+      Aarav asked why the moon follows the car
+    </span>
+  </div>`).join("") + Object.keys(TYPE_SIZE).map((k) => `
+  <div class="type-row">
+    <span class="label mono">size-${k}</span>
+    <span style="font-family: var(--w-font-display); font-size: var(--w-size-${k})">Anuvritti</span>
+    <span class="mono">${v(`--w-size-${k}`)}</span>
+  </div>`).join("");
+
+document.getElementById("spacebars").innerHTML = Object.keys(SPACE).map((k) => `
+  <div class="bar">
+    <span class="label mono" style="flex:0 0 7rem">space-${k}</span>
+    <span class="fill" style="width: var(--w-space-${k})"></span>
+    <span class="mono">${v(`--w-space-${k}`)}</span>
+  </div>`).join("");
+
+document.getElementById("radii").innerHTML = Object.keys(RADIUS).map((k) => `
+  <div class="tile" style="border-radius: var(--w-radius-${k})">${k}</div>`).join("");
+
+document.getElementById("elevations").innerHTML = Object.keys(ELEVATION).map((k) => `
+  <div class="tile" style="box-shadow: var(--w-elevation-${k}); border-radius: var(--w-radius-object)">${k}</div>`).join("");
+
+document.getElementById("durations").innerHTML = Object.keys(DURATION).map((k) => `
+  <div class="bar">
+    <span class="label mono" style="flex:0 0 7rem">${k}</span>
+    <span class="fill" style="width: ${Math.round(DURATION[k] / 4)}px"></span>
+    <span class="mono">${v(`--w-duration-${k}`)}</span>
+  </div>`).join("");
+
+// Time, said rather than counted.
+const SAID = [ // second column is a counter-example: what the product refuses to render
+ 
+  ["Earlier today", "4 hours ago"],
+  ["Yesterday", "1 day ago"],
+  ["Last week", "8 days ago"],
+  ["Earlier this spring", "63 days ago"],
+  ["The winter he was four", "247 days ago"],
+  ["Before she could read", "1,120 days ago"],
+];
+document.getElementById("times").innerHTML = SAID.map(([said, not]) => `
+  <div class="time"><span class="said">${said}</span><span class="not" data-counterexample>${not}</span></div>`).join("");
+
+// A waveform drawn from a fixed sample, not random: the same clip must look the same
+// in the app and in the film.
+const SAMPLE = [3,7,12,9,16,22,18,11,6,14,21,26,19,13,8,5,10,17,23,15,9,6,4,8,12,7,3];
+for (const wave of document.querySelectorAll("[data-wave]")) {
+  wave.innerHTML = SAMPLE.map((h) => `<i style="height:${h}px"></i>`).join("");
+}
+
+for (const el of document.querySelectorAll(".spark, .chip")) {
+  el.addEventListener("click", () => {
+    el.setAttribute("aria-pressed", el.getAttribute("aria-pressed") === "true" ? "false" : "true");
+  });
+}
+</script>
+</body>
+</html>

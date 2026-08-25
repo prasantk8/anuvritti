@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A workflow that can write to the repo is a supply-chain surface. It cannot.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ---------------------------------------------------------------- quality
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: ruff check
+        run: ruff check src tests
+      - name: ruff format
+        run: ruff format --check src tests
+
+  types:
+    name: Type check (strict)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: mypy
+
+  # ------------------------------------------------------------------ tests
+  test:
+    name: Tests & coverage gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+
+      # CLAUDE.md: >= 90% unit. The domain and application layers hold every rule
+      # the PRD promises, so they carry the strict gate.
+      - name: Core coverage gate (domain + application >= 90%)
+        run: |
+          pytest --cov=anuvritti.domain --cov=anuvritti.application \
+                 --cov-report=term-missing --cov-fail-under=90
+
+      # CLAUDE.md: >= 80% integration.
+      - name: Overall coverage gate (>= 80%)
+        run: pytest --cov=anuvritti --cov-report=term-missing --cov-fail-under=80
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: .coverage
+          if-no-files-found: ignore
+
+  # ---------------------------------------------- the PRD's own boundaries
+  constitution:
+    name: Ethical constitution (PRD 8.5, 46, 47, 49)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: The product must not cross a line the founder said it would not cross
+        run: pytest tests/constitution tests/architecture -v
+
+  # -------------------------------------------------------------- security
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+
+      - name: Dependency audit
+        run: |
+          pip install pip-audit
+          pip-audit --requirement requirements.txt --strict
+
+      - name: Static application security testing
+        run: |
+          pip install bandit[toml]
+          bandit -r src -ll
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: No .env committed
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo "::error::.env is committed - PRD 44 requires zero secrets in the repo"
+            exit 1
+          fi
+
+  # --------------------------------------------------------------- container
+  container:
+    name: Container build & scan
+    runs-on: ubuntu-latest
+    needs: [lint, types, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: anuvritti:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify the image does not run as root
+        run: |
+          user="$(docker image inspect anuvritti:ci --format '{{.Config.User}}')"
+          echo "image user: ${user:-<empty>}"
+          if [ -z "$user" ] || [ "$user" = "root" ] || [ "${user%%:*}" = "0" ]; then
+            echo "::error::the image would run as root"
+            exit 1
+          fi
+
+      - name: Verify the image refuses to start without an encryption key
+        run: |
+          # PRD 44: production must not run without encryption at rest.
+          if docker run --rm -e ANUVRITTI_ENV=production anuvritti:ci --help >/dev/null 2>&1; then
+            echo "::error::the image started in production without ANUVRITTI_MEDIA_KEY"
+            exit 1
+          fi
+
+      - name: Vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: anuvritti:ci
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+  # ------------------------------------------------------------------ gate
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    needs: [lint, types, test, constitution, security, container]
+    if: always()
+    steps:
+      - name: Require every job to pass
+        run: |
+          if echo '${{ toJSON(needs) }}' | grep -q '"result": *"\(failure\|cancelled\)"'; then
+            echo "::error::a required job did not pass"
+            exit 1
+          fi
+          echo "all checks passed"

@@ -1,0 +1,92 @@
+[project]
+name = "anuvritti"
+version = "0.1.0"
+description = "Family presence, intent & memory platform (V0)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "cryptography>=42",
+    "python-multipart>=0.0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "httpx2>=2",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pyyaml>=6",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+markers = [
+    "unit: pure, no I/O",
+    "integration: touches sqlite / filesystem / HTTP app",
+    "e2e: full golden path",
+    "constitution: PRD ethical boundary, must never be deleted",
+]
+filterwarnings = ["error"]
+
+# ---------------------------------------------------------------- coverage
+[tool.coverage.run]
+source = ["anuvritti"]
+branch = true
+omit = ["*/interfaces/http/asgi.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RET", "ARG", "PTH", "RUF", "S"]
+ignore = ["S101"]  # assert is the point in tests
+
+[tool.ruff.lint.per-file-ignores]
+# fixtures are routinely requested for their side effects, not their value
+"tests/*" = ["ARG001", "ARG002", "S105", "S106"]
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+packages = ["anuvritti"]
+strict = true
+warn_unreachable = true
+disallow_any_generics = true
+no_implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+# ---------------------------------------------------------------- bandit
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+# B608 (string-built SQL) is annotated inline where it occurs: the interpolated
+# fragments are code-controlled and every user value is a bound parameter.
