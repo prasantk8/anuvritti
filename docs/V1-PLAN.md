@@ -57,3 +57,56 @@ permanent restraint on voice cloning costless — the real voice was always bett
 TASK-501. `~/Projects/autovideo-engine` has **zero commits** — 4,779 lines and 13
 test files exist only as working-tree state. Phase 7 begins by pulling it apart.
 Run its suite and preserve it first. Committing needs the user's authorisation.
+
+---
+
+## Progress
+
+### Both repositories are now under version control (2026-08-25)
+
+Neither had a single commit. In both cases the reason was the same: media and logic
+shared a tree with no line between them, so committing meant committing renders.
+
+- `autovideo-engine` → `d1e5e64`, 71 files, 529 KB. The 50 MiB of dangling media
+  blobs left by an earlier staging attempt were pruned; the store is 284 KB.
+  **Baseline for TASK-702: 97 tests, ~1s.**
+- `dadaa` → 145 files, 815 KB. `packages/world/dist/` is ignored — `make world`
+  regenerates it, and `tests/design` refuses to run against a stale copy, so a
+  committed copy would only become a second truth.
+
+One near-miss worth remembering: a bare `media/` ignore rule matches at *any* depth
+and silently dropped `src/anuvritti/adapters/media/` — real source — out of the first
+commit. Scope runtime-output rules to their actual path, then diff
+`find src -name '*.py'` against `git ls-files src` before trusting the result.
+
+### Phase 5 — the design language (TASK-502, 503, 504 complete)
+
+`packages/world` is the visual language as code, with zero dependencies: Node strips
+the types natively and `node:test` runs the suite. Every token carries the role it
+plays and the reason it exists, which is what makes the constitution enforceable —
+the same provenance ethic the domain applies to `Attributed[T]`.
+
+Three positions the tests now hold:
+
+1. **Exactly one red, and it means erased.** Enforced by measuring chroma and hue
+   across the whole palette in both themes, not by reviewing intent. Lateness is not
+   urgent, and a child is never an error state.
+2. **Saffron is rationed to the voice role.** When a parent sees it, someone actually
+   spoke. Nothing else may occupy that hue at strength.
+3. **Elapsed time loses precision on purpose.** Past a fortnight, the exact day count
+   is absent from the string entirely, so no interface can recover it.
+
+All four rules were mutation-tested — a red used for something other than deletion, a
+leaked day count, a token defined only behind a theme guard, and a streak added to the
+application layer. All four were caught.
+
+The specimen catches what review does not. It is what revealed that elevation was
+light-theme-only: warm indigo-tinted shadows are invisible on a dark ground, so the
+whole elevation row simply vanished. Elevation is now themed like colour.
+
+Gate at this point: ruff clean, mypy clean over 44 files, **1,089 tests** passing,
+98.48% domain and application coverage, 97.49% overall, 20 `packages/world` tests, and
+no drift between the specimen and the emitted stylesheet. `make check` runs all of it.
+
+**Next: TASK-505** — the Expo app and a typed client generated from
+`docs/contracts/openapi.yaml`.
