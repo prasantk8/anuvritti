@@ -1,0 +1,86 @@
+[project]
+name = "filmkit"
+version = "0.1.0"
+description = "Compile a timeline of narrated scenes into a film. Knows nothing about what the film is about."
+requires-python = ">=3.12"
+dependencies = []
+
+# Nothing is required to import filmkit. The heavy things are ports: a browser
+# paints frames, a synthesiser makes voices, a runner runs ffmpeg. A caller
+# that supplies its own needs none of these, and a caller that wants the
+# defaults installs the extra that covers them.
+[project.optional-dependencies]
+chromium = ["playwright>=1.49"]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# PEP 561: filmkit passes mypy --strict, so consumers are entitled to its types.
+[tool.setuptools.package-data]
+filmkit = ["py.typed"]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+markers = [
+    "constitution: a boundary this package must not cross, must never be deleted",
+]
+filterwarnings = ["error"]
+
+# ---------------------------------------------------------------- coverage
+[tool.coverage.run]
+source = ["filmkit"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RET", "ARG", "PTH", "RUF", "S"]
+ignore = ["S101"]  # assert is the point in tests
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001", "ARG002", "S105", "S106"]
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+packages = ["filmkit"]
+strict = true
+warn_unreachable = true
+disallow_any_generics = true
+no_implicit_reexport = false
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["playwright.*"]
+ignore_missing_imports = true
