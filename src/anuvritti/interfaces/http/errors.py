@@ -28,6 +28,7 @@ STATUS_BY_CODE: Final[dict[ErrorCode, int]] = {
     ErrorCode.CAPTURE_SOURCE_INVALID: 422,
     ErrorCode.MEDIA_TOO_LARGE: 413,
     ErrorCode.MEDIA_KIND_UNSUPPORTED: 415,
+    ErrorCode.FILM_NOT_COMPILABLE: 422,
     ErrorCode.CONFLICT: 409,
 }
 

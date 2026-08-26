@@ -26,6 +26,7 @@ Wire shape (always exactly this shape):
 | `CAPTURE_SOURCE_INVALID` | 422 | Source payload unusable (malformed URL, empty text) |
 | `MEDIA_TOO_LARGE` | 413 | Exceeds `ANUVRITTI_MAX_MEDIA_BYTES` |
 | `MEDIA_KIND_UNSUPPORTED` | 415 | MIME type not on the allow-list |
+| `FILM_NOT_COMPILABLE` | 422 | The film does not add up: no scenes, a scene id used twice, or a scene that would have to be cut off to fit its cap |
 | `CONFLICT` | 409 | Uniqueness or concurrency conflict |
 
 The Return Engine returning **nothing** is a normal, silent, guilt-free outcome (PRD §8.5).

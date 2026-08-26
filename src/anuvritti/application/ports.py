@@ -8,6 +8,7 @@ promise in PRD 44 an implementation detail rather than a rewrite.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from types import TracebackType
 from typing import Protocol, runtime_checkable
@@ -15,6 +16,7 @@ from typing import Protocol, runtime_checkable
 from anuvritti.domain.access import Device, PairingRequest
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import Family
+from anuvritti.domain.film import CompiledFilm, ConnectiveLine, FilmSpec
 from anuvritti.domain.media import MediaObject
 from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
@@ -167,6 +169,80 @@ class Transcriber(Protocol):
     """
 
     def transcribe(self, media_id: MediaId) -> Result[Transcript | None, DomainError]: ...
+
+
+@runtime_checkable
+class FilmCompiler(Protocol):
+    """Turns a planned film into a film that adds up (PRD 34).
+
+    Look at what this protocol cannot say. There is no `render`, no output path, no codec,
+    no frame rate argument and no way to hand back a video file. That is the whole design.
+
+    Drawing a film needs a browser and an encoder - hundreds of megabytes of software with a
+    network stack, a JIT and a monthly CVE, running for minutes at full tilt. The family's box
+    is a small always-on machine holding every recording of their child, and `test_no_public_model`
+    already forbids anything under `adapters/` from reaching a socket. Installing Chromium there
+    so it can draw a birthday card would undo that in one line of a Dockerfile.
+
+    So the compiler does everything a film needs *except* the pixels: it places the scenes,
+    measures against the real audio, times the captions and checks that the arithmetic holds.
+    What comes out is a `CompiledFilm` plus, at TASK-705, a bundle of the media it names -
+    enough to draw the film anywhere, and not itself a film. The machine with the browser on
+    it is a machine the family can turn off, and never one holding their archive.
+
+    The other half of the arrangement is that this stays *cheap*: compiling is arithmetic over
+    durations, so a parent can reorder a year, see the new running time, and change their mind,
+    without a render farm being involved in the decision.
+    """
+
+    def compile(self, spec: FilmSpec) -> Result[CompiledFilm, DomainError]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class SynthesisedSpeech:
+    """A file a machine produced, and how long that file turned out to be.
+
+    `seconds` is a probe of the audio, never a calculation over the words. A synthesiser is
+    exactly the thing whose output length is least predictable from its input - two voices
+    reading the same four words differ by half a second, and half a second is the difference
+    between a line landing and a line being clipped.
+    """
+
+    media_id: MediaId
+    seconds: float
+
+    def __post_init__(self) -> None:
+        if self.seconds <= 0:
+            raise ValueError("a spoken line that lasts no time was not spoken")
+
+
+@runtime_checkable
+class Narrator(Protocol):
+    """Reads one of the product's own connective lines aloud (PRD 12, 39, 47).
+
+    Three things about this signature are the design, and all three are things it *cannot* do.
+
+    It takes a `ConnectiveLine`, not a string. There is no parameter here through which a
+    sentence about a child could reach a synthesiser, so "synthesis is only used for neutral
+    connective tissue" is enforced by the type of the port rather than by the discipline of
+    whoever calls it next year.
+
+    It returns a measured length, so nothing downstream ever has to estimate one. The contract
+    is that `seconds` was probed from the file that was produced.
+
+    It is optional everywhere it is used. `ComposeFilmUseCase` defaults to no narrator at all,
+    and a film composed without one is silent between its memories rather than narrated by a
+    machine - because silence is a legitimate answer and PRD 39 keeps voice synthesis at
+    research status, not shipped by default.
+
+    The file must be in the family's own media store before this returns. The film bundles
+    every file it names, and a bundle that names audio nobody can fetch is a film that will
+    fail at the far end instead of here.
+    """
+
+    def speak(
+        self, line: ConnectiveLine, *, family_id: FamilyId
+    ) -> Result[SynthesisedSpeech, DomainError]: ...
 
 
 @runtime_checkable
