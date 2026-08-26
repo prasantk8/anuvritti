@@ -57,7 +57,14 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - run: pip install -r requirements-dev.txt
+      # pytest collects tests/design too. `make check` builds this ignored output before
+      # either coverage pass; a fresh runner must do the same rather than test an empty dist.
+      - name: Build the shared visual world for pytest collection
+        run: npm --prefix packages/world run build --silent
 
       # CLAUDE.md: >= 90% unit. The domain and application layers hold every rule
       # the PRD promises, so they carry the strict gate.

@@ -78,6 +78,10 @@ class TestQualityGates:
         assert "--cov=anuvritti.domain" in steps
         assert "--cov-fail-under=90" in steps
 
+    def test_coverage_builds_the_ignored_world_before_pytest_collects_design_tests(self):
+        steps = _steps("test")
+        assert steps.index("packages/world run build") < steps.index("pytest --cov")
+
     def test_the_overall_coverage_gate_matches_the_local_ninety_percent_gate(self):
         assert "--cov-fail-under=90" in _steps("test")
 
