@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from anuvritti.adapters.film.filmkit_compiler import FilmkitFilmCompiler
 from anuvritti.adapters.intent.heuristic import HeuristicIntentEngine
 from anuvritti.application.capture import (
     CaptureSparkCommand,
@@ -23,6 +24,11 @@ from anuvritti.application.capture import (
     OverrideFieldUseCase,
     RecordWhyCommand,
     RecordWhyUseCase,
+)
+from anuvritti.application.film import (
+    CompileFilmUseCase,
+    ComposeFilmCommand,
+    ComposeFilmUseCase,
 )
 from anuvritti.application.moments import MarkAsDoneCommand, MarkAsDoneUseCase
 from anuvritti.application.presence import (
@@ -37,6 +43,7 @@ from anuvritti.application.privacy import (
     ExportFamilyDataQuery,
     ExportFamilyDataUseCase,
 )
+from anuvritti.application.provenance import VerifyProvenanceUseCase
 from anuvritti.application.returning import (
     GetWorthBringingBackUseCase,
     RespondToSuggestionCommand,
@@ -45,11 +52,13 @@ from anuvritti.application.returning import (
     WorthBringingBackQuery,
 )
 from anuvritti.application.vault import SearchVaultQuery, SearchVaultUseCase
+from anuvritti.domain.moment import Moment
 from anuvritti.domain.return_engine import ReturnEngine
+from anuvritti.domain.spark import Spark
 from anuvritti.domain.values import IntentType, SourceRef
 from anuvritti.shared.clock import FrozenClock
 from anuvritti.shared.errors import DomainError, ErrorCode
-from anuvritti.shared.identity import SequentialIdGenerator, SparkId
+from anuvritti.shared.identity import MomentId, SequentialIdGenerator, SparkId
 from anuvritti.shared.result import Err
 from tests.support.fakes import (
     CHILD,
@@ -486,3 +495,116 @@ class TestPrivacyFailures:
         )
         assert use_case.execute(DeleteFamilyDataCommand(FAMILY)).unwrap_err() is DISK_FULL
         assert uow.rolled_back is True
+
+
+class TestFilmCompositionFailures:
+    """TASK-705. A film is assembled by reading four stores, any of which can fail.
+
+    The property that matters here is narrow and easy to lose: a read that fails must stop
+    the composition. The alternative - skip the row and keep going - produces a film that is
+    shorter than the year was, and looks exactly like a film of a quieter year.
+    """
+
+    def _moment(self, sparks: InMemorySparkRepository) -> InMemoryMomentRepository:
+        spark = Spark.capture(
+            spark_id=SparkId("spk-1"),
+            family_id=FAMILY,
+            owner_id=PAPA,
+            source=SourceRef.from_text("skip stones at the lake"),
+            at=NOW,
+            subject_child_id=CHILD,
+        )
+        sparks.save(spark)
+        moments = InMemoryMomentRepository()
+        moments.save(
+            Moment.create(
+                moment_id=MomentId("mom-1"),
+                family_id=FAMILY,
+                spark_id=spark.id,
+                created_by=PAPA,
+                spark_captured_at=NOW,
+                at=NOW,
+            ).unwrap()
+        )
+        return moments
+
+    def _stores(self, **overrides) -> dict:
+        """One archive, shared by the composer and the verifier - only the fault differs."""
+        sparks = overrides.pop("sparks", None) or InMemorySparkRepository()
+        stores = {
+            "families": InMemoryFamilyRepository(build_family()),
+            "sparks": sparks,
+            "moments": self._moment(sparks),
+            "voice_notes": InMemoryVoiceNoteRepository(),
+            "little_things": InMemoryLittleThingRepository(),
+            "media": InMemoryMediaStore(),
+            "ids": SequentialIdGenerator("film"),
+        }
+        stores.update(overrides)
+        return stores
+
+    def _compose(self, stores: dict) -> ComposeFilmUseCase:
+        return ComposeFilmUseCase(**{k: v for k, v in stores.items() if k != "little_things"})
+
+    def _verify(self, stores: dict, **overrides) -> VerifyProvenanceUseCase:
+        parts = {
+            "sparks": stores["sparks"],
+            "moments": stores["moments"],
+            "voice_notes": stores["voice_notes"],
+            "little_things": stores["little_things"],
+            "media": stores["media"],
+            "clock": FrozenClock(NOW),
+        }
+        parts.update(overrides)
+        return VerifyProvenanceUseCase(**parts)
+
+    def _command(self) -> ComposeFilmCommand:
+        return ComposeFilmCommand(family_id=FAMILY, actor_id=PAPA)
+
+    def test_an_unreadable_moment_table_stops_the_film(self):
+        stores = self._stores(moments=failing(InMemoryMomentRepository(), "list_for_family"))
+        use_case = self._compose(stores)
+        assert use_case.execute(self._command()).unwrap_err() is DISK_FULL
+
+    def test_a_moment_whose_spark_cannot_be_read_stops_the_film(self):
+        """Not "skip the scene". A scene missing its heading is a scene missing its meaning."""
+        sparks = InMemorySparkRepository()
+        stores = self._stores(sparks=failing(sparks, "get"), moments=self._moment(sparks))
+        use_case = self._compose(stores)
+        assert use_case.execute(self._command()).unwrap_err() is DISK_FULL
+
+    def test_a_compiler_that_refuses_is_reported_and_not_papered_over(self):
+        class RefusingCompiler:
+            def compile(self, spec):
+                return Err(DISK_FULL)
+
+        stores = self._stores()
+        use_case = CompileFilmUseCase(
+            compose=self._compose(stores),
+            verify=self._verify(stores),
+            compiler=RefusingCompiler(),
+        )
+        assert use_case.execute(self._command()).unwrap_err() is DISK_FULL
+
+    def test_an_archive_that_cannot_be_searched_is_not_reported_as_an_empty_archive(self):
+        """The one distinction this whole checkpoint rests on.
+
+        A repository that fails to answer is not a repository saying "no such Spark". If the
+        second reading were allowed, an unreachable disk would write "MISSING" into a ledger
+        whose entire job is to be believed, and the film would be refused for a reason that
+        was never true.
+        """
+
+        class Silent:
+            """Answers the composer, refuses the checker. Only the verification path fails."""
+
+            def get(self, spark_id):
+                return Err(DISK_FULL)
+
+        stores = self._stores()
+        use_case = CompileFilmUseCase(
+            compose=self._compose(stores),
+            verify=self._verify(stores, sparks=Silent()),
+            compiler=FilmkitFilmCompiler(),
+        )
+        assert use_case.execute(self._command()).unwrap_err() is DISK_FULL

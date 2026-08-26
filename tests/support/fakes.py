@@ -6,6 +6,7 @@ Integration tests run the same scenarios against SQLite.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from types import TracebackType
@@ -217,7 +218,7 @@ class InMemoryMediaStore:
             kind=kind,
             mime_type=mime_type,
             byte_size=len(content),
-            content_hash="fake",
+            content_hash=hashlib.sha256(content).hexdigest(),
             storage_key=str(media_id),
             encrypted=True,
             created_at=at,
@@ -227,10 +228,31 @@ class InMemoryMediaStore:
         return Ok(meta)
 
     def get(self, media_id: MediaId) -> Result[bytes, DomainError]:
+        """Re-hashes on read, exactly as the encrypted store does.
+
+        A fake that cannot fail its own integrity check is a fake that quietly passes tests
+        about integrity, which is the only kind of test that matters here.
+        """
         found = self._bytes.get(str(media_id))
         if found is None:
             return Err(DomainError(ErrorCode.MEDIA_NOT_FOUND, str(media_id)))
+        if hashlib.sha256(found).hexdigest() != self._meta[str(media_id)].content_hash:
+            return Err(
+                DomainError(
+                    ErrorCode.CONFLICT,
+                    f"media {media_id} failed its integrity check",
+                    {"media_id": str(media_id)},
+                )
+            )
         return Ok(found)
+
+    def tamper(self, media_id: str, content: bytes) -> None:
+        """Replace the bytes without telling the catalogue. Only a test would ever do this."""
+        self._bytes[media_id] = content
+
+    def lose_bytes(self, media_id: str) -> None:
+        """Keep the row, drop the file - what a half-finished restore actually looks like."""
+        self._bytes.pop(media_id, None)
 
     def describe(self, media_id: MediaId) -> Result[MediaObject, DomainError]:
         found = self._meta.get(str(media_id))
@@ -349,3 +371,58 @@ class InMemoryVoiceNoteRepository:
         for key in doomed:
             del self._items[key]
         return Ok(len(doomed))
+
+
+#: How many bytes of this fake's audio format make up a second. The number is arbitrary; what
+#: matters is that the length comes out of the *file*, which is what a real prober does.
+SPOKEN_BYTES_PER_SECOND = 4000
+
+
+class FakeNarrator:
+    """A synthesiser that produces a file and then measures the file it produced.
+
+    The honesty of this fake is the whole point of it. It would be much simpler to hand back a
+    duration taken from a lookup table keyed on the line - and a test suite built on that fake
+    would pass happily on the day somebody starts estimating lengths from word counts, because
+    the fake would be estimating too. So this one writes real bytes into the media store and
+    derives the length from `len(audio)`. Nothing anywhere in it looks at the words.
+
+    `failing` is the other half: a synthesiser is a thing that is sometimes not there, and what
+    the product does then is a product decision that deserves a test.
+    """
+
+    def __init__(
+        self,
+        media: InMemoryMediaStore,
+        *,
+        at: datetime | None = None,
+        failing: frozenset[str] = frozenset(),
+    ) -> None:
+        self._media = media
+        self._at = at or datetime(2026, 1, 1, tzinfo=UTC)
+        self._failing = failing
+        self.spoken: list[str] = []
+
+    def speak(self, line: object, *, family_id: FamilyId) -> Result[object, DomainError]:
+        from anuvritti.application.ports import SynthesisedSpeech
+
+        name = getattr(line, "value", str(line))
+        if name in self._failing:
+            return Err(
+                DomainError(
+                    ErrorCode.CONFLICT,
+                    "the synthesiser is not available",
+                    {"line": name},
+                )
+            )
+        audio = b"\x00\x00\x00\x20ftypM4A " + (f"<{name}>".encode() * 900)
+        stored = self._media.put(family_id, content=audio, mime_type="audio/mp4", at=self._at)
+        if stored.is_err():
+            return Err(stored.unwrap_err())
+        self.spoken.append(name)
+        return Ok(
+            SynthesisedSpeech(
+                media_id=stored.unwrap().id,
+                seconds=len(audio) / SPOKEN_BYTES_PER_SECOND,
+            )
+        )

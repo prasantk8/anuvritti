@@ -19,9 +19,11 @@ from anuvritti.application.ports import (
     MomentRepository,
     RightNowRepository,
     SparkRepository,
+    SynthesisedSpeech,
     Transcriber,
     UnitOfWork,
 )
+from anuvritti.shared.identity import MediaId
 
 ALL_PORTS = [
     FamilyRepository,
@@ -98,3 +100,16 @@ def test_ports_module_imports_no_adapter():
     """Dependency inversion, checked at the one place it matters most."""
     source = inspect.getsource(ports)
     assert "anuvritti.adapters" not in source
+
+
+class TestSynthesisedSpeech:
+    """The port's one value type, and the one thing it will not carry."""
+
+    def test_it_carries_a_file_and_the_length_that_file_turned_out_to_be(self):
+        spoken = SynthesisedSpeech(media_id=MediaId("med-tts"), seconds=1.9)
+        assert spoken.seconds == 1.9
+
+    def test_a_line_that_lasts_no_time_was_not_spoken(self):
+        """Zero is what a failed synthesis looks like when nobody checked the return code."""
+        with pytest.raises(ValueError, match="was not spoken"):
+            SynthesisedSpeech(media_id=MediaId("med-tts"), seconds=0.0)
