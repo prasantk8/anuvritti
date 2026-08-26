@@ -97,6 +97,8 @@ class Timeline:
         return {
             "project": self.project,
             "fps": self.fps,
+            "width": self.width,
+            "height": self.height,
             "resolution": f"{self.width}x{self.height}",
             "duration_sec": round(self.duration_sec, 4),
             "scene_count": len(self.scenes),

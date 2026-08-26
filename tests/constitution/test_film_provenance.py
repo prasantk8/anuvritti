@@ -35,6 +35,7 @@ import pytest
 
 from anuvritti.adapters.film.export import FILM_FILENAME, FilesystemFilmExporter
 from anuvritti.adapters.film.filmkit_compiler import FilmkitFilmCompiler
+from anuvritti.adapters.film.render import ChromiumFfmpegRenderer
 from anuvritti.application.film import (
     CompileFilmUseCase,
     ComposeFilmCommand,
@@ -345,3 +346,38 @@ class TestTheLedgerTravelsWithTheFilm:
         }
         assert travelled >= vouched
         assert travelled == package.bundle.ids
+
+
+class TestTheRendererStillChecksTheReceipts:
+    """An export may travel between verification and pixels; trust does not travel with it."""
+
+    def test_a_ledger_altered_after_export_never_reaches_chromium(self, archive, tmp_path: Path):
+        package = archive.compile().unwrap()
+        exported = (
+            FilesystemFilmExporter(archive.media).export(package, into=tmp_path / "out").unwrap()
+        )
+        ledger = json.loads(exported.provenance_path.read_text())
+        ledger["entries"][0]["status"] = "MISSING"
+        ledger["unverified_count"] = 1
+        exported.provenance_path.write_text(json.dumps(ledger))
+
+        result = ChromiumFfmpegRenderer(workspace=tmp_path / "work").render(
+            exported.directory, destination=tmp_path / "film.mp4"
+        )
+
+        assert result.unwrap_err().code is ErrorCode.FILM_NOT_COMPILABLE
+        assert not (tmp_path / "work").exists(), "a failed receipt must be cheap to refuse"
+
+    def test_media_altered_after_export_never_becomes_a_frame(self, archive, tmp_path: Path):
+        package = archive.compile().unwrap()
+        exported = (
+            FilesystemFilmExporter(archive.media).export(package, into=tmp_path / "out").unwrap()
+        )
+        exported.media_paths[0].write_bytes(b"not the photograph the ledger vouched for")
+
+        result = ChromiumFfmpegRenderer(workspace=tmp_path / "work").render(
+            exported.directory, destination=tmp_path / "film.mp4"
+        )
+
+        assert result.unwrap_err().code is ErrorCode.FILM_NOT_COMPILABLE
+        assert not (tmp_path / "film.mp4").exists()

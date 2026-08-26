@@ -18,5 +18,9 @@
   },
   "engines": {
     "node": ">=22.6"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "@fontsource/newsreader": "5.3.0"
   }
 }

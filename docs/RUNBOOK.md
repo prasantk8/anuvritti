@@ -34,6 +34,20 @@ docker run --rm -p 8000:8000 \
   anuvritti:local
 ```
 
+### Render a FilmExport
+
+Rendering is intentionally a development-machine job: the always-on family server and its
+production image carry neither Chromium nor FFmpeg. After `make install`, point the renderer
+at the folder containing `film.json`, `provenance.json`, and `media/`:
+
+```bash
+make film ARCHIVE=/path/to/FilmExport
+```
+
+The film lands at `var/film/film.mp4`; `var/film/still.png` is the first frame for visual
+inspection. The renderer rechecks every media hash and every provenance entry before it
+draws, and the export remains plaintext family material: delete it after the render.
+
 The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse to start**
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.

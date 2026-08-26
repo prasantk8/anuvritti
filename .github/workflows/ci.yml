@@ -56,7 +56,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: pip install -r requirements-dev.txt
+      - run: npm --prefix packages/world install --no-package-lock
+      - name: Install the development-only film browser
+        run: python -m playwright install --with-deps chromium
 
       # CLAUDE.md: >= 90% unit. The domain and application layers hold every rule
       # the PRD promises, so they carry the strict gate.
