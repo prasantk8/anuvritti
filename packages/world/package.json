@@ -6,12 +6,15 @@
   "description": "The Anuvritti design language as code. One visual world, rendered by both the native app and the film.",
   "exports": {
     ".": "./src/index.ts",
-    "./world.css": "./dist/world.css"
+    "./world.css": "./dist/world.css",
+    "./scenes": "./scenes/index.ts",
+    "./scenes.css": "./dist/scenes.css"
   },
   "scripts": {
     "build": "node scripts/build.ts",
-    "test": "npm run build --silent && node --test \"test/**/*.test.ts\" && node scripts/check-specimen.ts",
-    "specimen:check": "npm run build --silent && node scripts/check-specimen.ts"
+    "test": "npm run build --silent && node --test \"test/**/*.test.ts\" && node scripts/check-specimen.ts && node scripts/check-scenes.ts",
+    "specimen:check": "npm run build --silent && node scripts/check-specimen.ts",
+    "scenes:check": "npm run build --silent && node scripts/check-scenes.ts"
   },
   "engines": {
     "node": ">=22.6"
