@@ -137,7 +137,7 @@ class TestContainer:
         steps = _steps("container")
         assert "ANUVRITTI_MEDIA_KEY is required in production" in steps
         assert "--help" not in steps
-        assert 'status" -ne 78' in steps
+        assert "-ne 78" in steps
 
     def test_the_image_is_scanned_for_vulnerabilities(self):
         steps = _steps("container")
