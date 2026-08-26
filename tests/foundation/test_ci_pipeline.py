@@ -58,7 +58,8 @@ class TestLeastPrivilege:
 
 class TestQualityGates:
     @pytest.mark.parametrize(
-        "job", ["lint", "types", "test", "constitution", "security", "container"]
+        "job",
+        ["lint", "types", "test", "constitution", "design", "filmkit", "security", "container"],
     )
     def test_the_job_exists(self, job: str):
         assert job in JOBS
@@ -77,8 +78,16 @@ class TestQualityGates:
         assert "--cov=anuvritti.domain" in steps
         assert "--cov-fail-under=90" in steps
 
-    def test_the_overall_coverage_gate_is_at_least_eighty_percent(self):
-        assert "--cov-fail-under=80" in _steps("test")
+    def test_the_overall_coverage_gate_matches_the_local_ninety_percent_gate(self):
+        assert "--cov-fail-under=90" in _steps("test")
+
+    @pytest.mark.parametrize("package", ["packages/world", "packages/client", "apps/anuvritti"])
+    def test_every_npm_suite_runs(self, package: str):
+        assert f"npm --prefix {package} test" in _steps("design")
+
+    def test_filmkit_runs_its_own_quality_gate(self):
+        steps = _steps("filmkit")
+        assert "make -C packages/filmkit check" in steps
 
     def test_no_step_disables_a_failure(self):
         """`continue-on-error` turns a gate into a suggestion."""

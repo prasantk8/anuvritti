@@ -9,4 +9,4 @@ pyyaml>=6
 # The memory compiler (TASK-701). Deliberately absent from requirements.txt: the
 # family's always-on server never compiles a film, so the production image never
 # grows this - or, one dependency further on, a browser.
-../filmkit
+-e packages/filmkit

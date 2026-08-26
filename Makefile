@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design filmkit specimen
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -32,6 +32,11 @@ design: world
 	npm --prefix packages/client test --silent
 	npm --prefix apps/anuvritti test --silent
 
+# filmkit is source in this monorepo, not an opaque dependency. Its own strict package
+# gate stays authoritative, including the compiler's branch-coverage promise.
+filmkit:
+	$(MAKE) -C packages/filmkit check PY=$(CURDIR)/$(PY)
+
 specimen: world
 	@echo "serving packages/world/specimen at http://127.0.0.1:8765/specimen/"
 	@cd packages/world && python3 -m http.server 8765 --bind 127.0.0.1
@@ -60,7 +65,7 @@ cov-core:
 cov:
 	$(PY) -m pytest --cov=anuvritti --cov-report=term-missing --cov-fail-under=90
 
-check: world lint types cov-core cov design
+check: world lint types cov-core cov design filmkit
 
 run:
 	$(PY) -m uvicorn anuvritti.interfaces.http.asgi:app --host 0.0.0.0 --port 8000

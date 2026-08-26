@@ -16,6 +16,7 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
 
 jobs:
   # ---------------------------------------------------------------- quality
@@ -30,9 +31,9 @@ jobs:
           cache: pip
       - run: pip install -r requirements-dev.txt
       - name: ruff check
-        run: ruff check src tests
+        run: ruff check src tests packages/client/codegen
       - name: ruff format
-        run: ruff format --check src tests
+        run: ruff format --check src tests packages/client/codegen
 
   types:
     name: Type check (strict)
@@ -65,9 +66,9 @@ jobs:
           pytest --cov=anuvritti.domain --cov=anuvritti.application \
                  --cov-report=term-missing --cov-fail-under=90
 
-      # CLAUDE.md: >= 80% integration.
-      - name: Overall coverage gate (>= 80%)
-        run: pytest --cov=anuvritti --cov-report=term-missing --cov-fail-under=80
+      # The local gate is stricter than the framework's 80% integration floor.
+      - name: Overall coverage gate (>= 90%)
+        run: pytest --cov=anuvritti --cov-report=term-missing --cov-fail-under=90
 
       - name: Upload coverage
         if: always()
@@ -90,6 +91,47 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - name: The product must not cross a line the founder said it would not cross
         run: pytest tests/constitution tests/architecture -v
+
+  # --------------------------------------- the app, client, and shared visual world
+  design:
+    name: World, client & app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: pip install -r requirements-dev.txt
+      - name: Build the shared visual world
+        run: npm --prefix packages/world run build --silent
+      - name: Verify the design contract
+        run: pytest tests/design -q
+      - name: Test packages/world
+        run: npm --prefix packages/world test --silent
+      - name: Refuse generated-client drift
+        run: python packages/client/codegen/generate.py --check
+      - name: Test packages/client
+        run: npm --prefix packages/client test --silent
+      - name: Test apps/anuvritti
+        run: npm --prefix apps/anuvritti test --silent
+
+  # ----------------------------------------------------- the memory compiler package
+  filmkit:
+    name: Filmkit quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Run filmkit lint, strict types, and coverage
+        run: make -C packages/filmkit check PY=python
 
   # -------------------------------------------------------------- security
   security:
@@ -176,7 +218,7 @@ jobs:
   ci:
     name: CI
     runs-on: ubuntu-latest
-    needs: [lint, types, test, constitution, security, container]
+    needs: [lint, types, test, constitution, design, filmkit, security, container]
     if: always()
     steps:
       - name: Require every job to pass
