@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "project": "Anuvritti - V0 complete, V1 Make It Magical",
+  "project": "Anuvritti - V0 complete, V1 Make It Magical, reshaped 2026-08-26",
   "prd": "docs/PRD.md",
   "architecture": "docs/ARCHITECTURE.md",
   "contracts": [
@@ -8,7 +8,7 @@
     "docs/contracts/events.md",
     "docs/contracts/errors.md"
   ],
-  "scope_note": "V0 (Phases 1-4) is complete and hardened: PRD 48 features 1-9, PRD 49 exclusions enforced as tests. V1 (Phases 5-9) is PRD 50 'Make It Magical'. Decisions taken 2026-08-25: native iOS and Android together via Expo, because the design tokens are then TypeScript and CSS and the same visual language renders both the app and the film's Chromium scenes; the Surface first, with Voice and the Memory Compiler to follow immediately after rather than eventually; and the rendering core extracted from autovideo-engine into a shared filmkit package rather than vendored or called across a file contract.",
+  "scope_note": "V0 (Phases 1-4) is complete and hardened: PRD 48 features 1-9, PRD 49 exclusions enforced as tests. V1 (Phases 5-9) is PRD 50 'Make It Magical'. Decisions taken 2026-08-25: native iOS and Android together via Expo, because the design tokens are then TypeScript and CSS and the same visual language renders both the app and the film's Chromium scenes; the Surface first, with Voice and the Memory Compiler to follow immediately after rather than eventually; and the rendering core extracted from autovideo-engine into a shared filmkit package rather than vendored or called across a file contract. Expanded 2026-08-26 from a V1 feature plan into a production programme: Phases 10-14 carry the work between 'it demonstrates' and 'a family can rely on it for eighteen years' - the app in a pocket, the machine that runs it, the render farm, the long now, and a product a family can actually have. The ordering is a dependency graph, not a schedule; there are no dates because the constraint is correctness, not calendar. Reshaped 2026-08-26 after a four-way review (Phase 7 audit, PRD gap analysis, app critique, adversarial roadmap review): Phase 7 gains the floor the product stood on in words only - a renderer that draws a pixel, a phone that is actually wired, CI that passes on the next push. Phase 8 becomes 'Make It Magical' and carries the PRD promises no task held: Future Inbox, Papa Today's presence prompts, the Annual Interview in the child's own voice, sealed capsules, the child's first screen. Phase 9 becomes 'Real': a server that is not the laptop, a restored backup, the app on the founder's phone, and PRD 54 run for thirty days. Phases 10 to 14 now depend on TASK-910, the dated answer to that month, because PRD 64 says not to start by building the platform, and the tracker had.",
   "phases": [
     {
       "name": "Phase 1: Foundations",
@@ -634,7 +634,7 @@
     {
       "name": "Phase 5: The Surface",
       "owner": "Design Lead / Principal Mobile Engineer",
-      "status": "completed",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-501",
@@ -714,8 +714,8 @@
           "id": "TASK-505",
           "role": "Principal Mobile Engineer",
           "description": "Expo application for iOS and Android, with a typed API client generated from the existing docs/contracts/openapi.yaml so the wire contract stays single-sourced.",
-          "module_path": "apps/mobile",
-          "verification_command": "npm --prefix apps/mobile test",
+          "module_path": "apps/anuvritti",
+          "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
             "TASK-502"
           ],
@@ -730,8 +730,8 @@
           "id": "TASK-506",
           "role": "Principal Mobile Engineer",
           "description": "The Spark as an object rather than a card: front is what was saved, back is why it was saved. The flip is the product's core gesture.",
-          "module_path": "apps/mobile/src/spark/SparkObject.tsx",
-          "verification_command": "npm --prefix apps/mobile test -- spark",
+          "module_path": "apps/anuvritti/src/spark/SparkObject.tsx",
+          "verification_command": "npm --prefix apps/anuvritti test -- spark",
           "dependencies": [
             "TASK-505",
             "TASK-503"
@@ -749,8 +749,8 @@
           "id": "TASK-507",
           "role": "Principal Mobile Engineer",
           "description": "Time as language, never as a number: bind describe_elapsed semantics through the client so the interface can say 'a Tuesday last spring' and cannot say '247 days'.",
-          "module_path": "apps/mobile/src/time/elapsed.ts",
-          "verification_command": "npm --prefix apps/mobile test -- elapsed",
+          "module_path": "apps/anuvritti/src/time/elapsed.ts",
+          "verification_command": "npm --prefix apps/anuvritti test -- elapsed",
           "dependencies": [
             "TASK-506",
             "TASK-504"
@@ -767,8 +767,8 @@
           "id": "TASK-508",
           "role": "Principal Mobile Engineer",
           "description": "Capture under ten seconds: an iOS Share Extension and an Android SEND intent filter that post straight to /v1/sparks and answer with 'Saved.' - the PRD's primary path, native on both platforms.",
-          "module_path": "apps/mobile/share-extension",
-          "verification_command": "npm --prefix apps/mobile test -- capture",
+          "module_path": "apps/anuvritti/share-extension",
+          "verification_command": "npm --prefix apps/anuvritti test -- capture",
           "dependencies": [
             "TASK-505"
           ],
@@ -785,8 +785,8 @@
           "id": "TASK-509",
           "role": "Principal Mobile Engineer",
           "description": "Offline-first capture queue with idempotent replay, so a parent with no signal still saves in under ten seconds.",
-          "module_path": "apps/mobile/src/queue",
-          "verification_command": "npm --prefix apps/mobile test -- queue",
+          "module_path": "apps/anuvritti/src/queue",
+          "verification_command": "npm --prefix apps/anuvritti test -- queue",
           "dependencies": [
             "TASK-508"
           ],
@@ -801,8 +801,8 @@
           "id": "TASK-510",
           "role": "Principal Mobile Engineer",
           "description": "One-tap correction: the inferred chip cycles through alternatives and never becomes a form, driving the Attributed override path the domain already models.",
-          "module_path": "apps/mobile/src/spark/InferenceChip.tsx",
-          "verification_command": "npm --prefix apps/mobile test -- inference",
+          "module_path": "apps/anuvritti/src/spark/InferenceChip.tsx",
+          "verification_command": "npm --prefix apps/anuvritti test -- inference",
           "dependencies": [
             "TASK-506"
           ],
@@ -836,8 +836,8 @@
           "id": "TASK-512",
           "role": "Principal Mobile Engineer",
           "description": "Worth Bringing Back on the phone: at most one suggestion, dismissible forever, no counter and no unread state.",
-          "module_path": "apps/mobile/src/return",
-          "verification_command": "npm --prefix apps/mobile test -- return",
+          "module_path": "apps/anuvritti/src/return",
+          "verification_command": "npm --prefix apps/anuvritti test -- return",
           "dependencies": [
             "TASK-507",
             "TASK-510"
@@ -854,8 +854,8 @@
           "id": "TASK-513",
           "role": "Principal QA Automation Engineer",
           "description": "On-device end to end: share, saved, returned months later, lived. The golden path from tests/e2e, on real hardware.",
-          "module_path": "apps/mobile/e2e",
-          "verification_command": "npm --prefix apps/mobile run e2e",
+          "module_path": "apps/anuvritti/e2e",
+          "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
             "TASK-512",
             "TASK-509",
@@ -864,9 +864,10 @@
           "prd_refs": [
             "PRD 54"
           ],
-          "status": "completed",
+          "status": "in_progress",
           "notes": "tests/e2e/test_the_app_against_the_server.py runs the real generated TypeScript client against the real ASGI application over a real socket, with the server's clock advanced eight months mid-story. docs/DEVICE.md is the four-item checklist for what genuinely needs hardware.",
-          "completed_at": "2026-08-25"
+          "completed_at": "2026-08-25",
+          "note": "Reopened 2026-08-26. The cross-language E2E passes, but docs/DEVICE.md has 0 of 54 checks ticked, apps/anuvritti has never been installed on this machine, and the review found the pairing screen unreachable from the route graph. Closed by TASK-907."
         }
       ]
     },
@@ -879,7 +880,7 @@
           "id": "TASK-601",
           "role": "Principal Mobile Engineer",
           "description": "Hold to talk with a live waveform; release saves. Five seconds is the target, not a minimum.",
-          "module_path": "apps/mobile/src/voice/HoldToTalk.tsx",
+          "module_path": "apps/anuvritti/src/voice/HoldToTalk.tsx",
           "verification_command": "npm --prefix apps/anuvritti exec -- node --test apps/anuvritti/test/voice.test.ts",
           "dependencies": [
             "TASK-513"
@@ -903,7 +904,7 @@
           "id": "TASK-602",
           "role": "Principal Mobile Engineer",
           "description": "The recording is the artifact and the transcript is only an index: voice always renders above text and text never replaces it.",
-          "module_path": "apps/mobile/src/voice/Playback.tsx",
+          "module_path": "apps/anuvritti/src/voice/Playback.tsx",
           "verification_command": "npm --prefix apps/anuvritti exec -- node --test apps/anuvritti/test/playback.test.ts",
           "dependencies": [
             "TASK-601"
@@ -975,7 +976,7 @@
           "id": "TASK-605",
           "role": "Principal Mobile Engineer",
           "description": "Little Things and the seed of the Papa Voice Vault - and the reason to record: every clip becomes a line in this year's film.",
-          "module_path": "apps/mobile/src/presence",
+          "module_path": "apps/anuvritti/src/presence",
           "verification_command": "npm --prefix apps/anuvritti exec -- node --test apps/anuvritti/test/presence.test.ts",
           "dependencies": [
             "TASK-602"
@@ -1019,7 +1020,7 @@
     {
       "name": "Phase 7: The Memory Compiler",
       "owner": "Principal Systems Architect / Senior Staff Backend Engineer",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-701",
@@ -1033,7 +1034,28 @@
           "prd_refs": [
             "CLAUDE.md 1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "../filmkit/pyproject.toml",
+            "../filmkit/Makefile",
+            "../filmkit/README.md",
+            "../filmkit/.gitignore",
+            "../filmkit/src/filmkit/__init__.py",
+            "../filmkit/src/filmkit/workspace.py",
+            "../filmkit/src/filmkit/files.py",
+            "../filmkit/src/filmkit/hashing.py",
+            "../filmkit/src/filmkit/process.py",
+            "../filmkit/src/filmkit/reporting.py",
+            "../filmkit/src/filmkit/cachestore.py",
+            "../filmkit/src/filmkit/narration.py",
+            "../filmkit/src/filmkit/timing.py",
+            "../filmkit/src/filmkit/timeline.py",
+            "../filmkit/src/filmkit/captions.py",
+            "../filmkit/src/filmkit/browser.py",
+            "../filmkit/src/filmkit/compositor.py",
+            "../filmkit/src/filmkit/manifest.py"
+          ],
+          "notes": "filmkit 0.1.0: 9 modules, 1863 lines. The three heavy dependencies are ports - Painter (browser), Synthesiser (voice), Runner (shell) - so importing filmkit requires nothing installed. Workspace is injected; no environment variable is read anywhere."
         },
         {
           "id": "TASK-702",
@@ -1047,7 +1069,25 @@
           "prd_refs": [
             "CLAUDE.md 1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "../autovideo-engine/src/util.py",
+            "../autovideo-engine/src/cachestore.py",
+            "../autovideo-engine/src/audio.py",
+            "../autovideo-engine/src/timing.py",
+            "../autovideo-engine/src/timeline.py",
+            "../autovideo-engine/src/captions.py",
+            "../autovideo-engine/src/compositor.py",
+            "../autovideo-engine/src/visual.py",
+            "../autovideo-engine/src/manifest.py",
+            "../autovideo-engine/src/spec.py",
+            "../autovideo-engine/requirements.txt",
+            "../autovideo-engine/docker/Dockerfile",
+            "../autovideo-engine/docker/Dockerfile.dockerignore",
+            "../autovideo-engine/.dockerignore",
+            "../autovideo-engine/docker-compose.yml"
+          ],
+          "notes": "1091 lines deleted from autovideo/src, 393 added. Not one test file touched: 97 tests pass unchanged. Docker build context moved to the parent so filmkit can be copied in - NOT verified by a real image build."
         },
         {
           "id": "TASK-703",
@@ -1061,7 +1101,27 @@
           "prd_refs": [
             "CLAUDE.md 1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "../filmkit/Makefile",
+            "../filmkit/pyproject.toml",
+            "../filmkit/tests/conftest.py",
+            "../filmkit/tests/test_hashing.py",
+            "../filmkit/tests/test_files.py",
+            "../filmkit/tests/test_workspace.py",
+            "../filmkit/tests/test_reporting.py",
+            "../filmkit/tests/test_process.py",
+            "../filmkit/tests/test_cachestore.py",
+            "../filmkit/tests/test_narration.py",
+            "../filmkit/tests/test_timing.py",
+            "../filmkit/tests/test_timeline.py",
+            "../filmkit/tests/test_captions.py",
+            "../filmkit/tests/test_browser.py",
+            "../filmkit/tests/test_compositor.py",
+            "../filmkit/tests/test_manifest.py",
+            "../filmkit/tests/test_knows_no_product.py"
+          ],
+          "notes": "207 tests, 97.40% coverage, ruff and mypy --strict clean. tests/test_knows_no_product.py fails the build on a product name, an environment read, or a top-level browser import."
         },
         {
           "id": "TASK-704",
@@ -1076,7 +1136,22 @@
             "PRD 34",
             "CLAUDE.md 1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/film.py",
+            "src/anuvritti/application/ports.py",
+            "src/anuvritti/adapters/film/__init__.py",
+            "src/anuvritti/adapters/film/filmkit_compiler.py",
+            "src/anuvritti/shared/errors.py",
+            "src/anuvritti/interfaces/http/errors.py",
+            "docs/contracts/errors.md",
+            "pyproject.toml",
+            "requirements-dev.txt",
+            "tests/unit/application/test_film.py",
+            "../filmkit/pyproject.toml",
+            "../filmkit/src/filmkit/py.typed"
+          ],
+          "notes": "FilmCompiler declares one method, compile(spec) -> CompiledFilm. There is no render, no output path and no codec on the protocol, so a video cannot be asked for through it. FilmkitFilmCompiler imports only filmkit's weightless half - narration, timing, timeline, captions - and a test enforces that whitelist, checks the composition root never reaches anuvritti.adapters.film, and proves both checks can fail. filmkit is an optional extra, absent from requirements.txt, so the production image never grows it. CompiledScene refuses to hold audio longer than its picture; a capped scene that would need trimming fails the compile with FILM_NOT_COMPILABLE instead. 36 tests, 100% coverage on both new modules; make check green (1715 python tests, 96.79%)."
         },
         {
           "id": "TASK-705",
@@ -1092,7 +1167,14 @@
             "PRD 23",
             "PRD 34"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/film.py",
+            "src/anuvritti/domain/film.py",
+            "tests/integration/test_filmspec.py",
+            "tests/unit/application/test_failure_paths.py"
+          ],
+          "notes": "ComposeFilmUseCase turns a family's Moments into a FilmSpec plus a MediaBundle. Every scene is built from a Moment and the Spark it came from and cites both by id, plus any photograph and recording; SceneKind.is_evidence makes that structural - FilmScene refuses to hold a MOMENT/VOICE/SPARK/LITTLE_THING scene with an empty cites, so an invented scene cannot be constructed, only title cards cite nothing. FilmDraft holds spec and bundle and refuses to exist unless they agree exactly in both directions: nothing missing (a film with a hole) and nothing spare (a child's recording that left the house for no reason). A Moment with audio but no measured VoiceNote fails the composition naming the moment rather than compiling a silent scene, and only a human transcript becomes a caption - a machine reading is an index, not a quotation. CompileFilmUseCase joins this to TASK-704's port and returns a FilmPackage, never a video. 43 integration tests over real SQLite + the encrypted media store + the real filmkit compiler, 3 more failure paths, 100% on application/film.py; make check green (1765 python tests, 97%)."
         },
         {
           "id": "TASK-706",
@@ -1107,7 +1189,21 @@
             "PRD 8.7",
             "PRD 47"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/film.py",
+            "src/anuvritti/application/provenance.py",
+            "src/anuvritti/application/film.py",
+            "src/anuvritti/adapters/film/export.py",
+            "tests/constitution/test_film_provenance.py",
+            "tests/constitution/README.md",
+            "tests/unit/application/test_provenance.py",
+            "tests/unit/adapters/test_film_export.py",
+            "tests/unit/application/test_failure_paths.py",
+            "tests/integration/test_filmspec.py",
+            "tests/support/fakes.py"
+          ],
+          "notes": "VerifyProvenanceUseCase follows every citation in a FilmDraft back to the archive and returns a Provenance ledger - one entry per citation, VERIFIED / MISSING / ALTERED. It is built as though the spec came from a stranger: media and voice-note citations are checked against the bytes (re-hashed on read), never against the catalogue row the composer already trusted. A repository that fails to answer propagates rather than being recorded as MISSING; a cross-family citation gets the same wording an unknown id gets. FilmPackage now requires the ledger and refuses to be constructed if it is incomplete, if it vouches for something the film does not cite, or if anything failed - so an unverified film cannot exist as a value. CompileFilmUseCase verifies before the compiler is ever called. FilesystemFilmExporter writes film.json, provenance.json and media/ into a 0700 folder, refusing a non-empty directory and re-hashing every file on the way out. Gates: 16 constitution tests, 12 verifier unit tests, 6 exporter unit tests, 100% on domain/film.py, application/film.py and adapters/film/export.py, 99% on application/provenance.py; make check green (1809 python tests, 97%, ruff + mypy strict, 94 npm tests)."
         },
         {
           "id": "TASK-707",
@@ -1124,7 +1220,21 @@
             "PRD 39",
             "PRD 47"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/film.py",
+            "src/anuvritti/application/ports.py",
+            "src/anuvritti/application/film.py",
+            "src/anuvritti/adapters/film/filmkit_compiler.py",
+            "tests/constitution/test_real_voice.py",
+            "tests/constitution/test_film_provenance.py",
+            "tests/constitution/README.md",
+            "tests/support/archive.py",
+            "tests/support/fakes.py",
+            "tests/unit/application/test_film.py",
+            "tests/unit/application/test_ports.py"
+          ],
+          "notes": "ConnectiveLine is the entire vocabulary a synthesiser may speak: four fixed sentences in the domain, containing no name, date or placeholder. SceneVoice refuses a synthetic voice that says anything else, that carries no file (a file is where the measurement comes from), or that a non-machine origin claims; FilmScene refuses any synthetic voice over a scene that cites, so 'synthesis is connective tissue only' is checked where scenes are built. The Narrator port takes a ConnectiveLine rather than a string, so there is no parameter anywhere through which a sentence about a child could reach a synthesiser, and it returns a probed length. ComposeFilmUseCase takes an optional narrator defaulting to None - the shipped product opens in silence - and a synthesis failure becomes silence, never an estimate. Every synthetic line is marked in SceneVoice.caption (which is what the timeline and therefore the captions are cut from), in CompiledFilm.narration, and in the film.json that ships beside provenance.json. 21 constitution tests; the Archive harness was extracted to tests/support so both film constitutions describe the same family."
         },
         {
           "id": "TASK-708",
@@ -1139,17 +1249,28 @@
           "prd_refs": [
             "PRD 56"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "packages/world/scenes/scene.ts",
+            "packages/world/scenes/css.ts",
+            "packages/world/scenes/index.ts",
+            "packages/world/scripts/build.ts",
+            "packages/world/scripts/check-scenes.ts",
+            "packages/world/test/scenes.test.ts",
+            "packages/world/package.json"
+          ],
+          "notes": "Film scenes are HTML documents linking the same dist/world.css the app is drawn from; scenes.css adds only layout and names no colour, font or size of its own. Type scales by moving the film's root size so the app's ratios are preserved; spacing stays on the px scale. check-scenes.ts reads the Python domain and fails if a SceneKind has no layout, if the frame size or fps drift from _FRAME_WIDTH/_FRAME_HEIGHT/_FPS, if a scene hard-codes a value, if a custom property is not declared in world.css, if anything animates (a screenshot of a moving page is non-deterministic), if an external host appears, if a caption is not passed through verbatim including the machine mark, or if the compiler stops labelling timeline scenes with their kind. The film commits to data-theme=light rather than inheriting a headless browser's preference; images use contain rather than cover; a scene with no picture renders no img. 15 unit tests plus the gate; the gate was verified to fail on injected drift."
         },
         {
           "id": "TASK-709",
           "role": "Senior Staff Backend Engineer",
-          "description": "The Year, In Their Own Voice, and birthday capsules: PRD 34's age four to eighteen, real in month one instead of year eighteen.",
+          "description": "The Year: one film per child per year, the window derived from the child's birthday, every scene a real Moment, Spark, Little Thing or recording, opening and closing cards only. Compiled from the founder's own month via TASK-712, so 'That's in this year's film' is a statement. Interview, capsules and a second voice are TASK-810 and TASK-813.",
           "module_path": "src/anuvritti/application/film.py",
           "verification_command": ".venv/bin/python -m pytest tests/e2e/test_the_year.py -q",
           "dependencies": [
             "TASK-707",
-            "TASK-708"
+            "TASK-708",
+            "TASK-712"
           ],
           "prd_refs": [
             "PRD 34",
@@ -1161,28 +1282,139 @@
         {
           "id": "TASK-710",
           "role": "Design Lead",
-          "description": "A teaser render from seeded data, so the destination is visible long before there is a year of material.",
-          "module_path": "artifacts/teaser",
-          "verification_command": "test -f artifacts/teaser/teaser.mp4",
+          "description": "A teaser render from seeded real media (a dozen photographs and recordings in the workspace, never committed), so the destination is visible long before there is a year of material. `make teaser` renders it; the gate is ffprobe agreeing with the compiled timeline, not a file existing.",
+          "module_path": "scripts/teaser.py",
+          "verification_command": "make teaser && .venv/bin/python -m pytest tests/integration/test_teaser.py -q",
+          "dependencies": [
+            "TASK-712"
+          ],
+          "prd_refs": [
+            "PRD 56"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-711",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Commit Phase 7 and unbreak CI: requirements-dev.txt ends in `../filmkit`, so the next push fails at pip install. Decide filmkit's home (fold into packages/filmkit in this monorepo, or pin `filmkit @ git+...@<sha>`), install it editable, add the three npm suites to ci.yml, and push all three repositories somewhere that is not this laptop.",
+          "module_path": ".github/workflows/ci.yml",
+          "verification_command": ".venv/bin/python -m pytest tests/foundation -q",
           "dependencies": [
             "TASK-708"
           ],
           "prd_refs": [
+            "CLAUDE.md 3",
+            "ADR-0001"
+          ],
+          "status": "in_progress"
+        },
+        {
+          "id": "TASK-712",
+          "role": "Senior Staff Backend Engineer",
+          "description": "FilmRenderer: the first pixel. A port and a ChromiumFfmpegRenderer adapter that turns a FilmExport folder into an mp4: each scene to HTML via packages/world/scenes with world.css, scenes.css and the photograph inlined (Chromium's set_content has no base URL), fonts bundled so a frame is the same offline, one PNG per scene via filmkit.browser, silence generated for silent scenes, per-scene render and concat via filmkit.compositor. `make film ARCHIVE=<dir>`.",
+          "module_path": "src/anuvritti/adapters/film/render.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render.py -q",
+          "dependencies": [
+            "TASK-708",
+            "TASK-711"
+          ],
+          "prd_refs": [
+            "PRD 23",
+            "PRD 47",
+            "PRD 55.5"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-713",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "The phone, wired: install dependencies and commit a lockfile (`expo install --fix`, tsc clean); a pairing gate in _layout so an unpaired phone reaches /pair and `router.replace('/')` after; image shares uploaded and captured instead of dropped on the floor (provider.tsx:104); playback authenticated via `{uri, headers}` on useAudioPlayer; HoldToTalk's arm cancelled when the finger lifts during the permission sheet; voice uploads spooled so a recording is never orphaned.",
+          "module_path": "apps/anuvritti/src/provider.tsx",
+          "verification_command": "npm --prefix apps/anuvritti test && npx --prefix apps/anuvritti tsc --noEmit",
+          "dependencies": [
+            "TASK-606"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 24",
+            "PRD 48 F1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-714",
+          "role": "Design Lead",
+          "description": "tests/design reads the app: saffron appears only in the waveform and the voice player (today the 'Saved.' tile wears it); no `\\d+ days` string; no hardcoded pronoun or relationship in copy; every screen's strings routed through one said.ts. Mutation-checked like the Python scanners.",
+          "module_path": "tests/design/test_the_app.py",
+          "verification_command": ".venv/bin/python -m pytest tests/design -q",
+          "dependencies": [
+            "TASK-713"
+          ],
+          "prd_refs": [
+            "PRD 56",
+            "PRD 8.5"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-715",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "The threshold: first run ends with the child's name, not a tour. Family name, then 'And who is this for?' (display name and birthday, POST /families/{id}/children), then the first share. A pairing sheet that shows the eight characters in mono at year size and nothing else, for as long as it is good. No step count, no progress, and the child's age never rendered as a number.",
+          "module_path": "apps/anuvritti/app/threshold.tsx",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-713"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 48 F1",
             "PRD 56"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-716",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "This Year's Film, on the phone: a route linked from the vault's kept line and the bottom of Today, titled with the child's name and the year in the display face, showing every recording and every Spark with a why in capture order, months as the only structure, and one sentence: 'This is what the film is made of.' A compile route in openapi.yaml and the client; the rendered film plays here once TASK-712 has made it. No count of scenes, no minutes, no percentage, no 'keep going'.",
+          "module_path": "apps/anuvritti/app/film.tsx",
+          "verification_command": "npm --prefix apps/anuvritti test && .venv/bin/python -m pytest tests/integration/test_contract_conformance.py -q",
+          "dependencies": [
+            "TASK-712",
+            "TASK-715"
+          ],
+          "prd_refs": [
+            "PRD 23",
+            "PRD 34",
+            "PRD 8.5"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-717",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Measured on the server, never trusted from the handset: VoiceNote.duration_seconds is probed from the bytes (filmkit.narration.measure via ffprobe) at keep time, and the handset's figure is only compared. A clip the client under-reports can no longer pass the 'would be cut off' invariant.",
+          "module_path": "src/anuvritti/adapters/media/measure.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/adapters/test_measure.py tests/constitution/test_real_voice.py -q",
+          "dependencies": [
+            "TASK-707"
+          ],
+          "prd_refs": [
+            "PRD 24",
+            "PRD 47"
           ],
           "status": "pending"
         }
       ]
     },
     {
-      "name": "Phase 8: Frictionless Meaning",
-      "owner": "Senior Staff Backend Engineer",
+      "name": "Phase 8: Make It Magical",
+      "owner": "Design Lead / Senior Staff Backend Engineer / Senior Staff Mobile Engineer",
       "status": "pending",
       "tasks": [
         {
           "id": "TASK-801",
           "role": "Senior Staff Backend Engineer",
-          "description": "FamilyLexicon: every correction trains that one family's private lexicon on their own device. No shared model, no network, no other family's data.",
+          "description": "FamilyLexicon: every correction trains that one family's private lexicon, held in the family's own archive. No shared model, no network, no other family's data.",
           "module_path": "src/anuvritti/domain/lexicon.py",
           "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_lexicon.py -q",
           "dependencies": [
@@ -1192,21 +1424,6 @@
             "PRD 44",
             "PRD 13",
             "PRD 8.1"
-          ],
-          "status": "pending"
-        },
-        {
-          "id": "TASK-802",
-          "role": "Senior Staff Backend Engineer",
-          "description": "Constellations: categories emerge from what a family actually saves and name themselves in the family's own words, instead of a taxonomy the parent must learn.",
-          "module_path": "src/anuvritti/domain/constellation.py",
-          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_constellation.py -q",
-          "dependencies": [
-            "TASK-801"
-          ],
-          "prd_refs": [
-            "PRD 40",
-            "PRD 41"
           ],
           "status": "pending"
         },
@@ -1226,10 +1443,219 @@
           "status": "pending"
         },
         {
+          "id": "TASK-806",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Future Inbox: a message sealed today and opened at five, ten, thirteen, eighteen, on leaving home, or whenever the child chooses. Sealed with the same provenance ledger as the film, so what opens is exactly what was written or recorded. Sensitive messages are never machine-triggered; the parent chooses the key. The parent's side shows 'sealed' and never a count.",
+          "module_path": "src/anuvritti/domain/inbox.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_inbox.py tests/constitution/test_inbox_sealed.py -q",
+          "dependencies": [
+            "TASK-706",
+            "TASK-715"
+          ],
+          "prd_refs": [
+            "PRD 21",
+            "PRD 50",
+            "PRD 52"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-807",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "Papa Today: the home screen occasionally taps you on the shoulder. 'Leave him a twenty-second message.' 'Put the phone down and go sit with her.' 'You once saved something about the moon. Look outside tonight.' At most one line a day, drawn from the archive, sometimes telling the parent to close the app. Never counted, never streaked, and a whole month of silence is a valid output.",
+          "module_path": "apps/anuvritti/src/model/today.ts",
+          "verification_command": "npm --prefix apps/anuvritti test && .venv/bin/python -m pytest tests/constitution/test_no_guilt.py -q",
+          "dependencies": [
+            "TASK-715"
+          ],
+          "prd_refs": [
+            "PRD 16",
+            "PRD 8.4",
+            "PRD 8.5"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-808",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "The Return, with ceremony: the one suggestion arrives (duration.arrive) onto the ground with the reason set in the display face above it, the rest of the vault quiet until it is answered. The Spark's reverse gets a waveform, so a why is spoken by turning the object over: release, upload, POST /sparks/{id}/why, and the back re-renders in saffron with the player. An empty back stays a finished state; no call to action in indigo.",
+          "module_path": "apps/anuvritti/src/components/Spark.tsx",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-714"
+          ],
+          "prd_refs": [
+            "PRD 12",
+            "PRD 14",
+            "PRD 56"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-809",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Promise/Kept: when a Moment's Spark carries a why recording, the film emits one scene playing the why from capture and then the trace from 'Did this happen?', in that order, with the real gap between them spoken as language. A scene of this kind cannot hold a synthetic voice, and the compiler refuses any bridge between the two recordings.",
+          "module_path": "src/anuvritti/application/film.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_film.py tests/constitution/test_real_voice.py -q",
+          "dependencies": [
+            "TASK-709"
+          ],
+          "prd_refs": [
+            "PRD 23",
+            "PRD 47",
+            "PRD 8.7"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-810",
+          "role": "Senior Staff Backend Engineer",
+          "description": "The Annual Interview, in two voices: on each birthday the same short questions to the child ('What is Papa terrible at?') and to the parent, recorded, filed against the age, never re-recorded. The film gains a second narrator, and the film at eight plays the answers at four, five, six and seven. PRD 34 as written: the child's own voice, as a yearly artifact.",
+          "module_path": "src/anuvritti/domain/interview.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_interview.py tests/e2e/test_the_year.py -q",
+          "dependencies": [
+            "TASK-709",
+            "TASK-717"
+          ],
+          "prd_refs": [
+            "PRD 34",
+            "PRD 52",
+            "PRD 24"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-811",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Ask Papa, later: a Right Now answer to 'What question did he ask that you could not answer?' becomes a TELL Spark with no date. The Return Engine hands it back once, years on, on age alone: 'She asked this when she was four.' The answer is a recording filed against the question, and the film gets 'Your questions, and what Papa found out'. Never listed as unanswered, never counted.",
+          "module_path": "src/anuvritti/application/returns.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_deferred_answers.py tests/constitution/test_no_guilt.py -q",
+          "dependencies": [
+            "TASK-816"
+          ],
+          "prd_refs": [
+            "PRD 8.1",
+            "PRD 33",
+            "PRD 17"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-812",
+          "role": "Senior Staff Backend Engineer",
+          "description": "The Dictionary of Us: a WORD Little Thing, the child's invented word in the child's own voice with the day it was first heard. The film gets a chapter in first-heard order; the offline reader renders it as a glossary. Deliberately no 'does she still say it?' prompt, so it records arrivals and never losses.",
+          "module_path": "src/anuvritti/domain/presence.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_presence.py tests/unit/application/test_film.py -q",
+          "dependencies": [
+            "TASK-709"
+          ],
+          "prd_refs": [
+            "PRD 18",
+            "PRD 24",
+            "PRD 8.8"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-813",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Sealed capsules: an Age N capsule (letters, a grandparent's message, the year's film) sealed until the birthday; and The Unfinished, addressed to the child at an age the parent chooses, compiled only from Sparks with a recorded why and no Moment, narrated only by those whys. The parent sees 'sealed' and never a list, so the unlived is a gift to the child and never a debt to the parent.",
+          "module_path": "src/anuvritti/application/capsules.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_capsules.py tests/constitution/test_no_guilt.py -q",
+          "dependencies": [
+            "TASK-806",
+            "TASK-709"
+          ],
+          "prd_refs": [
+            "PRD 35",
+            "PRD 8.5",
+            "PRD 8.8"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-814",
+          "role": "Content & Family Experience Lead",
+          "description": "Let's Do Something: 'We have fifteen minutes. Rainy day.' A curated, versioned set of offline activities, terrible jokes and bedtime ideas that ends every time with 'Phone goes away now.' The only screen whose success is the app closing. Content lives in the repository as data with an author and a date, and a constitution test forbids any activity that keeps a child on a screen.",
+          "module_path": "content/activities",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_activities.py -q",
+          "dependencies": [
+            "TASK-807"
+          ],
+          "prd_refs": [
+            "PRD 22",
+            "PRD 8.4",
+            "PRD 63.6"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-815",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Return signals beyond age and weekend: season, a birthday within the month, the child's stated interests from Right Now, and a parent-approved event. Each signal is a pure scorer with a name, and no signal may raise urgency, only fit. 'Look outside tonight' becomes possible.",
+          "module_path": "src/anuvritti/domain/return_engine.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_return_engine.py tests/constitution/test_no_guilt.py -q",
+          "dependencies": [
+            "TASK-206"
+          ],
+          "prd_refs": [
+            "PRD 14",
+            "PRD 55.4"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-816",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Lift the V0 gate: COOK, VISIT, TELL and LISTEN join the intents, so a recipe, a place, a story to tell and a song each have a home. The spoken engine learns their first-person shapes.",
+          "module_path": "src/anuvritti/domain/values.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_values.py tests/unit/adapters/test_heuristic_voice.py -q",
+          "dependencies": [
+            "TASK-604"
+          ],
+          "prd_refs": [
+            "PRD 13",
+            "PRD 50"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-817",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Right Now returns to its own cadence: every few months, two minutes, several fields at once, as PRD 17 wrote it. The daily single question becomes an occasional snapshot, because a daily question is the shape of a habit and the anti-metrics exist to refuse habits.",
+          "module_path": "src/anuvritti/application/presence.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/application/test_presence.py tests/constitution -q",
+          "dependencies": [
+            "TASK-212"
+          ],
+          "prd_refs": [
+            "PRD 17",
+            "PRD 8.5",
+            "PRD 53"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-818",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "What the child sees: one screen, one real recording, then it ends. Wind Down plays a parent's goodnight and stops; the Sound Garden plays one sound and says 'Roar with me', then the screen goes dark on its own. No navigation, no library, no autoplay, nothing to tap twice. The first child-facing surface, and the first test that a screen ends itself.",
+          "module_path": "apps/anuvritti/app/child.tsx",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-714"
+          ],
+          "prd_refs": [
+            "PRD 29",
+            "PRD 30",
+            "PRD 8.4"
+          ],
+          "status": "pending"
+        },
+        {
           "id": "TASK-804",
           "role": "Senior Staff Backend Engineer",
-          "description": "Email-in ingest, so a grandparent can contribute with nothing installed and nothing learned.",
-          "module_path": "src/anuvritti/adapters/ingest/email.py",
+          "description": "Email-in ingest, so a grandparent can contribute with nothing installed and nothing learned. The mailbox is read at the interface layer (a drop folder or an inbound webhook); tests/constitution/test_no_public_model.py forbids imaplib/smtplib under adapters/, and that stays.",
+          "module_path": "src/anuvritti/interfaces/ingest/email.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_email_ingest.py -q",
           "dependencies": [
             "TASK-801"
@@ -1243,37 +1669,200 @@
         {
           "id": "TASK-805",
           "role": "Senior Staff Backend Engineer",
-          "description": "Semantic search across the family archive, running on device.",
+          "description": "Search across the family archive that answers in the family's own words: SQLite FTS5 over captions, whys and transcripts, with FamilyLexicon synonyms. Embeddings (sqlite-vec + a small ONNX model via onnxruntime, never transformers) only if the month proves keyword search poor.",
           "module_path": "src/anuvritti/application/vault.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_semantic_search.py -q",
           "dependencies": [
-            "TASK-802"
+            "TASK-801"
           ],
           "prd_refs": [
             "PRD 21",
             "PRD 50"
           ],
           "status": "pending"
+        },
+        {
+          "id": "TASK-802",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Constellations: categories emerge from what a family actually saves and name themselves in the family's own words, instead of a taxonomy the parent must learn.",
+          "module_path": "src/anuvritti/domain/constellation.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_constellation.py -q",
+          "dependencies": [
+            "TASK-801"
+          ],
+          "prd_refs": [
+            "PRD 40",
+            "PRD 41"
+          ],
+          "status": "pending",
+          "note": "PRD 40 calls constellations design research, not MVP scope. Last in this phase on purpose."
         }
       ]
     },
     {
-      "name": "Phase 9: Trust and the Second Family",
-      "owner": "Principal SRE & DevSecOps Lead",
+      "name": "Phase 9: Real - a server, a backup, a phone, a month",
+      "owner": "Principal SRE & DevSecOps Lead / Founder",
       "status": "pending",
       "tasks": [
         {
-          "id": "TASK-901",
+          "id": "TASK-905",
           "role": "Principal SRE & DevSecOps Lead",
-          "description": "Real authentication and enforced family isolation - HARDENING 5.1 closed completely, which is the gate on any second family existing.",
-          "module_path": "src/anuvritti/interfaces/http/auth.py",
-          "verification_command": ".venv/bin/python -m pytest tests/integration/test_isolation.py -q",
+          "description": "A backup that has been restored: scheduled `sqlite3 .backup` plus media to an off-site copy, the Fernet key escrowed where a second person can find it, and a restore performed into a scratch container. Ten lines in docs/CONTINUITY.md say where the key is, where the backup is, and how to restore.",
+          "module_path": "docs/RUNBOOK.md",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_backup.py -q",
           "dependencies": [
-            "TASK-511"
+            "TASK-401"
+          ],
+          "prd_refs": [
+            "HARDENING 5.4",
+            "PRD 44"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-1101",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Schema migration with a forward path and a rehearsed way back, applied against a copy of a real archive before it is applied to one.",
+          "module_path": "src/anuvritti/adapters/persistence/migrations",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_migrations.py -q",
+          "dependencies": [
+            "TASK-905"
+          ],
+          "prd_refs": [
+            "HARDENING 5.4",
+            "PRD 8.6"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-906",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "A server that is not the laptop: the existing image on one small box behind Caddy for TLS (or Tailscale Serve for one family), a deploy workflow that pushes the image, `public_url` and trusted-proxy settings, and a liveness ping the backup cron sends. `curl https://host/ready` shows encryption at rest on.",
+          "module_path": ".github/workflows/deploy.yml",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/config tests/integration/test_observability.py -q",
+          "dependencies": [
+            "TASK-711"
           ],
           "prd_refs": [
             "PRD 44",
-            "HARDENING 5.1"
+            "CLAUDE.md 1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-907",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "The app on the founder's phone: eas.json with an internal-distribution profile, the server URL baked in, the App Group and share-extension profiles provisioned, an install link tapped on a real iPhone and a real Android. docs/DEVICE.md executed and dated. Closes TASK-513 honestly.",
+          "module_path": "apps/anuvritti/eas.json",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-713",
+            "TASK-715",
+            "TASK-906"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 48 F1"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-1102",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "A privacy budget for logs: no content, no transcript, no filename and no child's name can reach a log line, asserted by reading the emitted stream back.",
+          "module_path": "src/anuvritti/shared/logging.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_log_privacy.py -q",
+          "dependencies": [
+            "TASK-906"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 46"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1009",
+          "role": "Principal QA Automation Engineer",
+          "description": "Crash-free capture: a process killed mid-write loses nothing, because the spool journals before it acts and replays on launch.",
+          "module_path": "apps/anuvritti/test/crash-recovery.test.ts",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-713"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 8.6"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1004",
+          "role": "Principal Mobile Engineer",
+          "description": "The return arrives on the lock screen: local notifications scheduled on device, at most one a day, silenceable forever in one tap and never re-enabled by an update.",
+          "module_path": "apps/anuvritti/src/return/notifications.ts",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-907"
+          ],
+          "prd_refs": [
+            "PRD 14",
+            "PRD 8.3",
+            "PRD 8.5"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-908",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Import what already exists: a Photos export, a WhatsApp chat, a Notes dump become Sparks and Moments with source IMPORTED and their original dates, so the first film has a childhood in it and not a month. Nothing is inferred that the import did not carry.",
+          "module_path": "src/anuvritti/application/import_.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_import.py tests/constitution/test_film_provenance.py -q",
+          "dependencies": [
+            "TASK-713"
+          ],
+          "prd_refs": [
+            "PRD 9",
+            "PRD 47"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-909",
+          "role": "Principal Systems Architect",
+          "description": "ADR-0006, the tenant is the process: one container and one SQLite file per family, which is what ADR-0003 already means. Supersedes the many-families-one-server assumption under TASK-901, 1105, 1112 and 1211; 1211 is closed by it. Auth becomes 'who may pair with this box'.",
+          "module_path": "docs/architecture/ADR-0006-tenant-is-the-process.md",
+          "verification_command": ".venv/bin/python -m pytest tests/architecture -q",
+          "dependencies": [
+            "TASK-905"
+          ],
+          "prd_refs": [
+            "ADR-0003",
+            "PRD 44"
+          ],
+          "status": "pending"
+        },
+        {
+          "id": "TASK-910",
+          "role": "Founder",
+          "description": "Thirty days, for real: PRD 54 run on the founder's own phone against the real server, the year's film compiled at the end of it, and the dated answer written in docs/VALIDATION.md: did Anuvritti create one moment that would not have happened otherwise? This is the gate on Phases 10 to 14, and the answer is allowed to be no.",
+          "module_path": "docs/VALIDATION.md",
+          "verification_command": "test -s docs/VALIDATION.md",
+          "dependencies": [
+            "TASK-907",
+            "TASK-1004",
+            "TASK-709",
+            "TASK-716",
+            "TASK-807"
+          ],
+          "prd_refs": [
+            "PRD 54",
+            "PRD 64",
+            "PRD 50"
           ],
           "status": "pending"
         },
@@ -1295,12 +1884,12 @@
         {
           "id": "TASK-903",
           "role": "Senior Staff Backend Engineer",
-          "description": "Grandparent mode: contribute and receive, with a surface that assumes nothing about phones.",
+          "description": "Grandparent: one prompt, one tap, from a link, nothing installed. Thirty days before the child turns N the grandparent receives exactly one question keyed to N - 'What was his father like at N?' - and the recording is filed against two ages at once. Skippable forever; never re-asked.",
           "module_path": "src/anuvritti/application/presence.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_grandparent.py -q",
           "dependencies": [
             "TASK-902",
-            "TASK-804"
+            "TASK-906"
           ],
           "prd_refs": [
             "PRD 27"
@@ -1324,19 +1913,1042 @@
           "status": "pending"
         },
         {
-          "id": "TASK-905",
+          "id": "TASK-901",
           "role": "Principal SRE & DevSecOps Lead",
-          "description": "Retention policy, automated backup and a restore that has actually been performed - HARDENING 5.4.",
-          "module_path": "docs/RUNBOOK.md",
-          "verification_command": ".venv/bin/python -m pytest tests/integration/test_backup.py -q",
+          "description": "Real authentication and enforced family isolation - HARDENING 5.1 closed completely, which is the gate on any second family existing.",
+          "module_path": "src/anuvritti/interfaces/http/auth.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_isolation.py -q",
           "dependencies": [
-            "TASK-901"
+            "TASK-909",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "HARDENING 5.1"
+          ],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Phase 10: The Thing in Your Pocket",
+      "owner": "Principal Mobile Engineer / Design Lead",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-1001",
+          "role": "Principal Mobile Engineer",
+          "description": "The device vault: the offline spool is encrypted at rest under a key held in the Secure Enclave or Keystore, so a phone left in a taxi is not a child's archive left in a taxi.",
+          "module_path": "apps/anuvritti/src/vault/device-vault.ts",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-509",
+            "TASK-511",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 21",
+            "PRD 44",
+            "HARDENING 5.1"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1002",
+          "role": "Principal Mobile Engineer",
+          "description": "Resumable, idempotent upload of real media over a bad connection: chunked, restartable after the app is killed, and never a duplicate Spark on retry.",
+          "module_path": "apps/anuvritti/src/sync/uploader.ts",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-1001",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 11",
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1003",
+          "role": "Principal Mobile Engineer",
+          "description": "Camera and microphone capture inside the app, from cold start to saved in under ten seconds, without ever leaving for another app.",
+          "module_path": "apps/anuvritti/src/capture/native.ts",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-1001",
+            "TASK-601",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 11",
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1005",
+          "role": "Principal Mobile Engineer",
+          "description": "Right Now on the home screen and the lock screen as a widget, so the most-used surface needs no app launch at all.",
+          "module_path": "apps/anuvritti/src/widgets",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-1004",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 18",
+            "PRD 8.4"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1006",
+          "role": "Design Lead",
+          "description": "Accessibility proven rather than claimed: screen reader labels, dynamic type to two hundred per cent, reduced motion and contrast, each asserted as a test.",
+          "module_path": "apps/anuvritti/src/a11y",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-506",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 56",
+            "PRD 27"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1007",
+          "role": "Design Lead",
+          "description": "One-handed at three in the morning: every capture affordance inside the thumb arc, and a night surface that does not light the room.",
+          "module_path": "tests/design",
+          "verification_command": "npm --prefix packages/world test",
+          "dependencies": [
+            "TASK-504",
+            "TASK-1003",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 56",
+            "PRD 8.4",
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "changed_files": [],
+          "note": "PRD 29 'Wind Down' is a child-facing surface (TASK-818); this is the parent's night surface."
+        },
+        {
+          "id": "TASK-1008",
+          "role": "Principal Mobile Engineer",
+          "description": "A budget for battery, heat and storage: capture never wakes the radio, background work is bounded, and the spool has a ceiling it tells the parent about before it reaches it.",
+          "module_path": "apps/anuvritti/src/sync/budget.ts",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-1002",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 46"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1010",
+          "role": "Principal QA Automation Engineer",
+          "description": "On-device end to end on both platforms in CI: a real build, a real share, a real recording, a real return - the golden path executed on a device, not a mock.",
+          "module_path": ".github/workflows/device.yml",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-1003",
+            "TASK-1004",
+            "TASK-513",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 48"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1011",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Store readiness where the privacy label is generated from the code rather than written by hand, and a test fails if a dependency can phone home.",
+          "module_path": "scripts/privacy_manifest.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_privacy_manifest.py -q",
+          "dependencies": [
+            "TASK-1002",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 46",
+            "HARDENING 5.3"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1012",
+          "role": "Design Lead",
+          "description": "The family's own language: no string hardcoded in a screen, and a locale that follows the language a parent actually speaks to their child in.",
+          "module_path": "packages/world/src/language",
+          "verification_command": "npm --prefix packages/world test",
+          "dependencies": [
+            "TASK-502",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 40",
+            "PRD 56"
+          ],
+          "status": "pending",
+          "changed_files": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 11: The Machine That Runs It",
+      "owner": "Principal SRE & DevSecOps Lead",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-1103",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Traces and RED metrics with a cardinality ceiling, so observability cannot become a second archive of the family by accident.",
+          "module_path": "src/anuvritti/interfaces/http/telemetry.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_telemetry.py -q",
+          "dependencies": [
+            "TASK-1102",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "HARDENING 5.4"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1104",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Service levels a family would recognise - capture accepted, return delivered, film compiled - with alerting on budget burn rather than on spikes.",
+          "module_path": "docs/SLO.md",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_slo.py -q",
+          "dependencies": [
+            "TASK-1103",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "HARDENING 5.4"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1105",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Rate limiting and abuse control that never throttles a parent saving a moment - HARDENING 5.2 closed.",
+          "module_path": "src/anuvritti/interfaces/http/limits.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_rate_limit.py -q",
+          "dependencies": [
+            "TASK-901",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "HARDENING 5.2",
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1106",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Dependency hashes pinned and an SBOM produced and attested at build time - HARDENING 5.3 closed.",
+          "module_path": "requirements.txt",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_supply_chain.py -q",
+          "dependencies": [
+            "TASK-403",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "HARDENING 5.3"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1107",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Key rotation with no downtime and no need to re-encrypt eighteen years at once - HARDENING 5.5 closed.",
+          "module_path": "src/anuvritti/adapters/media/keys.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_key_rotation.py -q",
+          "dependencies": [
+            "TASK-901",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "HARDENING 5.5",
+            "PRD 44"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1108",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Retention as code rather than as a paragraph: what is kept, what expires and what can never expire, enforced by a scheduled job - HARDENING 5.6 closed.",
+          "module_path": "src/anuvritti/application/retention.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_retention.py -q",
+          "dependencies": [
+            "TASK-905",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "HARDENING 5.6",
+            "PRD 44",
+            "PRD 45"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1109",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Secrets by twelve-factor and proven so: the built image is scanned for anything that looks like a key, and the build fails if one is found in a layer.",
+          "module_path": "scripts/scan_image.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_no_secrets_in_image.py -q",
+          "dependencies": [
+            "TASK-402",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "HARDENING 5.3",
+            "PRD 44"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1110",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Blue-green release with an automatic rollback driven by the error budget, so a bad deploy is measured in seconds a family never noticed.",
+          "module_path": ".github/workflows/deploy.yml",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_release.py -q",
+          "dependencies": [
+            "TASK-1104",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "HARDENING 5.4"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1111",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "A restore that runs on a schedule into a scratch environment and proves the archive is readable, because a backup nobody has restored is a rumour.",
+          "module_path": "scripts/restore_drill.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_restore_drill.py -q",
+          "dependencies": [
+            "TASK-905",
+            "TASK-1101",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "HARDENING 5.4",
+            "PRD 8.6"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1112",
+          "role": "Principal QA Automation Engineer",
+          "description": "Ten years of one family loaded and the archive still answers in the time a parent will wait: a soak test against a full archive, not an empty one.",
+          "module_path": "tests/performance/test_full_archive.py",
+          "verification_command": ".venv/bin/python -m pytest tests/performance/test_full_archive.py -q",
+          "dependencies": [
+            "TASK-805",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 21",
+            "PRD 52"
+          ],
+          "status": "pending",
+          "changed_files": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 12: The Render Farm",
+      "owner": "Principal Systems Architect",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-1201",
+          "role": "Principal Systems Architect",
+          "description": "Compilation as a durable job: submitted, resumable, and idempotent on the hash of the spec, so a retry is never a second film.",
+          "module_path": "src/anuvritti/application/render_jobs.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_jobs.py -q",
+          "dependencies": [
+            "TASK-712",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 34",
+            "PRD 52"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1202",
+          "role": "Principal Systems Architect",
+          "description": "Determinism proven by hash: the same spec and the same bytes produce the same film, this year and in ten years.",
+          "module_path": "tests/constitution/test_deterministic_render.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_deterministic_render.py -q",
+          "dependencies": [
+            "TASK-1201",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.7",
+            "PRD 52"
+          ],
+          "status": "pending",
+          "changed_files": [],
+          "note": "Byte-identical frames will not survive a Chromium upgrade; TASK-1208's perceptual diff is the real gate. Scope this to spec + timeline hashes, not pixels."
+        },
+        {
+          "id": "TASK-1203",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "The render worker runs with no network, a read-only root and the family's media mounted for one job only, then removed.",
+          "module_path": "docker/render.Dockerfile",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_sandbox.py -q",
+          "dependencies": [
+            "TASK-1201",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "HARDENING 5.1"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1204",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Progress in words a parent reads and a cancel that actually stops the machine, rather than a bar that lies until it finishes.",
+          "module_path": "src/anuvritti/application/render_jobs.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_progress.py -q",
+          "dependencies": [
+            "TASK-1201",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 56",
+            "PRD 8.5"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1205",
+          "role": "Principal Systems Architect",
+          "description": "A ceiling on time and cost, checked before the first frame: a film that would take an hour is refused up front with a sentence, not discovered half-rendered.",
+          "module_path": "src/anuvritti/domain/film.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_render_budget.py -q",
+          "dependencies": [
+            "TASK-1201",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 57"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1206",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Failure that tells a family something true: a dead letter carries the scene, the citation and the human sentence, and never a stack trace to a parent.",
+          "module_path": "src/anuvritti/application/render_jobs.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_failure.py -q",
+          "dependencies": [
+            "TASK-1201",
+            "TASK-706",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.7",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1207",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Artifact lifecycle: the rendered film expires from the render host on a clock, and never from the family's own archive.",
+          "module_path": "src/anuvritti/application/retention.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_artifact_lifecycle.py -q",
+          "dependencies": [
+            "TASK-1108",
+            "TASK-1201",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 8.6"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1208",
+          "role": "Principal QA Automation Engineer",
+          "description": "Golden frames: a perceptual diff over a fixed set of scenes, so a token change can never quietly redraw a film a family has already seen.",
+          "module_path": "tests/render/test_golden_frames.py",
+          "verification_command": ".venv/bin/python -m pytest tests/render/test_golden_frames.py -q",
+          "dependencies": [
+            "TASK-708",
+            "TASK-1202",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 56",
+            "PRD 8.6"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1209",
+          "role": "Design Lead",
+          "description": "Captions and an audio description on every film by default, because the grandmother who cannot hear it is exactly who it was made for.",
+          "module_path": "packages/world/scenes/captions",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_film_accessible.py -q",
+          "dependencies": [
+            "TASK-708",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 27",
+            "PRD 56"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1210",
+          "role": "Senior Staff Backend Engineer",
+          "description": "The Sound Garden as a licence-clean audio bed whose provenance is recorded exactly like everything else the film claims.",
+          "module_path": "src/anuvritti/application/sound.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_sound_bed.py -q",
+          "dependencies": [
+            "TASK-706",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 43",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": [],
+          "note": "PRD 30 'Sound Garden' is a child sound-play surface (TASK-818); this is the film's audio bed."
+        },
+        {
+          "id": "TASK-1211",
+          "role": "Principal Systems Architect",
+          "description": "Backpressure and fairness: one family compiling eighteen years cannot make another family wait for five seconds of their child's voice.",
+          "module_path": "src/anuvritti/application/render_jobs.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_fairness.py -q",
+          "dependencies": [
+            "TASK-1201",
+            "TASK-901",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "changed_files": [],
+          "note": "Closed by ADR-0006 (TASK-909) if the tenant is the process."
+        },
+        {
+          "id": "TASK-1212",
+          "role": "Principal QA Automation Engineer",
+          "description": "The compiler's constitution runs where the film is made: the render worker boots with --network none and compiles, verifies and renders a real archive end to end. Anything that needs the network fails out loud. This is the runtime twin of the static import walk.",
+          "module_path": "tests/integration/test_render_offline.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_offline.py -q",
+          "dependencies": [
+            "TASK-1206",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.7",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 13: The Long Now",
+      "owner": "Principal Systems Architect",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-1301",
+          "role": "Principal Systems Architect",
+          "description": "The archive format written down as a specification: versioned, human-readable, and complete enough that someone could write a reader from it alone.",
+          "module_path": "docs/contracts/archive.md",
+          "verification_command": ".venv/bin/python -m pytest tests/contracts/test_archive_format.py -q",
+          "dependencies": [
+            "TASK-905",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 45",
+            "PRD 52",
+            "PRD 37"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1302",
+          "role": "Senior Staff Backend Engineer",
+          "description": "One command produces the whole archive as ordinary files a person can open in twenty years with nothing of ours installed.",
+          "module_path": "src/anuvritti/application/export.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_open_export.py -q",
+          "dependencies": [
+            "TASK-1301",
+            "TASK-904",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 45",
+            "PRD 24",
+            "PRD 44"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1303",
+          "role": "Principal QA Automation Engineer",
+          "description": "Forward compatibility against a corpus: every archive version ever shipped is opened by today's reader, in a test that grows with each release.",
+          "module_path": "tests/contracts/test_archive_compat.py",
+          "verification_command": ".venv/bin/python -m pytest tests/contracts/test_archive_compat.py -q",
+          "dependencies": [
+            "TASK-1301",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "PRD 52"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1304",
+          "role": "Senior Staff Backend Engineer",
+          "description": "A filmspec from an older version compiles on today's compiler or is refused out loud - it is never drawn differently in silence.",
+          "module_path": "src/anuvritti/domain/film.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_spec_versioning.py -q",
+          "dependencies": [
+            "TASK-1303",
+            "TASK-1202",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "PRD 8.7"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1305",
+          "role": "Principal QA Automation Engineer",
+          "description": "The time-travel test: an archive captured now, compiled against a clock set eighteen years forward, and still correct in every date it says out loud.",
+          "module_path": "tests/e2e/test_time_travel.py",
+          "verification_command": ".venv/bin/python -m pytest tests/e2e/test_time_travel.py -q",
+          "dependencies": [
+            "TASK-1304",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 52",
+            "PRD 34"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1306",
+          "role": "Principal Systems Architect",
+          "description": "What happens if we stop existing: keys escrowed to the family, the format published, and the reader already in their hands - written as a procedure, not a promise.",
+          "module_path": "docs/CONTINUITY.md",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_continuity.py -q",
+          "dependencies": [
+            "TASK-1302",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 45",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1307",
+          "role": "Design Lead",
+          "description": "The offline reader: one HTML file that opens an exported archive with no server, no account and no network, and looks like Anuvritti because it uses the same tokens.",
+          "module_path": "packages/world/reader",
+          "verification_command": "npm --prefix packages/world run reader:check",
+          "dependencies": [
+            "TASK-1302",
+            "TASK-502",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 45",
+            "PRD 56",
+            "PRD 24"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1308",
+          "role": "Design Lead",
+          "description": "The year as an object you can hold: a print-ready artifact generated from the same spec that makes the film.",
+          "module_path": "packages/world/print",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_print_artifact.py -q",
+          "dependencies": [
+            "TASK-709",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 36",
+            "PRD 56"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1309",
+          "role": "Principal Systems Architect",
+          "description": "The Family Artifact Protocol made real: a signed, self-describing bundle a family can hand to another generation.",
+          "module_path": "src/anuvritti/domain/artifact.py",
+          "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_artifact_protocol.py -q",
+          "dependencies": [
+            "TASK-1301",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 37",
+            "PRD 45"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1310",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Link rot answered: what was saved from the internet is kept as content with its own provenance, because a URL is not a memory.",
+          "module_path": "src/anuvritti/application/preserve.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_link_rot.py -q",
+          "dependencies": [
+            "TASK-706",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 43",
+            "PRD 19"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1311",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Fixity over decades: a scheduled check that re-hashes the whole archive, and a repair path for the day one file comes back wrong.",
+          "module_path": "src/anuvritti/application/fixity.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_fixity.py -q",
+          "dependencies": [
+            "TASK-1108",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "HARDENING 5.4"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1312",
+          "role": "Principal QA Automation Engineer",
+          "description": "Eighteen simulated years: captured, compiled, exported and reopened by the offline reader in one test that stands for the whole promise.",
+          "module_path": "tests/e2e/test_eighteen_years.py",
+          "verification_command": ".venv/bin/python -m pytest tests/e2e/test_eighteen_years.py -q",
+          "dependencies": [
+            "TASK-1305",
+            "TASK-1307",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 52",
+            "PRD 60"
+          ],
+          "status": "pending",
+          "changed_files": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 14: A Product a Family Can Have",
+      "owner": "Design Lead / Senior Staff Backend Engineer",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-1401",
+          "role": "Design Lead",
+          "description": "First run under sixty seconds that ends in a saved Spark rather than a tour, because the product explains itself by working.",
+          "module_path": "apps/anuvritti/src/onboarding",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-1003",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.2",
+            "PRD 56",
+            "PRD 48"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1402",
+          "role": "Senior Staff Backend Engineer",
+          "description": "The invitation: a co-parent or grandparent joins by receiving something worth having, not by being asked to create an account first.",
+          "module_path": "src/anuvritti/application/invitations.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_invitations.py -q",
+          "dependencies": [
+            "TASK-902",
+            "TASK-903",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 26",
+            "PRD 27",
+            "PRD 51"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1403",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Entitlements where nothing already saved is ever held hostage: if a family stops paying, the archive stays readable and exportable forever.",
+          "module_path": "src/anuvritti/domain/entitlement.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_never_hostage.py -q",
+          "dependencies": [
+            "TASK-1302",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 57",
+            "PRD 47",
+            "PRD 45"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1404",
+          "role": "Senior Staff Backend Engineer",
+          "description": "The gift path: a grandparent can pay for the legacy archive without becoming the owner of the child's record.",
+          "module_path": "src/anuvritti/application/billing.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_gift.py -q",
+          "dependencies": [
+            "TASK-1403",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 57",
+            "PRD 27",
+            "PRD 45"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1406",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Measurement that cannot become surveillance: counted on the device, reported family-blind, and never able to name a child or a moment.",
+          "module_path": "src/anuvritti/application/analytics.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_analytics_blind.py -q",
+          "dependencies": [
+            "TASK-1102",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 46",
+            "PRD 53"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1405",
+          "role": "Principal QA Automation Engineer",
+          "description": "The anti-metrics enforced in code: no streak, no daily active target, no session length goal - a test that fails if one is ever introduced.",
+          "module_path": "tests/constitution/test_anti_metrics.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_anti_metrics.py -q",
+          "dependencies": [
+            "TASK-1406",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 53",
+            "PRD 8.5",
+            "PRD 46"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1407",
+          "role": "Design Lead",
+          "description": "Messages that cannot nag: a hard ceiling, a permanent off switch, and no copy that exists to bring somebody back.",
+          "module_path": "src/anuvritti/application/messaging.py",
+          "verification_command": ".venv/bin/python -m pytest tests/constitution/test_no_nagging.py -q",
+          "dependencies": [
+            "TASK-1004",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 8.5",
+            "PRD 46",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1408",
+          "role": "Design Lead",
+          "description": "The trust page, written for a parent and not a lawyer: what is stored, where, who can read it, and what happens to it if we disappear.",
+          "module_path": "docs/TRUST.md",
+          "verification_command": ".venv/bin/python -m pytest tests/contracts/test_trust_claims.py -q",
+          "dependencies": [
+            "TASK-1306",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 47",
+            "PRD 55.5"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1409",
+          "role": "Senior Staff Backend Engineer",
+          "description": "A way to reach a person, and a support path that cannot read the family's archive to help them.",
+          "module_path": "src/anuvritti/application/support.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_support.py -q",
+          "dependencies": [
+            "TASK-901",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1410",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Incident response rehearsed rather than written: a drill that produces the notification a family would actually receive, within the hours we claim.",
+          "module_path": "docs/RUNBOOK.md",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_incident_drill.py -q",
+          "dependencies": [
+            "TASK-1110",
+            "TASK-910"
           ],
           "prd_refs": [
             "HARDENING 5.4",
             "PRD 44"
           ],
-          "status": "pending"
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1411",
+          "role": "Principal QA Automation Engineer",
+          "description": "The published terms tested against the code: every promise the privacy policy makes has an assertion behind it, and a broken promise fails the build.",
+          "module_path": "tests/contracts/test_policy_matches_code.py",
+          "verification_command": ".venv/bin/python -m pytest tests/contracts/test_policy_matches_code.py -q",
+          "dependencies": [
+            "TASK-1408",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1412",
+          "role": "Principal QA Automation Engineer",
+          "description": "The product's most important test, run against the real build: would a parent be glad, in fifteen years, that this existed.",
+          "module_path": "tests/e2e/test_the_most_important_test.py",
+          "verification_command": ".venv/bin/python -m pytest tests/e2e/test_the_most_important_test.py -q",
+          "dependencies": [
+            "TASK-1312",
+            "TASK-1403",
+            "TASK-910"
+          ],
+          "prd_refs": [
+            "PRD 60",
+            "PRD 61",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": []
         }
       ]
     }
@@ -1375,12 +2987,28 @@
     "TASK-502",
     "TASK-503",
     "TASK-504",
+    "TASK-505",
+    "TASK-506",
+    "TASK-507",
+    "TASK-508",
+    "TASK-509",
+    "TASK-510",
+    "TASK-511",
+    "TASK-512",
     "TASK-601",
     "TASK-602",
     "TASK-603",
     "TASK-604",
     "TASK-605",
-    "TASK-606"
+    "TASK-606",
+    "TASK-701",
+    "TASK-702",
+    "TASK-703",
+    "TASK-704",
+    "TASK-705",
+    "TASK-706",
+    "TASK-707",
+    "TASK-708"
   ],
   "blocked_tasks": []
 }

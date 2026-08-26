@@ -11,6 +11,8 @@
 - Always run modular tests before and after code changes.
 
 ## 3. Tracker Protocol
-- Read `tracker.json` before each operation; update after.
+- One task per chat. Start with `python3 scripts/tracker.py brief TASK-ID` (the task, its deps' files, what
+  it unlocks), then read whatever the work needs. Update with `tracker.py set`; `tracker.json` is 130 KB, so
+  query it (`brief`, `next`, `status`) rather than opening it whole.
 - States: "pending" → "in_progress" → "completed" | "blocked".
 - On completion, run tests, lint, and record changed files/commit hash.

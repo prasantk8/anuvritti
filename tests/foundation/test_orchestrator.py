@@ -188,3 +188,52 @@ class TestRealTracker:
             for task in phase["tasks"]:
                 assert task.get("role"), f"{task['id']} has no role"
                 assert task.get("prd_refs"), f"{task['id']} has no PRD reference"
+
+
+# --- tracker.py brief / status / --commit --------------------------------------------
+
+
+class TestBrief:
+    def test_brief_shows_the_task_and_its_dependencies_footprint(self, sandbox: Path):
+        first = _task("TASK-1", status="completed") | {"changed_files": ["src/a.py"]}
+        _write_tracker(sandbox, [first, _task("TASK-2", ["TASK-1"]), _task("TASK-3", ["TASK-2"])])
+        out = _run_cli(sandbox, "brief", "TASK-2").stdout
+        assert "# TASK-2 - Phase 1: Foundations" in out
+        assert "TASK-1 [completed]" in out
+        assert "src/a.py" in out
+        assert "Unlocks: TASK-3" in out
+
+    def test_brief_of_an_unknown_task_fails(self, sandbox: Path):
+        _write_tracker(sandbox, [_task("TASK-1")])
+        assert _run_cli(sandbox, "brief", "TASK-9").returncode == 1
+
+    def test_status_prints_the_status(self, sandbox: Path):
+        _write_tracker(sandbox, [_task("TASK-1", status="blocked")])
+        assert _run_cli(sandbox, "status", "TASK-1").stdout.strip() == "blocked"
+
+    def test_commit_hash_is_recorded(self, sandbox: Path):
+        _write_tracker(sandbox, [_task("TASK-1")])
+        _run_cli(sandbox, "set", "TASK-1", "completed", "--commit", "abc1234")
+        data = json.loads((sandbox / "tracker.json").read_text())
+        assert data["phases"][0]["tasks"][0]["commit"] == "abc1234"
+
+    def test_board_lists_what_is_in_flight(self, sandbox: Path):
+        landed = _task("TASK-1", status="completed") | {"commit": "abc1234"}
+        _write_tracker(
+            sandbox,
+            [
+                landed,
+                _task("TASK-2", status="in_progress"),
+                _task("TASK-3", status="blocked"),
+                _task("TASK-4"),
+            ],
+        )
+        out = _run_cli(sandbox, "board").stdout
+        assert "in_progress:" in out and "TASK-2" in out
+        assert "blocked:" in out and "TASK-3" in out
+        assert "completed:" in out and "TASK-1" in out and "@ abc1234" in out
+        assert "TASK-4" not in out
+
+    def test_board_is_quiet_when_nothing_is_in_flight(self, sandbox: Path):
+        _write_tracker(sandbox, [_task("TASK-1")])
+        assert "nothing in flight" in _run_cli(sandbox, "board").stdout

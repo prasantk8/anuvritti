@@ -313,3 +313,62 @@ hand, and the export carries both the audio and who said which words.
 **Next: TASK-701** — extract `filmkit`. Phase 7 turns a year of these recordings into the
 film they were always for, and TASK-707 will measure narration against the
 `duration_seconds` this phase started recording.
+
+---
+
+## Reshaped (2026-08-26) — the floor and the magic
+
+Four reviews were run against the working tree after Phase 6: an audit of the
+uncommitted Phase 7 work, a line-by-line gap analysis of the PRD against the
+tracker, a screen-by-screen critique of the app, and an adversarial read of the
+Phases 10–14 programme. `make check` was green throughout (1,833 Python tests,
+183 TypeScript, 97.19%). Three findings changed the plan.
+
+**1. The premise had no floor.** The app says *"That's in this year's film"*
+(TASK-605) and nothing in this repository draws a pixel: the compiler emits a
+provenance-verified `film.json` and a media bundle, and stops. Playwright is not
+in this project's venv; the exported paths (`media/<id>.<ext>`, bare `<id>` in
+`audio_path`, `<scene>.png`) do not yet describe one folder; the scene HTML links
+`world.css` relatively, which Chromium's `set_content` cannot resolve. **TASK-712**
+is the renderer. **TASK-717** measures duration from the bytes rather than trusting
+the handset, which is the one place "measured, never estimated" was still a claim.
+
+**2. The phone was never wired.** `apps/anuvritti` has no `node_modules` and no
+lockfile; nothing routes to `/pair`, so a fresh install reads *"Nothing today.
+That's normal."* while every request 401s; image shares are dropped at
+`provider.tsx:104`; `useAudioPlayer` is handed a bare URL the server refuses;
+the *"Saved."* tile is painted saffron, the colour rationed to a human voice —
+and `tests/design` could not see it because it never reads the app. TASK-513 is
+reopened; **TASK-713–716** wire, test, and give the film a screen. Next push to
+GitHub fails at `pip install` on `../filmkit` — **TASK-711** first.
+
+**3. The magic was not in the plan.** Future Inbox (PRD 21), Papa Today's
+presence prompts (PRD 16), the Annual Interview in the child's own voice (PRD 34),
+Let's Do Something (PRD 22), any child-facing screen (PRD 29, 30, 25) — promised,
+and carried by no task, while 47 of the remaining tasks built the platform PRD 64
+says not to start with. Phase 8 is now **Make It Magical** (TASK-806–818). Phase 9
+is **Real**: a server that is not the laptop, a restored backup with an escrowed
+key, the app on the founder's phone, an import of the childhood that already
+exists, and PRD 54 run for thirty days. **Every task in Phases 10–14 now depends
+on TASK-910**, the dated answer to that month.
+
+Corrections made while there: `apps/mobile` paths that never existed; 905's
+dependency on multi-family auth; 1201 waiting on birthday capsules; PRD 29/30
+cited by tasks that are not those features; 804/805/1201 as specified would have
+failed `test_no_public_model.py` (`imaplib`, `transformers`, `asyncio`) and are
+reworded to respect it; `completed_tasks` regenerated (it listed 39 of 56).
+
+Three decisions recorded for the founder rather than taken: filmkit's home (fold
+into `packages/` or pin by SHA); ADR-0006, the tenant is the process (TASK-909);
+Right Now's cadence returning to "every few months" (TASK-817).
+
+**Next: TASK-711**, then 712, 713 — the first real film, on a phone that works.
+
+## Working in waves (2026-08-26)
+
+Every task is one chat, started from a prompt in `docs/prompts/` and held to
+`docs/prompts/WORKING.md`. Tasks that do not depend on each other run at the same time,
+each in its own worktree, each recording itself on the main tree's `tracker.json`
+(`tracker.py board` is the founder's view) and reporting to `var/reviews/`. Review is on
+request: the branch is diffed, the gates rerun, the work merged. `wave-1.md` is TASK-711
+alone, then 712, 713, 717, 801, 815, 816, 817 and 905 in parallel.
