@@ -207,8 +207,16 @@ jobs:
       - name: Verify the image refuses to start without an encryption key
         run: |
           # PRD 44: production must not run without encryption at rest.
-          if docker run --rm -e ANUVRITTI_ENV=production anuvritti:ci --help >/dev/null 2>&1; then
-            echo "::error::the image started in production without ANUVRITTI_MEDIA_KEY"
+          set +e
+          output="$(docker run --rm -e ANUVRITTI_ENV=production anuvritti:ci 2>&1)"
+          status=$?
+          set -e
+          if [ "$status" -ne 78 ]; then
+            echo "::error::the image returned $status instead of refusing invalid configuration"
+            exit 1
+          fi
+          if ! grep -q "ANUVRITTI_MEDIA_KEY is required in production" <<<"$output"; then
+            echo "::error::the image failed without naming the missing encryption key"
             exit 1
           fi
 

@@ -134,7 +134,10 @@ class TestContainer:
 
     def test_ci_verifies_production_refuses_to_start_without_a_key(self):
         """PRD 44 - the promise is only real if something checks it."""
-        assert "ANUVRITTI_MEDIA_KEY" in _steps("container")
+        steps = _steps("container")
+        assert "ANUVRITTI_MEDIA_KEY is required in production" in steps
+        assert "--help" not in steps
+        assert 'status" -ne 78' in steps
 
     def test_the_image_is_scanned_for_vulnerabilities(self):
         steps = _steps("container")
