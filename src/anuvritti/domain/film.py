@@ -499,6 +499,10 @@ class CompiledFilm:
             "narration": self.narration,
             "notes": list(self.notes),
             "scenes": [scene.to_dict() for scene in self.scenes],
+            # The renderer consumes the arithmetic the compiler checked. Reconstructing
+            # it from rounded summaries at the far end is how audio and picture drift.
+            "timeline": self.timeline,
+            "timing": self.timing,
         }
 
 

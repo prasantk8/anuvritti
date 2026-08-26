@@ -152,18 +152,22 @@ export interface RenderOptions {
   /** Relative hrefs, so a scene folder can be opened from anywhere including a file URL. */
   readonly worldCss?: string;
   readonly sceneCss?: string;
+  /** Complete offline renders carry their CSS inside the document. */
+  readonly inlineCss?: readonly string[];
 }
 
 export function renderScene(scene: SceneInput, options: RenderOptions = {}): string {
   const world = options.worldCss ?? "world.css";
   const scenes = options.sceneCss ?? "scenes.css";
+  const styles = options.inlineCss
+    ? options.inlineCss.map((css) => `<style>${css}</style>`).join("\n")
+    : `<link rel="stylesheet" href="${escapeHtml(world)}">\n<link rel="stylesheet" href="${escapeHtml(scenes)}">`;
   return `<!doctype html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <title>${escapeHtml(scene.id)}</title>
-<link rel="stylesheet" href="${escapeHtml(world)}">
-<link rel="stylesheet" href="${escapeHtml(scenes)}">
+${styles}
 </head>
 <body>
 <main class="frame ${scene.kind.toLowerCase().replace(/_/g, "-")}" id="${escapeHtml(scene.id)}">
