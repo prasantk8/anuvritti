@@ -56,7 +56,10 @@ export const INTENT_SAID: Readonly<Record<IntentType, string>> = {
 /** The next intent one tap away. Wraps, so the cycle is closed. */
 export function nextIntent(current: IntentType): IntentType {
   const alternatives = NEXT_INTENT[current];
-  return alternatives[0] ?? INTENT_TYPE_VALUES[0];
+  // `NEXT_INTENT` is total — every intent lists the other five — so the fallback is
+  // unreachable. It is written out rather than read from `INTENT_TYPE_VALUES[0]`, which is
+  // typed `IntentType | undefined` and so answers this function's promise with a maybe.
+  return alternatives[0] ?? "REMEMBER";
 }
 
 /**

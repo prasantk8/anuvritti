@@ -101,7 +101,12 @@ export {
 export interface World {
   readonly theme: Theme;
   readonly color: Palette;
-  readonly shadow: (typeof SHADOW)["light"];
+  /**
+   * Either theme's shadows. `SHADOW` is `as const`, so naming only the light half here
+   * makes the dark half's `shadowColor` — a different literal string — a type error at the
+   * one line that resolves a theme.
+   */
+  readonly shadow: (typeof SHADOW)[Theme];
   readonly space: typeof SPACE;
   readonly type: typeof TYPE_SIZE;
   readonly radius: typeof RADIUS;
