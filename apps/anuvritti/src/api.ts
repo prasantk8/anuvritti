@@ -9,11 +9,21 @@
 
 import * as Crypto from "expo-crypto";
 
-import type { CaptureQueue, Clock, QueuedCapture, Random, Result } from "@anuvritti/client";
+import type {
+  CaptureQueue,
+  Clock,
+  QueuedCapture,
+  Random,
+  Result,
+  TokenStore,
+} from "@anuvritti/client";
 import { createClient, createQueue } from "@anuvritti/client";
 
 import { sqliteQueueStore } from "./storage/queue-store.ts";
+import { documentCustody, sqliteSpoolStore } from "./storage/spool-store.ts";
 import { secureTokenStore } from "./storage/token-store.ts";
+import type { Outbox, Spooled } from "./upload/spool.ts";
+import { createOutbox } from "./upload/spool.ts";
 
 /**
  * `expo-crypto`, and nothing else.
@@ -39,6 +49,10 @@ const clock: Clock = { now: () => Date.now() };
 export interface Wired {
   readonly anuvritti: ReturnType<typeof createClient>;
   readonly queue: CaptureQueue;
+  /** Files that are on this phone and not yet in the archive (TASK-713). */
+  readonly outbox: Outbox;
+  /** The keychain, so the audio player can be handed the same bearer token (`media.ts`). */
+  readonly tokens: TokenStore;
 }
 
 /**
@@ -78,7 +92,36 @@ export async function wire(baseUrl: string): Promise<Wired> {
     }
   };
 
-  return { anuvritti, queue: createQueue({ store, clock, random, send }) };
+  const queue = createQueue({ store, clock, random, send });
+
+  /**
+   * One multipart `POST /v1/media`.
+   *
+   * `FormData` with a `{ uri, name, type }` part is React Native's own extension: the
+   * runtime streams the file off disk rather than reading it into JavaScript. A `Blob`
+   * here would load a whole recording into memory on a phone that has just been holding a
+   * microphone open, and Hermes has no `File` at all.
+   */
+  const upload = (entry: Spooled): Promise<Result<{ id: string }>> => {
+    const form = new FormData();
+    form.append("file", {
+      uri: entry.uri,
+      name: entry.name,
+      type: entry.mimeType,
+    } as unknown as Blob);
+    return anuvritti.api.uploadMedia(form);
+  };
+
+  const outbox = createOutbox({
+    store: await sqliteSpoolStore(),
+    clock,
+    random,
+    queue,
+    custody: documentCustody(),
+    upload,
+  });
+
+  return { anuvritti, queue, outbox, tokens };
 }
 
 export { random as deviceRandom, clock as deviceClock };

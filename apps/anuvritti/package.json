@@ -9,7 +9,7 @@
     "android": "expo run:android",
     "prebuild": "expo prebuild --clean",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"test/**/*.test.ts\""
+    "test": "npm run typecheck --silent && node --test \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@anuvritti/client": "file:../../packages/client",

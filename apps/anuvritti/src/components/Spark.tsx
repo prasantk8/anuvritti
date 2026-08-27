@@ -30,6 +30,7 @@ import Animated, {
 import type { Spark as SparkData } from "@anuvritti/client";
 import { INTENT_SAID, intentOf, isUncertain, savedSentence } from "@anuvritti/client";
 
+import type { MediaSource } from "../media.ts";
 import { whyFrom } from "../voice/playback.ts";
 import type { World } from "../world.ts";
 import { VoiceNote } from "./VoiceNote.tsx";
@@ -46,8 +47,14 @@ export interface SparkProps {
   readonly onCorrect?: () => void;
   /** What the chip should say right now, which may be ahead of the server. */
   readonly sayingIntent?: string;
-  /** Where media lives, so the back face can play a recorded why (TASK-602). */
-  readonly baseUrl?: string;
+  /**
+   * How to reach a piece of media, so the back face can play a recorded why (TASK-602).
+   *
+   * A function rather than a base url (TASK-713): the source carries this device's bearer
+   * token, and only the provider holds that. A component that built the URL itself would
+   * be building an unauthenticated one.
+   */
+  readonly media?: (mediaId: string) => MediaSource | null;
 }
 
 export function Spark({
@@ -57,7 +64,7 @@ export function Spark({
   onFlip,
   onCorrect,
   sayingIntent,
-  baseUrl,
+  media,
 }: SparkProps) {
   const turn = useSharedValue(flipped ? 1 : 0);
   const styles = sheet(world);
@@ -157,11 +164,11 @@ export function Spark({
               because the recording *is* the answer and the transcript is a second, lesser
               way of giving it. `whyFrom` decides that; this only lays it out in that order.
             */}
-            {said.voice && spark.why?.voice && baseUrl ? (
+            {said.voice && spark.why?.voice && media ? (
               <VoiceNote
                 note={spark.why.voice}
                 world={world}
-                sourceUrl={`${baseUrl}/v1/media/${spark.why.voice.media_id}`}
+                source={media(spark.why.voice.media_id)}
               />
             ) : null}
             {said.text ? <Text style={styles.why}>{said.text}</Text> : null}

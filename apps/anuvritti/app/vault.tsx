@@ -31,7 +31,7 @@ export default function Vault() {
   const world = useWorld();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
-  const { anuvritti, queue, drain, baseUrl, today } = useAnuvritti();
+  const { anuvritti, outbox, drain, media, today } = useAnuvritti();
 
   const [recordings, setRecordings] = useState<readonly Note[]>([]);
   const [said, setSaid] = useState<string | null>(null);
@@ -47,10 +47,11 @@ export default function Vault() {
 
   const kept = useCallback(
     async ({ uri, seconds }: Kept) => {
-      const result = await keepRecording({ api: anuvritti.api, queue }, { uri, seconds });
+      const result = await keepRecording({ outbox }, { uri, seconds });
       if (!result.ok) {
-        // The one honest failure on this path: the bytes never left the phone, so saying
-        // "saved" would be a lie. The recording is still in the app's own directory.
+        // The bytes have not left the phone yet, so saying "that's in this year's film"
+        // would be ahead of the truth. It is not a loss and there is nothing to redo: the
+        // recording is spooled in the app's own directory and goes up on its own (TASK-713).
         setSaid("Still on your phone. It will go up when there's signal.");
         return;
       }
@@ -58,7 +59,7 @@ export default function Vault() {
       void drain();
       void load();
     },
-    [anuvritti, drain, load, queue]
+    [drain, load, outbox]
   );
 
   const shelf = shelve(recordings);
@@ -84,7 +85,7 @@ export default function Vault() {
                 key={note.media_id}
                 note={note}
                 world={world}
-                sourceUrl={`${baseUrl}/v1/media/${note.media_id}`}
+                source={media(note.media_id)}
               />
             ))}
           </View>

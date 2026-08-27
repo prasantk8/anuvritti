@@ -28,7 +28,7 @@ export default function Today() {
   const world = useWorld();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
-  const { anuvritti, justSaved, acknowledge, baseUrl } = useAnuvritti();
+  const { anuvritti, justSaved, acknowledge, media } = useAnuvritti();
 
   const [suggestions, setSuggestions] = useState<readonly Suggestion[]>([]);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
@@ -123,7 +123,7 @@ export default function Today() {
                   : bringingBack.suggestion.spark.id
               )
             }
-            baseUrl={baseUrl}
+            media={media}
           />
 
           <View style={styles.answers}>
@@ -164,7 +164,7 @@ export default function Today() {
               onFlip={() => setFlipped((current) => (current === spark.id ? null : spark.id))}
               onCorrect={() => correct(spark)}
               sayingIntent={corrections[spark.id] ?? undefined}
-              baseUrl={baseUrl}
+              media={media}
             />
           </View>
         ))}

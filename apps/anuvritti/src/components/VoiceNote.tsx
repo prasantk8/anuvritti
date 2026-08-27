@@ -12,6 +12,14 @@
  * `useAudioPlayerStatus(player)` is the subscription — `player.playing` alone does not
  * re-render. `player.seekTo(0)` is needed before replaying a finished clip, because a
  * player parked at the end answers `play()` by doing nothing at all.
+ *
+ * The source is an object, not a URL (TASK-713). `AudioSource` is
+ * `string | number | null | { uri?, assetId?, headers?, name? }`, and the player fetches
+ * the bytes itself — outside `@anuvritti/client`, and so outside the one place that knows
+ * this family's token. Handed a bare URL it asked anonymously, was told 401, and rendered
+ * a complete, silent recording. `src/media.ts` builds the source; `null` is a legal one and
+ * is what an unpaired phone gets, because a player that cannot be let in should not be
+ * pointed at the door.
  */
 
 import { useCallback } from "react";
@@ -20,6 +28,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
 import type { VoiceNote as Note } from "@anuvritti/client";
 
+import type { MediaSource } from "../media.ts";
 import { describe, lengthOf, whatToShow } from "../voice/playback.ts";
 import { FLOOR_HEIGHT, summarise } from "../voice/waveform.ts";
 import type { World } from "../world.ts";
@@ -30,15 +39,15 @@ const BARS = 28;
 export interface VoiceNoteProps {
   readonly note: Note;
   readonly world: World;
-  /** Where the bytes live. `src/api.ts` knows the base url; this component does not. */
-  readonly sourceUrl: string;
+  /** The bytes, and this phone's right to them. `null` when there is no token yet. */
+  readonly source: MediaSource | null;
   /** The recorded shape, when the device that made it kept one. */
   readonly shape?: readonly number[];
 }
 
-export function VoiceNote({ note, world, sourceUrl, shape }: VoiceNoteProps) {
+export function VoiceNote({ note, world, source, shape }: VoiceNoteProps) {
   const shown = whatToShow(note);
-  const player = useAudioPlayer(sourceUrl);
+  const player = useAudioPlayer(source);
   const status = useAudioPlayerStatus(player);
   const styles = sheet(world);
 

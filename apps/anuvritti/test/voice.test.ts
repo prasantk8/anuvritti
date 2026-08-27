@@ -8,6 +8,7 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import {
@@ -243,5 +244,95 @@ describe("the waveform", () => {
     assert.equal(clock(4.9), "0:04");
     assert.equal(clock(65), "1:05");
     assert.equal(clock(-3), "0:00");
+  });
+});
+
+/**
+ * TASK-713 — the first time, there is a permission sheet in the way.
+ *
+ * The very first press does not start a recording. It puts up the OS microphone dialog,
+ * over the app, and the finger that pressed is now hovering over a system alert. Almost
+ * everyone lifts it there — the button they were holding is no longer under it.
+ *
+ * The old code awaited the dialog and only then told the machine a press had happened, so
+ * the release that came while the sheet was up landed on a machine at rest and did
+ * nothing. Tap "Allow", and the phone started recording and never stopped: the parent's
+ * first experience of the vault was a live microphone they did not ask for and could not
+ * see how to end.
+ *
+ * The fix is a state, not a flag. While the sheet is up the machine is `asking`, a release
+ * during it returns to rest, and an answer that arrives at rest starts nothing.
+ */
+describe("asking for the microphone", () => {
+  it("captures nothing while the sheet is up", () => {
+    const { state, effects } = gesture({ kind: "ask", at: 0 });
+    assert.equal(state.phase, "asking");
+    assert.deepEqual(effects, []);
+    assert.equal(isLive(state), false);
+  });
+
+  it("starts recording when the answer arrives and the finger is still down", () => {
+    const { state, effects } = gesture(
+      { kind: "ask", at: 0 },
+      { kind: "granted", at: 900 },
+      { kind: "tick", at: 900 + ARMING_MS }
+    );
+    assert.equal(state.phase, "recording");
+    assert.deepEqual(effects, ["start"]);
+  });
+
+  it("arms from the answer rather than from the press", () => {
+    // The 200ms is there to tell a tap from a hold. Measuring it from a press that was
+    // three seconds ago means the first recording starts the instant permission lands,
+    // which is the one recording most likely to be an accident.
+    const { state } = gesture({ kind: "ask", at: 0 }, { kind: "granted", at: 3000 });
+    assert.equal(state.phase, "arming");
+    assert.equal(state.pressedAt, 3000);
+  });
+
+  it("cancels the arm when the finger lifts during the sheet", () => {
+    const { state, effects } = gesture({ kind: "ask", at: 0 }, { kind: "release", at: 400 });
+    assert.deepEqual(state, RESTING);
+    assert.deepEqual(effects, []);
+  });
+
+  it("starts nothing when permission is granted after the finger has lifted", () => {
+    // The whole bug, as one sequence. This is what left a first-time parent recording.
+    const { state, effects } = gesture(
+      { kind: "ask", at: 0 },
+      { kind: "release", at: 400 },
+      { kind: "granted", at: 900 },
+      { kind: "tick", at: 900 + ARMING_MS },
+      { kind: "tick", at: 5000 }
+    );
+    assert.deepEqual(state, RESTING);
+    assert.deepEqual(effects, []);
+  });
+
+  it("returns to rest when permission is refused", () => {
+    const { state, effects } = gesture({ kind: "ask", at: 0 }, { kind: "refused" });
+    assert.deepEqual(state, RESTING);
+    assert.deepEqual(effects, []);
+  });
+
+  it("says nothing alarming to a screen reader while it waits", () => {
+    assert.equal(announce("asking"), "Hold to talk.");
+  });
+});
+
+describe("the recorder holds the gesture, not a promise", () => {
+  it("never signals a press from inside an await", () => {
+    const source = readFileSync(
+      new URL("../src/components/HoldToTalk.tsx", import.meta.url),
+      "utf8"
+    );
+    // `signal("press")` after `await requestRecordingPermissionsAsync()` is the shape of
+    // the bug: by then the release has already happened and been ignored.
+    assert.ok(
+      !/await requestRecordingPermissionsAsync[\s\S]{0,400}?signal\("press"\)/.test(source),
+      "the press is still signalled after the permission dialog resolves"
+    );
+    assert.match(source, /signal\("ask"\)/);
+    assert.match(source, /signal\("granted"\)|signal\("refused"\)/);
   });
 });
