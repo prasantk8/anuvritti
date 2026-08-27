@@ -331,6 +331,7 @@ class FakeFilmRenderer:
         self.calls: list[tuple[Path, Path]] = []
         self.result = result or RenderedFilm(
             path=Path("film.mp4"),
+            manifest_path=Path("film.manifest.json"),
             frames=(RenderedFrame("opening", Path("opening.png"), Path("opening.html")),),
             duration_seconds=3.0,
         )

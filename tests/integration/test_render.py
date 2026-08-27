@@ -7,6 +7,7 @@ import io
 import json
 import wave
 from datetime import date
+from hashlib import sha256
 
 import pytest
 from filmkit.compositor import probe
@@ -106,6 +107,40 @@ def test_every_drawn_frame_traces_to_a_real_scene_in_film_json(rendered):
         for scene in payload["film"]["timeline"]["scenes"]
         for frame in scene["frames"]
     )
+
+
+def test_manifest_accounts_for_the_tools_sources_commands_and_every_pixel(rendered):
+    exported, result = rendered
+    manifest = json.loads(result.manifest_path.read_text())
+    timeline = json.loads(exported.film_path.read_text())["film"]["timeline"]
+
+    assert result.manifest_path == result.path.with_suffix(".manifest.json")
+    assert manifest["schema"] == "anuvritti.render-manifest.v1"
+    assert (
+        manifest["sources"]["film.json"]["sha256"]
+        == sha256(exported.film_path.read_bytes()).hexdigest()
+    )
+    assert (
+        manifest["sources"]["provenance.json"]["sha256"]
+        == sha256(exported.provenance_path.read_bytes()).hexdigest()
+    )
+    assert manifest["toolchain"]["playwright"]
+    assert manifest["toolchain"]["chromium"]["version"]
+    assert manifest["toolchain"]["chromium"]["revision"]
+    assert "ffmpeg version" in manifest["toolchain"]["ffmpeg"]
+
+    assert manifest["output"]["path"] == result.path.name
+    assert manifest["output"]["sha256"] == sha256(result.path.read_bytes()).hexdigest()
+    assert len(manifest["commands"]["scene_encodes"]) == len(timeline["scenes"])
+    assert manifest["commands"]["concat"][0] == "ffmpeg"
+    assert all("/Users/" not in json.dumps(command) for command in manifest["commands"].values())
+
+    scenes = {scene["id"] for scene in timeline["scenes"]}
+    frames = {entry["scene_id"]: entry for entry in manifest["frames"]}
+    assert frames.keys() == scenes
+    for frame in result.frames:
+        assert frames[frame.scene_id]["path"] == frame.path.name
+        assert frames[frame.scene_id]["sha256"] == sha256(frame.path.read_bytes()).hexdigest()
 
 
 def test_the_scene_document_is_a_complete_offline_world(rendered):

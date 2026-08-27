@@ -44,6 +44,11 @@ at the folder containing `film.json`, `provenance.json`, and `media/`:
 make film ARCHIVE=/path/to/FilmExport
 ```
 
+The render writes `var/film/film.mp4`, `var/film/film.manifest.json`, and the first
+inspection still. Keep the manifest with the MP4: it is the portable account of the exact
+FilmExport receipts, browser revision, FFmpeg version and arguments, and hashes for every
+held frame and scene video that made the final film.
+
 The film lands at `var/film/film.mp4`; `var/film/still.png` is the first frame for visual
 inspection. The renderer rechecks every media hash and every provenance entry before it
 draws, and the export remains plaintext family material: delete it after the render.

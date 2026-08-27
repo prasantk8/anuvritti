@@ -213,6 +213,7 @@ class RenderedFilm:
     """The inspectable result of drawing an exported film."""
 
     path: Path
+    manifest_path: Path
     frames: tuple[RenderedFrame, ...]
     duration_seconds: float
 

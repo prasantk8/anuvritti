@@ -16,11 +16,14 @@ import re
 import shutil
 from dataclasses import dataclass
 from importlib.metadata import version
+from importlib.resources import files
 from pathlib import Path
 from typing import Any, cast
 
 from filmkit.browser import FrameFarm, Shot
-from filmkit.compositor import concat_scenes, probe, render_scene, render_scenes
+from filmkit.compositor import AAC, H264, concat_scenes, probe, render_scene, render_scenes
+from filmkit.hashing import sha256_file
+from filmkit.manifest import browser_version, stamp, tool_versions, write
 from filmkit.process import run
 from filmkit.timeline import FrameEntry, SceneEntry, Timeline
 from filmkit.workspace import Workspace
@@ -86,19 +89,48 @@ class ChromiumFfmpegRenderer:
                 renderer=f"anuvritti-frames-1-playwright-{version('playwright')}",
             ).render(shots)
 
+            encoded_commands: dict[str, list[str]] = {}
+
+            def encode(scene: SceneEntry, plan: Timeline, work: Path, **kwargs: Any) -> Path:
+                threads = int(kwargs.get("threads", 0))
+                command = _scene_command(
+                    scene,
+                    plan,
+                    work / f"{scene.id}.concat",
+                    work / f"{scene.id}.mp4",
+                    threads=threads,
+                )
+                encoded_commands[scene.id] = _portable_command(
+                    command,
+                    archive=archive,
+                    workspace=workspace.artifacts,
+                    destination=destination,
+                )
+                return render_scene(scene, plan, work, workspace=workspace, **kwargs)
+
             scene_files = render_scenes(
                 timeline.scenes,
                 timeline,
                 scenes_dir,
                 workers=self._workers,
-                render=lambda scene, plan, work, **kwargs: render_scene(
-                    scene, plan, work, workspace=workspace, **kwargs
-                ),
+                render=encode,
             )
             concat_scenes(scene_files, destination, scenes_dir)
             inspected = probe(destination)
             duration = _verify_output(inspected, timeline)
-            return Ok(RenderedFilm(destination, rendered_frames, duration))
+            manifest_path = destination.with_suffix(".manifest.json")
+            _write_manifest(
+                manifest_path,
+                archive=archive,
+                destination=destination,
+                timeline=timeline,
+                frames=rendered_frames,
+                scene_commands=encoded_commands,
+                scene_files=scene_files,
+                scenes_dir=scenes_dir,
+                duration=duration,
+            )
+            return Ok(RenderedFilm(destination, manifest_path, rendered_frames, duration))
         except Exception as exc:
             return Err(
                 DomainError(
@@ -305,6 +337,168 @@ def _verify_output(inspected: dict[str, Any], timeline: Timeline) -> float:
     return duration
 
 
+def _chromium_revision() -> str:
+    browsers = files("playwright").joinpath("driver/package/browsers.json")
+    payload = json.loads(browsers.read_text(encoding="utf-8"))
+    for browser in _objects(payload["browsers"], "playwright browsers"):
+        if browser.get("name") == "chromium":
+            return str(browser["revision"])
+    raise ValueError("the installed Playwright package does not declare a Chromium revision")
+
+
+def _portable_command(
+    command: list[str], *, archive: Path, workspace: Path, destination: Path
+) -> list[str]:
+    roots = (
+        (str(workspace.resolve()), "$WORK"),
+        (str(archive.resolve()), "$ARCHIVE"),
+        (str(destination.resolve()), "$OUTPUT"),
+    )
+    portable: list[str] = []
+    for argument in command:
+        value = argument
+        for root, label in roots:
+            value = value.replace(root, label)
+        portable.append(value)
+    return portable
+
+
+def _digest(path: Path, *, portable_path: str) -> dict[str, str | int]:
+    return {
+        "path": portable_path,
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
+
+
+def _write_manifest(
+    path: Path,
+    *,
+    archive: Path,
+    destination: Path,
+    timeline: Timeline,
+    frames: tuple[RenderedFrame, ...],
+    scene_commands: dict[str, list[str]],
+    scene_files: list[Path],
+    scenes_dir: Path,
+    duration: float,
+) -> None:
+    ffmpeg = tool_versions((("ffmpeg", ("ffmpeg", "-version")),))["ffmpeg"]
+    if ffmpeg is None:
+        raise ValueError("FFmpeg disappeared before the render manifest was written")
+    chromium = browser_version()
+    if chromium is None:
+        raise ValueError("Chromium could not identify itself for the render manifest")
+    concat = _concat_command(scenes_dir / "scenes.concat", destination)
+    payload: dict[str, Any] = {
+        "schema": "anuvritti.render-manifest.v1",
+        "written_at": stamp(),
+        "sources": {
+            _FILM: _digest(archive / _FILM, portable_path=_FILM),
+            _PROVENANCE: _digest(archive / _PROVENANCE, portable_path=_PROVENANCE),
+        },
+        "toolchain": {
+            "playwright": version("playwright"),
+            "chromium": {"version": chromium, "revision": _chromium_revision()},
+            "ffmpeg": ffmpeg,
+        },
+        "timeline": {
+            "fps": timeline.fps,
+            "width": timeline.width,
+            "height": timeline.height,
+            "duration_seconds": timeline.duration_sec,
+        },
+        "commands": {
+            "scene_encodes": [scene_commands[scene.id] for scene in timeline.scenes],
+            "concat": _portable_command(
+                concat,
+                archive=archive,
+                workspace=scenes_dir.parent,
+                destination=destination,
+            ),
+        },
+        "frames": [
+            {
+                "scene_id": frame.scene_id,
+                **_digest(frame.path, portable_path=frame.path.name),
+                "document_sha256": sha256_file(frame.document_path),
+            }
+            for frame in frames
+        ],
+        "scene_videos": [
+            {"scene_id": scene.id, **_digest(video, portable_path=video.name)}
+            for scene, video in zip(timeline.scenes, scene_files, strict=True)
+        ],
+        "output": {
+            **_digest(destination, portable_path=destination.name),
+            "duration_seconds": duration,
+        },
+    }
+    write(payload, path)
+
+
+def _scene_command(
+    scene: SceneEntry,
+    timeline: Timeline,
+    concat: Path,
+    output: Path,
+    *,
+    threads: int,
+) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat),
+        "-i",
+        str(scene.audio_path),
+        "-filter_complex",
+        f"[0:v]fps={timeline.fps},format=yuv420p,"
+        f"scale={timeline.width}:{timeline.height}:flags=lanczos[v];"
+        f"[1:a]aresample=48000,apad[a]",
+        "-map",
+        "[v]",
+        "-map",
+        "[a]",
+        "-t",
+        f"{scene.visual_duration_sec:.6f}",
+        *(["-threads", str(threads)] if threads else []),
+        *H264,
+        *AAC,
+        "-movflags",
+        "+faststart",
+        str(output),
+    ]
+
+
+def _concat_command(listing: Path, destination: Path) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(listing),
+        "-c",
+        "copy",
+        "-movflags",
+        "+faststart",
+        str(destination),
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render a provenance-verified FilmExport")
     parser.add_argument("--archive", type=Path, required=True)
@@ -325,6 +519,7 @@ def main() -> int:
         arguments.still.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(result.frames[0].path, arguments.still)
     print(f"film  {result.path} ({result.duration_seconds:.3f}s)")
+    print(f"manifest {result.manifest_path}")
     if arguments.still:
         print(f"still {arguments.still}")
     return 0
