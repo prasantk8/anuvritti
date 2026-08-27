@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen film
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen film film-verify
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -46,6 +46,11 @@ film:
 	@test -n "$(ARCHIVE)" || (echo "usage: make film ARCHIVE=/path/to/FilmExport" && exit 2)
 	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.render --archive "$(ARCHIVE)" \
 		--output "$(FILM_OUTPUT)" --still "$(FILM_STILL)" --workspace var/film/work
+
+film-verify:
+	@test -n "$(MANIFEST)" || (echo "usage: make film-verify MANIFEST=/path/to/film.manifest.json [FRAMES=/path/to/frames]" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.verify --manifest "$(MANIFEST)" \
+		$(if $(FILM),--film "$(FILM)") $(if $(FRAMES),--frames "$(FRAMES)")
 
 lint:
 	$(PY) -m ruff check src tests packages/client/codegen

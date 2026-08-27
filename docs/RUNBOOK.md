@@ -53,6 +53,20 @@ The film lands at `var/film/film.mp4`; `var/film/still.png` is the first frame f
 inspection. The renderer rechecks every media hash and every provenance entry before it
 draws, and the export remains plaintext family material: delete it after the render.
 
+Later, verify the film without restoring that plaintext export or using a network:
+
+```bash
+make film-verify MANIFEST=/path/to/film.manifest.json
+# If the render workspace's frames were retained:
+make film-verify MANIFEST=/path/to/film.manifest.json FRAMES=/path/to/frames
+```
+
+The sibling MP4 is found from the manifest by default; `FILM=/path/to/renamed.mp4` can name
+a copy stored elsewhere. Verification checks its hash and byte count, then independently
+checks the video/audio streams, frame size, and duration with `ffprobe`. When `FRAMES` is
+given, every frame receipt must resolve and match too. A failure names each missing or
+changed artifact; success says explicitly when frame bytes were not available to check.
+
 The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse to start**
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.
