@@ -35,7 +35,7 @@ import { View } from "react-native";
 
 import { useWorld } from "../src/useWorld.ts";
 import { AnuvrittiProvider, useAnuvritti } from "../src/provider.tsx";
-import { gateFor, showsHome, showsPairing } from "../src/session/gate.ts";
+import { gateFor, showsHome, showsPairing, showsThreshold } from "../src/session/gate.ts";
 import type { World } from "../src/world.ts";
 
 export default function RootLayout() {
@@ -64,8 +64,8 @@ export default function RootLayout() {
 }
 
 function Routes({ world }: { world: World }) {
-  const { paired } = useAnuvritti();
-  const gate = gateFor(paired);
+  const { paired, threshold } = useAnuvritti();
+  const gate = gateFor(paired, threshold !== null);
 
   return (
     <Stack
@@ -81,6 +81,11 @@ function Routes({ world }: { world: World }) {
       <Stack.Protected guard={showsHome(gate)}>
         <Stack.Screen name="index" />
         <Stack.Screen name="vault" />
+        <Stack.Screen name="pairing-code" options={{ presentation: "modal" }} />
+      </Stack.Protected>
+
+      <Stack.Protected guard={showsThreshold(gate)}>
+        <Stack.Screen name="threshold" />
       </Stack.Protected>
     </Stack>
   );

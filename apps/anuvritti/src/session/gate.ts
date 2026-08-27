@@ -21,18 +21,22 @@ export const HOME = "/" as const;
 
 /** Where a phone goes to become part of a family. */
 export const PAIR = "/pair" as const;
+export const THRESHOLD = "/threshold" as const;
 
 export type Gate =
   /** The keychain has not answered. Nothing that implies an answer may be on screen. */
   | "waiting"
   /** No token. The only screen that works without one. */
   | "pair"
+  /** Paired, but the founding child and first share are not both here yet. */
+  | "threshold"
   /** A token. Everything else. */
   | "home";
 
-export function gateFor(paired: boolean | null): Gate {
+export function gateFor(paired: boolean | null, threshold = false): Gate {
   if (paired === null) return "waiting";
-  return paired ? "home" : "pair";
+  if (!paired) return "pair";
+  return threshold ? "threshold" : "home";
 }
 
 /**
@@ -48,4 +52,8 @@ export function showsHome(gate: Gate): boolean {
 
 export function showsPairing(gate: Gate): boolean {
   return gate === "pair";
+}
+
+export function showsThreshold(gate: Gate): boolean {
+  return gate === "threshold";
 }

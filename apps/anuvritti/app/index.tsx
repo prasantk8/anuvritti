@@ -154,6 +154,12 @@ export default function Today() {
         </Pressable>
       </Link>
 
+      <Link href="/pairing-code" asChild>
+        <Pressable accessibilityRole="link" style={styles.toVault}>
+          <Text style={styles.pairPhone}>Pair another phone</Text>
+        </Pressable>
+      </Link>
+
       <View style={styles.vault}>
         {sparks.map((spark) => (
           <View key={spark.id} style={styles.slot}>
@@ -204,6 +210,11 @@ function sheet(world: World) {
       fontFamily: world.font.body,
       fontSize: world.type.body,
       color: world.color.indigo,
+    },
+    pairPhone: {
+      fontFamily: world.font.body,
+      fontSize: world.type.fine,
+      color: world.color["ink-faint"],
     },
     bringingBack: { gap: world.space[4] },
     reason: {

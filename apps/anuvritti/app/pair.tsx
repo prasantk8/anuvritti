@@ -15,7 +15,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAnuvritti } from "../src/provider.tsx";
-import { HOME } from "../src/session/gate.ts";
+import { HOME, THRESHOLD } from "../src/session/gate.ts";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
 
@@ -26,11 +26,10 @@ export default function Pair() {
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
   const router = useRouter();
-  const { anuvritti, refreshPairing } = useAnuvritti();
+  const { anuvritti, refreshPairing, beginThreshold } = useAnuvritti();
 
   const [mode, setMode] = useState<Mode>("choose");
   const [familyName, setFamilyName] = useState("");
-  const [yourName, setYourName] = useState("");
   const [code, setCode] = useState("");
   const [working, setWorking] = useState(false);
   const [trouble, setTrouble] = useState<string | null>(null);
@@ -54,14 +53,16 @@ export default function Pair() {
     setTrouble(null);
     const result = await anuvritti.session.bootstrap({
       name: familyName.trim(),
-      owner_display_name: yourName.trim(),
+      owner_display_name: familyName.trim(),
     });
     setWorking(false);
     if (!result.ok) {
       setTrouble(explain(result.error));
       return;
     }
-    await arrive();
+    await beginThreshold(result.value.id);
+    await refreshPairing();
+    router.replace(THRESHOLD);
   }
 
   async function join() {
@@ -101,16 +102,9 @@ export default function Pair() {
             onChange={setFamilyName}
             placeholder="Our family"
           />
-          <Field
-            world={world}
-            label="And you?"
-            value={yourName}
-            onChange={setYourName}
-            placeholder="Papa"
-          />
           <Pressable
             style={[styles.primary, !familyName.trim() && styles.disabled]}
-            disabled={!familyName.trim() || !yourName.trim() || working}
+            disabled={!familyName.trim() || working}
             onPress={begin}
           >
             {working ? (

@@ -23,6 +23,12 @@ import { wire } from "./api.ts";
 import { readShares } from "./capture/incoming.ts";
 import type { MediaSource } from "./media.ts";
 import { mediaSource } from "./media.ts";
+import type { ThresholdMarker } from "./model/threshold.ts";
+import {
+  clearThreshold,
+  readThreshold,
+  writeThreshold,
+} from "./storage/threshold-store.ts";
 import type { Outbox } from "./upload/spool.ts";
 
 /** Where the family's server is. One family, one box, configured once at pairing. */
@@ -39,6 +45,7 @@ interface Anuvritti extends Wired {
    * empty archive of a family it has not joined.
    */
   readonly paired: boolean | null;
+  readonly threshold: ThresholdMarker | null;
   /**
    * Today, as `YYYY-MM-DD`.
    *
@@ -52,6 +59,9 @@ interface Anuvritti extends Wired {
   drain(): Promise<void>;
   /** Ask the keychain again. Called by the pairing screen the moment it succeeds. */
   refreshPairing(): Promise<void>;
+  beginThreshold(familyId: string): Promise<void>;
+  nameThresholdChild(childName: string): Promise<void>;
+  finishThreshold(): Promise<void>;
   /**
    * Where a piece of media is, and the proof this phone may hear it. `null` while unpaired,
    * because the native audio player fetches the bytes itself and would otherwise be sent to
@@ -83,6 +93,7 @@ export function AnuvrittiProvider({ children, fallback = null }: AnuvrittiProvid
   const [justSaved, setJustSaved] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [paired, setPaired] = useState<boolean | null>(null);
+  const [threshold, setThreshold] = useState<ThresholdMarker | null>(null);
   const queueRef = useRef<CaptureQueue | null>(null);
   const outboxRef = useRef<Outbox | null>(null);
   const wiredRef = useRef<Wired | null>(null);
@@ -92,13 +103,14 @@ export function AnuvrittiProvider({ children, fallback = null }: AnuvrittiProvid
     void wire(DEFAULT_BASE_URL).then(async (ready) => {
       // The keychain is read before anything renders, so the gate never has to guess and
       // the first frame is never the wrong app.
-      const held = await ready.tokens.read();
+      const [held, unfinished] = await Promise.all([ready.tokens.read(), readThreshold()]);
       if (cancelled) return;
       queueRef.current = ready.queue;
       outboxRef.current = ready.outbox;
       wiredRef.current = ready;
       setToken(held);
       setPaired(held !== null);
+      setThreshold(unfinished);
       setWired(ready);
     });
     return () => {
@@ -117,6 +129,27 @@ export function AnuvrittiProvider({ children, fallback = null }: AnuvrittiProvid
     // up, and the spool is what puts it in the queue.
     await outboxRef.current?.drain();
     await queueRef.current?.drain();
+  }, []);
+
+  const beginThreshold = useCallback(async (familyId: string) => {
+    const marker = { familyId };
+    await writeThreshold(marker);
+    setThreshold(marker);
+  }, []);
+
+  const nameThresholdChild = useCallback(
+    async (childName: string) => {
+      if (!threshold) return;
+      const marker = { ...threshold, childName };
+      await writeThreshold(marker);
+      setThreshold(marker);
+    },
+    [threshold]
+  );
+
+  const finishThreshold = useCallback(async () => {
+    await clearThreshold();
+    setThreshold(null);
   }, []);
 
   // --- when to try again -----------------------------------------------------------
@@ -200,14 +233,29 @@ export function AnuvrittiProvider({ children, fallback = null }: AnuvrittiProvid
             justSaved,
             baseUrl: DEFAULT_BASE_URL,
             paired,
+            threshold,
             today: new Date().toISOString().slice(0, 10),
             acknowledge: () => setJustSaved(null),
             drain,
             refreshPairing,
+            beginThreshold,
+            nameThresholdChild,
+            finishThreshold,
             media,
           }
         : null,
-    [drain, justSaved, media, paired, refreshPairing, wired]
+    [
+      beginThreshold,
+      drain,
+      finishThreshold,
+      justSaved,
+      media,
+      nameThresholdChild,
+      paired,
+      refreshPairing,
+      threshold,
+      wired,
+    ]
   );
 
   if (!value) return <>{fallback}</>;
