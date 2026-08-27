@@ -12,7 +12,9 @@
   },
   "scripts": {
     "build": "node scripts/build.ts",
-    "test": "npm run build --silent && node --test \"test/**/*.test.ts\" && node scripts/check-specimen.ts && node scripts/check-scenes.ts",
+    "test": "npm run build --silent && npm run policy:check --silent && node --test \"test/**/*.test.ts\" && node scripts/check-specimen.ts && node scripts/check-scenes.ts",
+    "policy:check": "node scripts/export-film-policy.ts --check",
+    "policy:write": "node scripts/export-film-policy.ts",
     "specimen:check": "npm run build --silent && node scripts/check-specimen.ts",
     "scenes:check": "npm run build --silent && node scripts/check-scenes.ts"
   },

@@ -18,7 +18,7 @@ export interface FilmFontFace {
   readonly file: string;
 }
 
-const COMMON = [
+export const FILM_COMMON_RANGES = [
   [0x0009, 0x000d], // whitespace that can occur in saved text
   [0x0020, 0x007e], // ASCII letters, digits and punctuation
   [0x00a0, 0x00bf], // shared punctuation and currency
@@ -28,7 +28,7 @@ const COMMON = [
 export const FILM_SCRIPTS: readonly FilmScriptCoverage[] = [
   {
     name: "Latin",
-    ranges: [...COMMON, [0x00c0, 0x024f], [0x0300, 0x036f], [0x1e00, 0x1eff]],
+    ranges: [...FILM_COMMON_RANGES, [0x00c0, 0x024f], [0x0300, 0x036f], [0x1e00, 0x1eff]],
   },
   {
     name: "Arabic",

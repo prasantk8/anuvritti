@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen film
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen film film-prepare
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -42,6 +42,11 @@ specimen: world
 # founder's inspection still therefore stay under ignored var/, beside the finished film.
 FILM_OUTPUT ?= var/film/film.mp4
 FILM_STILL ?= var/film/still.png
+film-prepare:
+	@test -n "$(REQUIREMENTS)" || (echo "usage: make film-prepare REQUIREMENTS=/path/to/render-requirements.json" && exit 2)
+	node packages/world/scripts/prepare-film.ts "$(REQUIREMENTS)"
+	npm --prefix packages/world install --no-package-lock
+
 film:
 	@test -n "$(ARCHIVE)" || (echo "usage: make film ARCHIVE=/path/to/FilmExport" && exit 2)
 	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.render --archive "$(ARCHIVE)" \

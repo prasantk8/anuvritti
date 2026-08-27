@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { FRAME, SCENE_KINDS, escapeHtml, renderScene, type SceneKind } from "../scenes/scene.ts";
 import { emitSceneCss, FILM_ROOT_PX } from "../scenes/css.ts";
 import { FILM_FONTS, FILM_SCRIPTS, unsupportedFilmCodepoints } from "../scenes/fonts.ts";
+import { approveRenderRequirements } from "../scenes/preparation.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const domain = readFileSync(
@@ -150,6 +151,32 @@ describe("the film's offline writing systems", () => {
 
   test("names an unbundled glyph instead of silently borrowing a host font", () => {
     assert.deepEqual(unsupportedFilmCodepoints("家"), ["U+5BB6"]);
+  });
+
+  test("approves only this exact pinned world bundle before setup fetches it", () => {
+    const font_packages = Object.fromEntries(
+      FILM_FONTS.map((face) => [face.package, face.version])
+    );
+    const requirements = {
+      schema: "anuvritti.render-requirements.v1",
+      scripts: ["Arabic"],
+      world: { package: "@anuvritti/world", version: "0.1.0", font_packages },
+    };
+    assert.deepEqual(
+      approveRenderRequirements(requirements, {
+        name: "@anuvritti/world",
+        version: "0.1.0",
+      }).scripts,
+      ["Arabic"]
+    );
+    assert.throws(
+      () =>
+        approveRenderRequirements(
+          { ...requirements, world: { ...requirements.world, font_packages: { "host-font": "latest" } } },
+          { name: "@anuvritti/world", version: "0.1.0" }
+        ),
+      /approved pinned font bundle exactly/
+    );
   });
 });
 

@@ -37,8 +37,20 @@ docker run --rm -p 8000:8000 \
 ### Render a FilmExport
 
 Rendering is intentionally a development-machine job: the always-on family server and its
-production image carry neither Chromium nor FFmpeg. After `make install`, point the renderer
-at the folder containing `film.json`, `provenance.json`, and `media/`:
+production image carry neither Chromium nor FFmpeg. Compilation first emits a text-free
+`render-requirements.json`: it names only requested scripts and the exact approved world/font
+package versions. Send that small receipt to the render machine and prepare it **before**
+creating or moving the plaintext FilmExport:
+
+```bash
+make film-prepare REQUIREMENTS=/path/to/render-requirements.json
+```
+
+The preparation command refuses unknown scripts, changed versions, extra packages, and
+`latest`; only after that check does npm fetch the pinned bundle. The compiler itself refuses
+unsupported text with the scene, rendered field, and Unicode codepoint, while the family
+material is still inside the archive. Once preparation succeeds, point the renderer at the
+folder containing `film.json`, `provenance.json`, `render-requirements.json`, and `media/`:
 
 ```bash
 make film ARCHIVE=/path/to/FilmExport
