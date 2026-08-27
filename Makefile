@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen film
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen film teaser
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -46,6 +46,11 @@ film:
 	@test -n "$(ARCHIVE)" || (echo "usage: make film ARCHIVE=/path/to/FilmExport" && exit 2)
 	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.render --archive "$(ARCHIVE)" \
 		--output "$(FILM_OUTPUT)" --still "$(FILM_STILL)" --workspace var/film/work
+
+# The seed is intentionally generated under ignored var/: it demonstrates the destination
+# without putting either demo media or a family's media in source control.
+teaser:
+	PYTHONPATH=src $(PY) scripts/teaser.py
 
 lint:
 	$(PY) -m ruff check src tests packages/client/codegen
