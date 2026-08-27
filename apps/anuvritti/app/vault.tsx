@@ -23,6 +23,7 @@ import { HoldToTalk, type Kept } from "../src/components/HoldToTalk.tsx";
 import { VoiceNote } from "../src/components/VoiceNote.tsx";
 import { KEPT, NOTHING_YET, shelve, worthSayingOn } from "../src/model/vault.ts";
 import { useAnuvritti } from "../src/provider.tsx";
+import { SAID } from "../src/said.ts";
 import { keepRecording } from "../src/voice/keep.ts";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
@@ -52,7 +53,7 @@ export default function Vault() {
         // The bytes have not left the phone yet, so saying "that's in this year's film"
         // would be ahead of the truth. It is not a loss and there is nothing to redo: the
         // recording is spooled in the app's own directory and goes up on its own (TASK-713).
-        setSaid("Still on your phone. It will go up when there's signal.");
+        setSaid(SAID.vault.waitingForSignal);
         return;
       }
       setSaid(KEPT);

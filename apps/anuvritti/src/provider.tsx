@@ -23,6 +23,7 @@ import { wire } from "./api.ts";
 import { readShares } from "./capture/incoming.ts";
 import type { MediaSource } from "./media.ts";
 import { mediaSource } from "./media.ts";
+import { SAID } from "./said.ts";
 import type { Outbox } from "./upload/spool.ts";
 
 /** Where the family's server is. One family, one box, configured once at pairing. */
@@ -176,7 +177,9 @@ export function AnuvrittiProvider({ children, fallback = null }: AnuvrittiProvid
           { uri: media.uri, mimeType: media.mimeType, name: media.name },
           { kind: "spark", media }
         );
-        saved = media.name ?? (media.kind === "SCREENSHOT" ? "that screenshot" : "that photo");
+        saved =
+          media.name ??
+          (media.kind === "SCREENSHOT" ? SAID.capture.screenshot : SAID.capture.photo);
       }
       clearSharedPayloads();
       if (saved) {

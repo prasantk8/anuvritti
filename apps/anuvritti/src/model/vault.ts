@@ -25,6 +25,7 @@
  */
 
 import type { VoiceNote } from "@anuvritti/client";
+import { SAID } from "../said.ts";
 
 /**
  * What the app says after a recording is kept.
@@ -33,7 +34,7 @@ import type { VoiceNote } from "@anuvritti/client";
  * Phase 7 compiles from what is already in the archive — so it is a statement rather than
  * a promise, and nothing has to be done to make it come true.
  */
-export const KEPT = "That's in this year's film.";
+export const KEPT = SAID.vault.kept;
 
 /**
  * What the app says when the vault is empty.
@@ -41,7 +42,7 @@ export const KEPT = "That's in this year's film.";
  * No call to action, because a call to action here is a chore. It says what the shelf is
  * for and stops.
  */
-export const NOTHING_YET = "Nothing here yet. This is where his father's voice lives.";
+export const NOTHING_YET = SAID.vault.empty;
 
 /**
  * Things worth saying out loud, offered one at a time when someone opens the recorder cold.
@@ -50,16 +51,7 @@ export const NOTHING_YET = "Nothing here yet. This is where his father's voice l
  * on the server. None of them asks a parent to be wise, which is the failure mode PRD §17
  * names directly: "No need to sound wise."
  */
-export const WORTH_SAYING = [
-  "What did he say today that you want to keep?",
-  "What word does he say wrong in a way you hope he never fixes?",
-  "What happened today that you'd have told your own father about?",
-  "What made you both laugh?",
-  "What is he like at the moment, in one sentence?",
-  "What do you want him to know, that you'd struggle to say to his face?",
-  "What did he do that you didn't expect?",
-  "What is the most ordinary thing about today?",
-] as const;
+export const WORTH_SAYING = SAID.vault.prompts;
 
 /**
  * The prompt for a given day. Deterministic, and the same all day.

@@ -15,6 +15,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAnuvritti } from "../src/provider.tsx";
+import { SAID } from "../src/said.ts";
 import { HOME } from "../src/session/gate.ts";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
@@ -78,16 +79,16 @@ export default function Pair() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + world.space[8] }]}>
-      <Text style={styles.title}>Anuvritti</Text>
-      <Text style={styles.subtitle}>For the little things you don't want life to erase.</Text>
+      <Text style={styles.title}>{SAID.pairing.title}</Text>
+      <Text style={styles.subtitle}>{SAID.pairing.subtitle}</Text>
 
       {mode === "choose" ? (
         <View style={styles.choices}>
           <Pressable style={styles.primary} onPress={() => setMode("first")}>
-            <Text style={styles.primaryText}>Start our family</Text>
+            <Text style={styles.primaryText}>{SAID.pairing.start}</Text>
           </Pressable>
           <Pressable style={styles.secondary} onPress={() => setMode("join")}>
-            <Text style={styles.secondaryText}>Join with a code</Text>
+            <Text style={styles.secondaryText}>{SAID.pairing.joinChoice}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -96,17 +97,17 @@ export default function Pair() {
         <View style={styles.form}>
           <Field
             world={world}
-            label="What shall we call your family?"
+            label={SAID.pairing.familyLabel}
             value={familyName}
             onChange={setFamilyName}
-            placeholder="Our family"
+            placeholder={SAID.pairing.familyPlaceholder}
           />
           <Field
             world={world}
-            label="And you?"
+            label={SAID.pairing.ownerLabel}
             value={yourName}
             onChange={setYourName}
-            placeholder="Papa"
+            placeholder={SAID.pairing.ownerPlaceholder}
           />
           <Pressable
             style={[styles.primary, !familyName.trim() && styles.disabled]}
@@ -116,7 +117,7 @@ export default function Pair() {
             {working ? (
               <ActivityIndicator color={world.color.surface} />
             ) : (
-              <Text style={styles.primaryText}>Begin</Text>
+              <Text style={styles.primaryText}>{SAID.pairing.begin}</Text>
             )}
           </Pressable>
         </View>
@@ -126,10 +127,10 @@ export default function Pair() {
         <View style={styles.form}>
           <Field
             world={world}
-            label="The code on the other phone"
+            label={SAID.pairing.codeLabel}
             value={code}
             onChange={setCode}
-            placeholder="ABCD-1234"
+            placeholder={SAID.pairing.codePlaceholder}
             mono
           />
           <Pressable
@@ -140,7 +141,7 @@ export default function Pair() {
             {working ? (
               <ActivityIndicator color={world.color.surface} />
             ) : (
-              <Text style={styles.primaryText}>Join</Text>
+              <Text style={styles.primaryText}>{SAID.pairing.join}</Text>
             )}
           </Pressable>
         </View>
@@ -159,11 +160,11 @@ export default function Pair() {
  * every one of those cases anyway.
  */
 function explain(failure: { kind: string; code?: string }): string {
-  if (failure.kind === "offline") return "Can't reach home right now. Try again in a moment.";
-  if (failure.kind === "timeout") return "That took too long. Try again?";
-  if (failure.code === "PAIRING_FAILED") return "That code didn't work. Ask for a fresh one.";
-  if (failure.code === "CONFLICT") return "This server already belongs to a family.";
-  return "Something went wrong at our end.";
+  if (failure.kind === "offline") return SAID.pairing.failure.offline;
+  if (failure.kind === "timeout") return SAID.pairing.failure.timeout;
+  if (failure.code === "PAIRING_FAILED") return SAID.pairing.failure.pairing;
+  if (failure.code === "CONFLICT") return SAID.pairing.failure.conflict;
+  return SAID.pairing.failure.unknown;
 }
 
 function Field({

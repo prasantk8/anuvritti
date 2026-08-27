@@ -52,6 +52,7 @@ import {
   step,
 } from "../voice/recording.ts";
 import { WINDOW, clock, push, resting } from "../voice/waveform.ts";
+import { SAID } from "../said.ts";
 
 /** Fast enough that the shape moves with the voice. See the note above about the default. */
 const POLL_MS = 60;
@@ -211,7 +212,7 @@ export function HoldToTalk({ world, onKept, saying }: HoldToTalkProps) {
               styles.bar,
               {
                 height: `${height * 100}%`,
-                backgroundColor: live ? world.color["indigo"] : world.color["thread"],
+                backgroundColor: live ? world.color.saffron : world.color["thread"],
               },
             ]}
           />
@@ -223,14 +224,14 @@ export function HoldToTalk({ world, onKept, saying }: HoldToTalkProps) {
         onPressOut={() => void signal("release")}
         accessibilityRole="button"
         accessibilityLabel={announce(state.phase)}
-        accessibilityHint="Hold to record. Let go to keep it."
+        accessibilityHint={SAID.voice.holdHint}
         style={({ pressed }) => [styles.button, (pressed || live) && styles.buttonHeld]}
       >
-        <Text style={styles.buttonText}>{live ? clock(seconds) : "Hold to talk"}</Text>
+        <Text style={styles.buttonText}>{live ? clock(seconds) : SAID.voice.hold}</Text>
       </Pressable>
 
       <Text style={styles.saying}>
-        {allowed === false ? "Anuvritti needs the microphone to keep your voice." : saying}
+        {allowed === false ? SAID.voice.microphone : saying}
       </Text>
     </View>
   );

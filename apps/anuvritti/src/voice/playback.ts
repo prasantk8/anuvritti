@@ -25,6 +25,7 @@
  */
 
 import type { VoiceNote } from "@anuvritti/client";
+import { SAID } from "../said.ts";
 
 /** Below this a reading is offered as a possibility rather than as a reading. */
 export const UNSURE = 0.5;
@@ -70,7 +71,7 @@ function wordsFrom(note: VoiceNote): Words | null {
   return {
     kind: "heard",
     text: transcript.text,
-    said: sure ? "It sounded like" : "Maybe",
+    said: sure ? SAID.voice.heard : SAID.voice.uncertain,
     sure,
   };
 }

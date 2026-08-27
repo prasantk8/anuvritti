@@ -21,6 +21,7 @@ import { Spark } from "../src/components/Spark.tsx";
 import type { Answer } from "../src/model/worth.ts";
 import { ACKNOWLEDGEMENT, ANSWERS, NOTHING_TODAY, whatToBringBack } from "../src/model/worth.ts";
 import { useAnuvritti } from "../src/provider.tsx";
+import { SAID } from "../src/said.ts";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
 
@@ -101,7 +102,7 @@ export default function Today() {
       {justSaved ? (
         <Pressable onPress={acknowledge} style={styles.saved} accessibilityRole="button">
           {/* The whole of the capture confirmation. One word, because it is one fact. */}
-          <Text style={styles.savedWord}>Saved.</Text>
+          <Text style={styles.savedWord}>{SAID.today.saved}</Text>
           <Text style={styles.savedWhat} numberOfLines={1}>
             {justSaved}
           </Text>
@@ -150,7 +151,7 @@ export default function Today() {
       */}
       <Link href="/vault" asChild>
         <Pressable accessibilityRole="link" style={styles.toVault}>
-          <Text style={styles.toVaultText}>Say something out loud →</Text>
+          <Text style={styles.toVaultText}>{SAID.today.toVault}</Text>
         </Pressable>
       </Link>
 
@@ -171,7 +172,7 @@ export default function Today() {
 
         {sparks.length === 0 ? (
           <Text style={styles.nothing}>
-            Nothing here yet. Share something to this app and it will be.
+            {SAID.today.emptyArchive}
           </Text>
         ) : null}
       </View>
@@ -184,7 +185,7 @@ function sheet(world: World) {
     screen: { flex: 1, backgroundColor: world.color.ground },
     content: { paddingHorizontal: world.space[4], paddingBottom: world.space[9], gap: world.space[6] },
     saved: {
-      backgroundColor: world.color["saffron-wash"],
+      backgroundColor: world.color["indigo-wash"],
       borderRadius: world.radius.cut,
       padding: world.space[4],
       gap: world.space[1],
@@ -192,7 +193,7 @@ function sheet(world: World) {
     savedWord: {
       fontFamily: world.font.display,
       fontSize: world.type.chapter,
-      color: world.color.saffron,
+      color: world.color.indigo,
     },
     savedWhat: {
       fontFamily: world.font.body,

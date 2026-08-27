@@ -42,6 +42,8 @@
  * parent's voice to an incoming spam call, and there is no way to ask for them back.
  */
 
+import { SAID } from "../said.ts";
+
 /** How long a press must be held before any audio is captured. */
 export const ARMING_MS = 200;
 
@@ -210,13 +212,13 @@ export function isLive(state: Recording): boolean {
 export function announce(phase: Phase): string {
   switch (phase) {
     case "recording":
-      return "Recording.";
+      return SAID.voice.recording;
     case "keeping":
-      return "Saved.";
+      return SAID.voice.saved;
     case "asking":
     case "arming":
     case "resting":
-      return "Hold to talk.";
+      return SAID.voice.resting;
   }
 }
 
