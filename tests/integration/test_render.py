@@ -5,15 +5,19 @@ from __future__ import annotations
 import base64
 import io
 import json
+import shutil
 import wave
 from datetime import date
 from hashlib import sha256
 
 import pytest
+from filmkit.browser import FrameFarm
 from filmkit.compositor import probe
+from playwright.sync_api import sync_playwright
 
 from anuvritti.adapters.film.export import FilesystemFilmExporter
-from anuvritti.adapters.film.render import ChromiumFfmpegRenderer
+from anuvritti.adapters.film.render import ChromiumFfmpegRenderer, _verify_bundled_fonts
+from anuvritti.application.ports import RenderedFrame
 from anuvritti.domain.voice import VoiceNote
 from anuvritti.shared.identity import MediaId
 from tests.support.archive import NOW, Archive
@@ -38,6 +42,8 @@ def rendered(tmp_path_factory: pytest.TempPathFactory):
         on=date(2026, 3, 4),
         photo=photograph,
     )
+    archive.moment("أول مرة نزل فيها وحده", on=date(2026, 3, 5))
+    archive.moment("पहली बार वह अकेले फिसला", on=date(2026, 3, 6))
     recording = io.BytesIO()
     with wave.open(recording, "wb") as audio:
         audio.setnchannels(1)
@@ -61,6 +67,15 @@ def rendered(tmp_path_factory: pytest.TempPathFactory):
     )
     package = archive.compile().unwrap()
     exported = FilesystemFilmExporter(archive.media).export(package, into=root / "export").unwrap()
+    payload = json.loads(exported.film_path.read_text())
+    multilingual_bodies = {
+        "أول مرة نزل فيها وحده": "قالها بابا",
+        "पहली बार वह अकेले फिसला": "पापा ने लिखा",
+    }
+    for scene in payload["film"]["timeline"]["scenes"]:
+        if scene["shows"][0] in multilingual_bodies:
+            scene["shows"].append(multilingual_bodies[scene["shows"][0]])
+    exported.film_path.write_text(json.dumps(payload))
 
     result = (
         ChromiumFfmpegRenderer(workspace=root / "work")
@@ -154,3 +169,89 @@ def test_the_scene_document_is_a_complete_offline_world(rendered):
     assert "data:image/png;base64," in document
     assert "https://" not in document
     assert 'href="world.css"' not in document
+
+
+def test_arabic_and_devanagari_glyphs_are_drawn_only_from_bundled_fonts(rendered):
+    _, result = rendered
+    documents = "\n".join(frame.document_path.read_text() for frame in result.frames)
+    manifest = json.loads(result.manifest_path.read_text())
+
+    assert "Noto Naskh Arabic" in documents
+    assert "Noto Serif Devanagari" in documents
+    assert "Noto Sans Arabic" in documents
+    assert "Noto Sans Devanagari" in documents
+    assert manifest["fonts"]["scripts"] == ["Latin", "Arabic", "Devanagari"]
+    assert {font["script"] for font in manifest["fonts"]["faces"]} == {
+        "Latin",
+        "Arabic",
+        "Devanagari",
+    }
+    assert all(font["sha256"] and font["bytes"] > 0 for font in manifest["fonts"]["faces"])
+
+    samples = {
+        "أول مرة نزل فيها وحده": ("h1", "Noto Naskh Arabic"),
+        "قالها بابا": ("p", "Noto Sans Arabic"),
+        "पहली बार वह अकेले फिसला": ("h1", "Noto Serif Devanagari"),
+        "पापा ने लिखा": ("p", "Noto Sans Devanagari"),
+    }
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        try:
+            for sample, (selector, expected_family) in samples.items():
+                frame = next(
+                    item for item in result.frames if sample in item.document_path.read_text()
+                )
+                page = browser.new_page()
+                try:
+                    page.set_content(frame.document_path.read_text(), wait_until="load")
+                    session = page.context.new_cdp_session(page)
+                    session.send("DOM.enable")
+                    session.send("CSS.enable")
+                    document = session.send("DOM.getDocument")
+                    heading = session.send(
+                        "DOM.querySelector",
+                        {"nodeId": document["root"]["nodeId"], "selector": selector},
+                    )
+                    fonts = session.send(
+                        "CSS.getPlatformFontsForNode", {"nodeId": heading["nodeId"]}
+                    )["fonts"]
+                    assert expected_family in {font["familyName"] for font in fonts}
+                    assert all(font["isCustomFont"] for font in fonts)
+                    assert all(font["glyphCount"] > 0 for font in fonts)
+                finally:
+                    page.close()
+        finally:
+            browser.close()
+
+
+def test_an_unbundled_writing_system_is_refused_before_chromium(rendered, tmp_path, monkeypatch):
+    exported, _ = rendered
+    archive = tmp_path / "export"
+    shutil.copytree(exported.directory, archive)
+    film_path = archive / "film.json"
+    payload = json.loads(film_path.read_text())
+    payload["film"]["timeline"]["scenes"][0]["shows"][0] = "家"
+    film_path.write_text(json.dumps(payload))
+
+    def chromium_must_not_start(*_args, **_kwargs):
+        raise AssertionError("Chromium started for an unsupported writing system")
+
+    monkeypatch.setattr(FrameFarm, "render", chromium_must_not_start)
+
+    destination = tmp_path / "unsupported.mp4"
+    refused = ChromiumFfmpegRenderer(workspace=tmp_path / "work").render(
+        archive, destination=destination
+    )
+
+    assert refused.is_err()
+    assert "U+5BB6" in refused.unwrap_err().details["reason"]
+    assert not destination.exists()
+
+
+def test_a_host_font_is_refused_instead_of_becoming_part_of_a_frame(tmp_path):
+    document = tmp_path / "borrowed.html"
+    document.write_text("<style>h1{font-family:sans-serif}</style><h1>remembered</h1>")
+    frame = RenderedFrame("borrowed", tmp_path / "borrowed.png", document)
+
+    with pytest.raises(ValueError, match="borrow unbundled host font"):
+        _verify_bundled_fonts((frame,))

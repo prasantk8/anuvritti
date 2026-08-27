@@ -49,6 +49,13 @@ inspection still. Keep the manifest with the MP4: it is the portable account of 
 FilmExport receipts, browser revision, FFmpeg version and arguments, and hashes for every
 held frame and scene video that made the final film.
 
+Film text is currently promised offline for Latin, Arabic, and Devanagari. The world bundle
+uses Newsreader and IBM Plex Sans for Latin, Noto Naskh/Sans Arabic, and Noto Serif/Sans
+Devanagari; the manifest records every face's package version and hash. Rendering stops if
+text uses an undeclared writing system or if Chromium reports that any visible glyph came
+from a host font. Add a writing system to `packages/world/scenes/fonts.ts` with both display
+and body faces before asking a family film to use it.
+
 The film lands at `var/film/film.mp4`; `var/film/still.png` is the first frame for visual
 inspection. The renderer rechecks every media hash and every provenance entry before it
 draws, and the export remains plaintext family material: delete it after the render.

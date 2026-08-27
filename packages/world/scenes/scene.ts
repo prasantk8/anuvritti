@@ -80,7 +80,7 @@ export function escapeHtml(text: string): string {
 
 function line(text: string | undefined, className: string): string {
   if (!text) return "";
-  return `<p class="${className}">${escapeHtml(text)}</p>`;
+  return `<p class="${className}" dir="auto">${escapeHtml(text)}</p>`;
 }
 
 /** The picture, whole. `contain` rather than `cover` - see the note in `emitSceneCss`. */
@@ -91,7 +91,7 @@ function picture(scene: SceneInput): string {
 
 function caption(scene: SceneInput): string {
   if (!scene.narration) return "";
-  return `<footer class="caption"><p>${escapeHtml(scene.narration)}</p></footer>`;
+  return `<footer class="caption"><p dir="auto">${escapeHtml(scene.narration)}</p></footer>`;
 }
 
 /** A label in tracked uppercase. Used for the two things a viewer should be told, not sold. */
@@ -103,14 +103,14 @@ function body(scene: SceneInput): string {
   switch (scene.kind) {
     case "OPENING":
       return `<div class="stage centred">
-        <h1 class="display name">${escapeHtml(scene.heading)}</h1>
+        <h1 class="display name" dir="auto">${escapeHtml(scene.heading)}</h1>
         <hr class="thread">
         ${line(scene.body, "quiet lead")}
       </div>`;
 
     case "CLOSING":
       return `<div class="stage centred">
-        <h1 class="display year">${escapeHtml(scene.heading)}</h1>
+        <h1 class="display year" dir="auto">${escapeHtml(scene.heading)}</h1>
         <hr class="thread">
         ${line(scene.body, "quiet lead measure")}
       </div>`;
@@ -121,7 +121,7 @@ function body(scene: SceneInput): string {
       // does not do that. A thread and a plain label say the true thing instead.
       return `<div class="stage centred">
         ${label("recorded")}
-        <h1 class="display chapter measure">${escapeHtml(scene.heading)}</h1>
+        <h1 class="display chapter measure" dir="auto">${escapeHtml(scene.heading)}</h1>
         <hr class="thread short">
         ${line(scene.body, "quiet lead measure")}
       </div>`;
@@ -129,7 +129,7 @@ function body(scene: SceneInput): string {
     case "LITTLE_THING":
       return `<div class="stage centred wash">
         ${label("a little thing")}
-        <h1 class="display year measure">${escapeHtml(scene.heading)}</h1>
+        <h1 class="display year measure" dir="auto">${escapeHtml(scene.heading)}</h1>
         ${line(scene.body, "quiet lead measure")}
       </div>`;
 
@@ -140,7 +140,7 @@ function body(scene: SceneInput): string {
       return `<div class="stage ${split}">
         ${picture(scene)}
         <div class="words">
-          <h1 class="display chapter">${escapeHtml(scene.heading)}</h1>
+          <h1 class="display chapter" dir="auto">${escapeHtml(scene.heading)}</h1>
           ${line(scene.body, "quiet lead measure")}
         </div>
       </div>`;
@@ -163,7 +163,7 @@ export function renderScene(scene: SceneInput, options: RenderOptions = {}): str
     ? options.inlineCss.map((css) => `<style>${css}</style>`).join("\n")
     : `<link rel="stylesheet" href="${escapeHtml(world)}">\n<link rel="stylesheet" href="${escapeHtml(scenes)}">`;
   return `<!doctype html>
-<html lang="en" data-theme="light">
+<html lang="und" data-theme="light">
 <head>
 <meta charset="utf-8">
 <title>${escapeHtml(scene.id)}</title>

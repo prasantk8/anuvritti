@@ -78,6 +78,7 @@ class ChromiumFfmpegRenderer:
 
             timeline = _timeline(exported, frames_dir, scenes_dir)
             shots, rendered_frames = _shots(timeline, documents)
+            _verify_bundled_fonts(rendered_frames)
             FrameFarm(
                 timeline.width,
                 timeline.height,
@@ -128,6 +129,7 @@ class ChromiumFfmpegRenderer:
                 scene_commands=encoded_commands,
                 scene_files=scene_files,
                 scenes_dir=scenes_dir,
+                fonts_path=documents / "_fonts.json",
                 duration=duration,
             )
             return Ok(RenderedFilm(destination, manifest_path, rendered_frames, duration))
@@ -302,6 +304,39 @@ def _shots(timeline: Timeline, documents: Path) -> tuple[list[Shot], tuple[Rende
     return shots, tuple(frames)
 
 
+def _verify_bundled_fonts(frames: tuple[RenderedFrame, ...]) -> None:
+    """Ask Chromium which font drew every textual node; host fallback is a render error."""
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        try:
+            page = browser.new_page()
+            session = page.context.new_cdp_session(page)
+            session.send("DOM.enable")
+            session.send("CSS.enable")
+            for frame in frames:
+                page.set_content(frame.document_path.read_text(encoding="utf-8"), wait_until="load")
+                page.evaluate("document.fonts.ready")
+                document = session.send("DOM.getDocument")
+                nodes = session.send(
+                    "DOM.querySelectorAll",
+                    {"nodeId": document["root"]["nodeId"], "selector": "h1, p"},
+                )["nodeIds"]
+                for node_id in nodes:
+                    fonts = session.send("CSS.getPlatformFontsForNode", {"nodeId": node_id})[
+                        "fonts"
+                    ]
+                    borrowed = [font["familyName"] for font in fonts if not font["isCustomFont"]]
+                    if borrowed:
+                        names = ", ".join(sorted(set(borrowed)))
+                        raise ValueError(
+                            f"{frame.scene_id} would borrow unbundled host font(s): {names}"
+                        )
+        finally:
+            browser.close()
+
+
 def _object(value: object, name: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"{name} is not an object")
@@ -381,6 +416,7 @@ def _write_manifest(
     scene_commands: dict[str, list[str]],
     scene_files: list[Path],
     scenes_dir: Path,
+    fonts_path: Path,
     duration: float,
 ) -> None:
     ffmpeg = tool_versions((("ffmpeg", ("ffmpeg", "-version")),))["ffmpeg"]
@@ -402,6 +438,7 @@ def _write_manifest(
             "chromium": {"version": chromium, "revision": _chromium_revision()},
             "ffmpeg": ffmpeg,
         },
+        "fonts": _object(json.loads(fonts_path.read_text(encoding="utf-8")), "font coverage"),
         "timeline": {
             "fps": timeline.fps,
             "width": timeline.width,

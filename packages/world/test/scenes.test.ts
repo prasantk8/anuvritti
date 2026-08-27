@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import { FRAME, SCENE_KINDS, escapeHtml, renderScene, type SceneKind } from "../scenes/scene.ts";
 import { emitSceneCss, FILM_ROOT_PX } from "../scenes/css.ts";
+import { FILM_FONTS, FILM_SCRIPTS, unsupportedFilmCodepoints } from "../scenes/fonts.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const domain = readFileSync(
@@ -115,6 +116,40 @@ describe("the document a renderer opens", () => {
     assert.ok(html.includes("<style>:root"));
     assert.ok(html.includes("<style>.frame"));
     assert.ok(!html.includes("<link"));
+  });
+
+  test("lets each saved line establish its own direction", () => {
+    const html = renderScene({
+      id: "s1",
+      kind: "MOMENT",
+      heading: "أول مرة نزل فيها وحده",
+      body: "पहली बार वह अकेले फिसला",
+    });
+    assert.match(html, /<h1[^>]+dir="auto"/);
+    assert.match(html, /<p class="quiet lead measure" dir="auto"/);
+  });
+});
+
+describe("the film's offline writing systems", () => {
+  test("declares Latin, Arabic and Devanagari and bundles display and body faces", () => {
+    assert.deepEqual(
+      FILM_SCRIPTS.map((script) => script.name),
+      ["Latin", "Arabic", "Devanagari"]
+    );
+    for (const script of FILM_SCRIPTS) {
+      assert.ok(FILM_FONTS.some((font) => font.script === script.name && font.role === "display"));
+      assert.ok(FILM_FONTS.some((font) => font.script === script.name && font.role === "body"));
+    }
+  });
+
+  test("accepts real family text in every declared script", () => {
+    assert.deepEqual(unsupportedFilmCodepoints("Aarav’s first slide — 2026"), []);
+    assert.deepEqual(unsupportedFilmCodepoints("أول مرة نزل فيها وحده"), []);
+    assert.deepEqual(unsupportedFilmCodepoints("पहली बार वह अकेले फिसला"), []);
+  });
+
+  test("names an unbundled glyph instead of silently borrowing a host font", () => {
+    assert.deepEqual(unsupportedFilmCodepoints("家"), ["U+5BB6"]);
   });
 });
 
