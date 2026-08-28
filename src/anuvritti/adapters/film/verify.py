@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import hmac
 import json
 import re
 from dataclasses import dataclass
@@ -21,6 +22,9 @@ from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.result import Err, Ok, Result
 
 _SCHEMA = "anuvritti.render-manifest.v1"
+_ANCHOR_SCHEMA = "anuvritti.render-anchor.v1"
+_ANCHOR_CONTEXT = b"anuvritti-render-receipt-v1\0"
+_MINIMUM_KEY_BYTES = 32
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
@@ -32,7 +36,67 @@ class FilmVerification:
     film: Path
     checked: tuple[Path, ...]
     retained_frames: int
+    authenticated: bool = False
     skipped: tuple[str, ...] = ()
+
+
+class RenderReceiptAuthenticator:
+    """Bind a receipt to a secret held separately by the family."""
+
+    def anchor(self, manifest: Path, *, key: bytes, destination: Path) -> Result[Path, DomainError]:
+        try:
+            _validate_key(key)
+            body = manifest.read_bytes()
+            payload = {
+                "schema": _ANCHOR_SCHEMA,
+                "manifest": manifest.name,
+                "manifest_sha256": hashlib.sha256(body).hexdigest(),
+                "hmac_sha256": _authentication_tag(body, key),
+            }
+            destination.write_text(
+                json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+            return Ok(destination)
+        except (OSError, TypeError, ValueError) as exc:
+            return Err(
+                DomainError(
+                    ErrorCode.VALIDATION_FAILED,
+                    "the render receipt could not be anchored",
+                    {"manifest": str(manifest), "finding": str(exc)},
+                )
+            )
+
+    def authenticate(
+        self, manifest: Path, *, key: bytes, anchor: Path
+    ) -> Result[None, DomainError]:
+        try:
+            _validate_key(key)
+            body = manifest.read_bytes()
+            payload = _object(json.loads(anchor.read_text(encoding="utf-8")), "anchor")
+            expected = {
+                "schema": _ANCHOR_SCHEMA,
+                "manifest": manifest.name,
+                "manifest_sha256": hashlib.sha256(body).hexdigest(),
+                "hmac_sha256": _authentication_tag(body, key),
+            }
+            if any(
+                not isinstance(payload.get(field), str)
+                or not hmac.compare_digest(payload[field], value)
+                for field, value in expected.items()
+            ):
+                raise ValueError("render receipt authentication failed")
+            return Ok(None)
+        except (KeyError, OSError, TypeError, ValueError):
+            return Err(
+                DomainError(
+                    ErrorCode.CONFLICT,
+                    "the render receipt is not authentic",
+                    {
+                        "manifest": str(manifest),
+                        "findings": ["render receipt authentication failed"],
+                    },
+                )
+            )
 
 
 class OfflineFilmVerifier:
@@ -44,8 +108,20 @@ class OfflineFilmVerifier:
         *,
         film: Path | None = None,
         frames: Path | None = None,
+        anchor: Path | None = None,
+        key: bytes | None = None,
     ) -> Result[FilmVerification, DomainError]:
         try:
+            if (anchor is None) != (key is None):
+                raise ValueError("anchor and family key must be supplied together")
+            authenticated = False
+            if anchor is not None and key is not None:
+                authentication = RenderReceiptAuthenticator().authenticate(
+                    manifest, key=key, anchor=anchor
+                )
+                if authentication.is_err():
+                    return Err(authentication.unwrap_err())
+                authenticated = True
             payload = _object(json.loads(manifest.read_text(encoding="utf-8")), "manifest")
             if payload.get("schema") != _SCHEMA:
                 raise ValueError(f"schema must be {_SCHEMA}")
@@ -90,6 +166,7 @@ class OfflineFilmVerifier:
                     film=film_path,
                     checked=tuple(checked),
                     retained_frames=retained,
+                    authenticated=authenticated,
                     skipped=skipped,
                 )
             )
@@ -126,6 +203,15 @@ def _object(value: object, name: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"{name} is not an object")
     return cast(dict[str, Any], value)
+
+
+def _validate_key(key: bytes) -> None:
+    if not isinstance(key, bytes) or len(key) < _MINIMUM_KEY_BYTES:
+        raise ValueError(f"family key must contain at least {_MINIMUM_KEY_BYTES} bytes")
+
+
+def _authentication_tag(manifest: bytes, key: bytes) -> str:
+    return hmac.new(key, _ANCHOR_CONTEXT + manifest, hashlib.sha256).hexdigest()
 
 
 def _objects(value: object, name: str) -> list[dict[str, Any]]:
@@ -225,9 +311,29 @@ def main() -> int:
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--film", type=Path)
     parser.add_argument("--frames", type=Path)
+    parser.add_argument("--anchor", type=Path)
+    parser.add_argument("--key", type=Path, help="family-held key file; never store with film")
+    parser.add_argument("--write-anchor", type=Path)
     arguments = parser.parse_args()
+    if arguments.write_anchor is not None:
+        if arguments.key is None:
+            parser.error("--write-anchor requires --key")
+        anchored = RenderReceiptAuthenticator().anchor(
+            arguments.manifest,
+            key=arguments.key.read_bytes(),
+            destination=arguments.write_anchor,
+        )
+        if anchored.is_err():
+            print(anchored.unwrap_err().message)
+            return 1
+        print(f"anchored {arguments.manifest} at {anchored.unwrap()}")
+        return 0
     result = OfflineFilmVerifier().verify(
-        arguments.manifest, film=arguments.film, frames=arguments.frames
+        arguments.manifest,
+        film=arguments.film,
+        frames=arguments.frames,
+        anchor=arguments.anchor,
+        key=arguments.key.read_bytes() if arguments.key is not None else None,
     )
     if result.is_err():
         error = result.unwrap_err()
@@ -238,6 +344,11 @@ def main() -> int:
     report = result.unwrap()
     print(f"verified {report.film} against {report.manifest}")
     print(f"checked {len(report.checked)} artifact(s), including {report.retained_frames} frame(s)")
+    print(
+        "receipt authentication: family key verified"
+        if report.authenticated
+        else "receipt authentication: not requested"
+    )
     for skipped in report.skipped:
         print(f"not checked: {skipped}")
     return 0

@@ -67,6 +67,24 @@ checks the video/audio streams, frame size, and duration with `ffprobe`. When `F
 given, every frame receipt must resolve and match too. A failure names each missing or
 changed artifact; success says explicitly when frame bytes were not available to check.
 
+To distinguish the original receipt from a coordinated replacement of both the MP4 and
+manifest, create a 32-byte family-held key on separate offline storage and anchor the
+manifest after rendering:
+
+```bash
+openssl rand 32 > /offline/family-render.key
+chmod 600 /offline/family-render.key
+make film-anchor MANIFEST=/path/to/film.manifest.json \
+  KEY=/offline/family-render.key ANCHOR=/path/to/film.anchor.json
+make film-verify MANIFEST=/path/to/film.manifest.json \
+  ANCHOR=/path/to/film.anchor.json KEY=/offline/family-render.key
+```
+
+The anchor may travel beside the film; the key must not. The anchor authenticates the exact
+manifest bytes with domain-separated HMAC-SHA-256. Losing the key does not damage the film,
+but it makes authenticity unverifiable; exposing it lets an attacker mint replacement
+anchors, so keep a second encrypted offline copy with the family's backup key custody.
+
 The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse to start**
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.

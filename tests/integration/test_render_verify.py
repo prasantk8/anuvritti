@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from filmkit.process import run
 
-from anuvritti.adapters.film.verify import OfflineFilmVerifier
+from anuvritti.adapters.film.verify import OfflineFilmVerifier, RenderReceiptAuthenticator
 
 pytestmark = pytest.mark.integration
 
@@ -160,3 +160,50 @@ def test_an_unreadable_video_is_an_error_value_not_an_exception(receipt):
     error = OfflineFilmVerifier().verify(manifest).unwrap_err()
 
     assert error.details["findings"] == ["ffprobe refused the film: 1"]
+
+
+def test_family_held_key_authenticates_the_receipt_before_artifacts(receipt):
+    manifest, film, frames = receipt
+    key = b"a family-held render receipt key" * 2
+    anchor = manifest.with_suffix(".anchor.json")
+    RenderReceiptAuthenticator().anchor(manifest, key=key, destination=anchor).unwrap()
+
+    report = OfflineFilmVerifier().verify(manifest, frames=frames, anchor=anchor, key=key).unwrap()
+
+    assert report.authenticated is True
+    assert anchor not in report.checked
+    assert film in report.checked
+
+
+def test_coordinated_replacement_of_film_and_manifest_cannot_replace_anchor(receipt):
+    manifest, film, _ = receipt
+    key = b"a family-held render receipt key" * 2
+    anchor = manifest.with_suffix(".anchor.json")
+    RenderReceiptAuthenticator().anchor(manifest, key=key, destination=anchor).unwrap()
+    film.write_bytes(film.read_bytes() + b"replacement")
+    payload = json.loads(manifest.read_text())
+    payload["output"].update(_digest(film))
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+    error = OfflineFilmVerifier().verify(manifest, anchor=anchor, key=key).unwrap_err()
+
+    assert error.details["findings"] == ["render receipt authentication failed"]
+
+
+def test_wrong_or_short_family_key_is_an_error_value(receipt):
+    manifest, _, _ = receipt
+    anchor = manifest.with_suffix(".anchor.json")
+    key = b"a family-held render receipt key" * 2
+    RenderReceiptAuthenticator().anchor(manifest, key=key, destination=anchor).unwrap()
+
+    wrong = (
+        OfflineFilmVerifier()
+        .verify(manifest, anchor=anchor, key=b"another family-held receipt key!!")
+        .unwrap_err()
+    )
+    short = (
+        RenderReceiptAuthenticator().anchor(manifest, key=b"short", destination=anchor).unwrap_err()
+    )
+
+    assert wrong.details["findings"] == ["render receipt authentication failed"]
+    assert short.code.value == "VALIDATION_FAILED"
