@@ -10,6 +10,7 @@
   "scripts": {
     "world": "npm --prefix packages/world run build",
     "client": "python3 packages/client/codegen/generate.py",
+    "audit": "node scripts/audit-javascript.mjs",
     "test": "npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test"
   },
   "engines": {
