@@ -14,6 +14,7 @@ from pathlib import Path
 from anuvritti.adapters.intent.heuristic import HeuristicIntentEngine
 from anuvritti.adapters.intent.spoken import SpokenIntentEngine
 from anuvritti.adapters.media.filesystem import EncryptedFilesystemMediaStore
+from anuvritti.adapters.media.measure import FfprobeAudioDurationMeasurer
 from anuvritti.adapters.persistence.schema import GuardedConnection, connect, migrate
 from anuvritti.adapters.persistence.sqlite import (
     SqliteDeviceRepository,
@@ -246,6 +247,7 @@ def build_container(
         keep_voice_note=KeepVoiceNoteUseCase(
             families=families,
             media=media,
+            duration_measurer=FfprobeAudioDurationMeasurer(),
             voice_notes=voice_notes,
             transcriber=transcriber,
             events=events,

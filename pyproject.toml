@@ -9,13 +9,12 @@ dependencies = [
     "pydantic>=2.7",
     "cryptography>=42",
     "python-multipart>=0.0.20",
+    "filmkit>=0.1",
 ]
 
 [project.optional-dependencies]
-# The memory compiler (PRD 34). An extra, not a dependency: the always-on server that
-# holds a family's archive has no reason to carry it, and the machine that eventually
-# draws a film is one they can turn off. `requirements-dev.txt` installs the monorepo package.
-film = ["filmkit>=0.1"]
+# The browser remains optional; base filmkit is used by the server's voice probe (TASK-717).
+film = ["filmkit[chromium]>=0.1"]
 dev = [
     "pytest>=8",
     "pytest-cov>=5",

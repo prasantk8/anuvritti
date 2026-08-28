@@ -126,6 +126,13 @@ class MediaStore(Protocol):
 
 
 @runtime_checkable
+class AudioDurationMeasurer(Protocol):
+    """Measure a recording from its bytes; a handset's timer is never authority."""
+
+    def measure(self, content: bytes, *, mime_type: str) -> Result[float, DomainError]: ...
+
+
+@runtime_checkable
 class IntentEngine(Protocol):
     """PRD 13. A port, not a dependency (ADR-0004).
 

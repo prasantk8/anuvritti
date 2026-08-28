@@ -58,6 +58,11 @@ class TestBaseImage:
     def test_security_updates_are_applied(self):
         assert "apt-get upgrade" in DOCKERFILE
 
+    def test_runtime_can_probe_voice_without_shipping_a_browser(self):
+        assert "apt-get install -y --no-install-recommends ffmpeg" in DOCKERFILE
+        assert "playwright" not in DOCKERFILE.lower()
+        assert "chromium" not in DOCKERFILE.lower()
+
     def test_the_apt_cache_is_not_left_in_a_layer(self):
         assert "rm -rf /var/lib/apt/lists/*" in DOCKERFILE
 

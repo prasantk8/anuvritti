@@ -25,6 +25,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from anuvritti.application.ports import (
+    AudioDurationMeasurer,
     EventPublisher,
     FamilyRepository,
     MediaStore,
@@ -73,6 +74,7 @@ class KeepVoiceNoteUseCase:
         *,
         families: FamilyRepository,
         media: MediaStore,
+        duration_measurer: AudioDurationMeasurer,
         voice_notes: VoiceNoteRepository,
         transcriber: Transcriber,
         events: EventPublisher,
@@ -81,6 +83,7 @@ class KeepVoiceNoteUseCase:
     ) -> None:
         self._families = families
         self._media = media
+        self._duration_measurer = duration_measurer
         self._voice_notes = voice_notes
         self._transcriber = transcriber
         self._events = events
@@ -100,12 +103,19 @@ class KeepVoiceNoteUseCase:
         if audio.is_err():
             return Err(audio.unwrap_err())
 
+        content = self._media.get(command.media_id)
+        if content.is_err():
+            return Err(content.unwrap_err())
+        measured = self._duration_measurer.measure(content.unwrap(), mime_type=audio.unwrap())
+        if measured.is_err():
+            return Err(measured.unwrap_err())
+
         now = self._clock.now()
         kept = VoiceNote.kept(
             media_id=command.media_id,
             family_id=command.family_id,
             author_id=command.author_id,
-            duration_seconds=command.duration_seconds,
+            duration_seconds=measured.unwrap(),
             at=now,
         )
         if kept.is_err():
@@ -122,7 +132,7 @@ class KeepVoiceNoteUseCase:
             self._uow.commit()
         return Ok(note)
 
-    def _audio_in_family(self, media_id: MediaId, family_id: FamilyId) -> Result[None, DomainError]:
+    def _audio_in_family(self, media_id: MediaId, family_id: FamilyId) -> Result[str, DomainError]:
         described = self._media.describe(media_id)
         if described.is_err():
             return Err(described.unwrap_err())
@@ -139,7 +149,7 @@ class KeepVoiceNoteUseCase:
                     {"kind": media.kind.value},
                 )
             )
-        return Ok(None)
+        return Ok(media.mime_type)
 
     def _indexed(self, note: VoiceNote, command: KeepVoiceNoteCommand) -> VoiceNote:
         """Attach whatever reading is available, and never fail because none is.

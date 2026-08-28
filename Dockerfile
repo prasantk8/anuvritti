@@ -22,6 +22,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt ./
+COPY packages/filmkit ./packages/filmkit
 RUN pip install --require-hashes --no-deps -r requirements.txt 2>/dev/null \
     || pip install -r requirements.txt
 
@@ -45,9 +46,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     ANUVRITTI_DB_PATH=/var/lib/anuvritti/anuvritti.db \
     ANUVRITTI_MEDIA_DIR=/var/lib/anuvritti/media
 
-# Security patches only; no build tooling, no shell utilities beyond the base.
+# Security patches plus ffprobe's package; no build tooling and no browser runtime.
 RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # A dedicated unprivileged account. It owns the data directory and nothing else.

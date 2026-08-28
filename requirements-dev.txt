@@ -6,7 +6,6 @@ ruff>=0.6
 mypy>=1.11
 pyyaml>=6
 
-# The memory compiler (TASK-701). Deliberately absent from requirements.txt: the
-# family's always-on server never compiles a film, so the production image never
-# grows this - or, one dependency further on, a browser.
--e packages/filmkit
+# Browser rendering is a workstation concern. Production receives filmkit's base
+# narration probe from requirements.txt, never Playwright or Chromium.
+-e packages/filmkit[chromium]
