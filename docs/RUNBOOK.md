@@ -74,8 +74,12 @@ make film-font-review \
 
 Open `var/film/font-review-5.4.0/REVIEW.md` and inspect the six full-size stills plus the
 three difference maps. A map keeps the approved frame quiet underneath, marks changed
-pixels in the world's indigo, and boxes their exact bounds. The receipt records changed
-pixel count, fraction, mean and maximum RGB delta alongside every old/new WOFF2 digest.
+pixels in the world's indigo, and boxes their exact bounds. Every non-empty bound also gets
+approved, candidate and difference detail panels: twelve pixels of context, enlarged four
+times by repeating the source pixels exactly. No interpolated edge may make a glyph look
+smoother or rougher than Chromium drew it. The receipt records changed pixel count,
+fraction, mean and maximum RGB delta alongside every old/new WOFF2 digest and the detail
+filenames; an unchanged frame gets no invented panel.
 The receipt and review sheet also name the exact Playwright version, Chromium product
 version and revision, installation path, operating-system release and architecture. Compare
 pixel counts only when those fingerprints agree; different rasterisers are different

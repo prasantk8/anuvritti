@@ -20,7 +20,7 @@ import {
   approveRenderRequirements,
   assertInstalledFilmFontDigests,
 } from "../scenes/preparation.ts";
-import { encodePng } from "../scripts/png-difference.ts";
+import { decodePng, encodePng } from "../scripts/png-difference.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const domain = readFileSync(
@@ -205,9 +205,14 @@ describe("the film's offline writing systems", () => {
     const output = join(temporary, "review");
     const fakePlaywright = join(temporary, "playwright");
     const fixture = join(temporary, "frame.png");
+    const candidateFixture = join(temporary, "candidate-frame.png");
     writeFileSync(
       fixture,
       encodePng({ width: 2, height: 1, pixels: Uint8Array.from([19, 27, 42, 255, 249, 248, 243, 255]) })
+    );
+    writeFileSync(
+      candidateFixture,
+      encodePng({ width: 2, height: 1, pixels: Uint8Array.from([19, 27, 42, 255, 46, 74, 140, 255]) })
     );
     writeFileSync(
       fakePlaywright,
@@ -218,7 +223,9 @@ describe("the film's offline writing systems", () => {
         "  echo '  Install location: /review/chromium-1234'\n" +
         "  exit 0\n" +
         "fi\n" +
-        "for last do :; done\ncp \"$PLAYWRIGHT_FIXTURE\" \"$last\"\n"
+        "for last do :; done\n" +
+        "case \"$last\" in *candidate-*) cp \"$PLAYWRIGHT_CANDIDATE_FIXTURE\" \"$last\" ;; " +
+        "*) cp \"$PLAYWRIGHT_FIXTURE\" \"$last\" ;; esac\n"
     );
     chmodSync(fakePlaywright, 0o700);
     try {
@@ -235,7 +242,12 @@ describe("the film's offline writing systems", () => {
         ],
         {
           encoding: "utf8",
-          env: { ...process.env, PLAYWRIGHT_CLI: fakePlaywright, PLAYWRIGHT_FIXTURE: fixture },
+          env: {
+            ...process.env,
+            PLAYWRIGHT_CLI: fakePlaywright,
+            PLAYWRIGHT_FIXTURE: fixture,
+            PLAYWRIGHT_CANDIDATE_FIXTURE: candidateFixture,
+          },
         }
       );
       assert.equal(reviewed.status, 0, reviewed.stderr);
@@ -247,9 +259,14 @@ describe("the film's offline writing systems", () => {
           host: { platform: string; release: string; architecture: string };
         };
         faces: { approved_sha256: string; candidate_sha256: string }[];
-        comparisons: { script: string; changed_pixels: number; bounds: unknown }[];
+        comparisons: {
+          script: string;
+          changed_pixels: number;
+          bounds: unknown;
+          details: { approved: string; candidate: string; difference: string; scale: number } | null;
+        }[];
       };
-      assert.equal(receipt.schema, "anuvritti.font-review.v3");
+      assert.equal(receipt.schema, "anuvritti.font-review.v4");
       assert.deepEqual(receipt.environment.playwright, { version: "1.62.0" });
       assert.deepEqual(receipt.environment.chromium, {
         version: "151.0.7922.34",
@@ -272,19 +289,30 @@ describe("the film's offline writing systems", () => {
         receipt.comparisons.map((comparison) => comparison.script),
         ["Latin", "Arabic", "Devanagari"]
       );
-      assert.ok(receipt.comparisons.every((comparison) => comparison.changed_pixels === 0));
-      assert.ok(receipt.comparisons.every((comparison) => comparison.bounds === null));
+      assert.ok(receipt.comparisons.every((comparison) => comparison.changed_pixels === 1));
+      assert.ok(
+        receipt.comparisons.every(
+          (comparison) => JSON.stringify(comparison.bounds) === JSON.stringify({ x: 1, y: 0, width: 1, height: 1 })
+        )
+      );
       for (const script of ["latin", "arabic", "devanagari"]) {
         assert.ok(readFileSync(join(output, `difference-${script}.png`)).byteLength > 0);
+        for (const state of ["approved", "candidate", "difference"]) {
+          const detail = decodePng(readFileSync(join(output, `detail-${state}-${script}.png`)));
+          assert.equal(detail.width, 8);
+          assert.equal(detail.height, 4);
+        }
       }
       const sheet = readFileSync(join(output, "REVIEW.md"), "utf8");
       assert.match(sheet, /- \[ \] Approved/);
       assert.match(sheet, /Approved SHA-256.*Candidate SHA-256/);
       assert.match(sheet, /Difference map/);
-      assert.match(sheet, /Devanagari.*0 \/ 2 \(0\.0000%\)/);
+      assert.match(sheet, /Devanagari.*1 \/ 2 \(50\.0000%\)/);
       assert.match(sheet, /Playwright 1\.62\.0/);
       assert.match(sheet, /Chromium 151\.0\.7922\.34 \(revision 1234\)/);
       assert.match(sheet, new RegExp(`${process.platform} ${process.arch}`));
+      assert.match(sheet, /Devanagari · 4× nearest-neighbour/);
+      assert.match(sheet, /detail-candidate-devanagari\.png/);
     } finally {
       rmSync(temporary, { recursive: true, force: true });
     }

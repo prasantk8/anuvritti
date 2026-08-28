@@ -12,7 +12,7 @@ import { FILM_FONTS, type FilmFontFace, type FilmScript } from "../scenes/fonts.
 import { renderScene, FRAME, type SceneInput } from "../scenes/scene.ts";
 import { assertInstalledFilmFontDigests } from "../scenes/preparation.ts";
 import { emitCss } from "../src/css.ts";
-import { comparePngs, type DifferenceMetrics } from "./png-difference.ts";
+import { comparePngs, magnifyPng, type DifferenceMetrics } from "./png-difference.ts";
 
 interface FaceBytes extends FilmFontFace {
   readonly bytes: Buffer;
@@ -35,6 +35,12 @@ interface ReviewComparison extends DifferenceMetrics {
   readonly approved: string;
   readonly candidate: string;
   readonly difference: string;
+  readonly details: {
+    readonly approved: string;
+    readonly candidate: string;
+    readonly difference: string;
+    readonly scale: number;
+  } | null;
 }
 
 interface RenderEnvironment {
@@ -228,6 +234,18 @@ function reviewMarkdown(
         `${comparison.mean_changed_channel_delta.toFixed(2)} | ${comparison.maximum_channel_delta} | ${bounds} |`;
     })
     .join("\n");
+  const details = comparisons
+    .filter((comparison) => comparison.details !== null)
+    .map((comparison) => {
+      const detail = comparison.details!;
+      return `### ${comparison.script} · ${detail.scale}× nearest-neighbour\n\n` +
+        `| Approved detail | Candidate detail | Difference detail |\n` +
+        `| --- | --- | --- |\n` +
+        `| ![approved ${comparison.script} detail](${detail.approved}) | ` +
+        `![candidate ${comparison.script} detail](${detail.candidate}) | ` +
+        `![difference ${comparison.script} detail](${detail.difference}) |`;
+    })
+    .join("\n\n");
   return `# Film font migration review\n\nCandidate: Fontsource ${candidateVersion}\n\n` +
     `Rendered with Playwright ${environment.playwright.version}; Chromium ` +
     `${environment.chromium.version} (revision ${environment.chromium.revision}); ` +
@@ -241,6 +259,11 @@ function reviewMarkdown(
     `## Pixel evidence\n\n| Script | Changed pixels | Mean RGB delta | Maximum delta | Bounds (x,y · w×h) |\n` +
     `| --- | ---: | ---: | ---: | --- |\n${measurements}\n\n` +
     `Measurements are exact only for the browser, platform and approved/candidate pair used for this run.\n\n` +
+    `## Magnified details\n\n` +
+    `${details || "No changed bounds; no detail panels were invented."}\n\n` +
+    `Detail panels include twelve pixels of surrounding context and repeat source pixels ` +
+    `without interpolation. Read approved, candidate and difference together; magnification ` +
+    `makes evidence legible but does not make the decision.\n\n` +
     `## Byte changes\n\n| Face | Approved SHA-256 | Candidate SHA-256 | Result |\n` +
     `| --- | --- | --- | --- |\n${changes}\n\n` +
     `## Decision\n\n- [ ] Approved\n- [ ] Rejected\n\nReviewer: ____________________\n\nDate: ____________________\n`;
@@ -283,16 +306,38 @@ export function runReview(): void {
     const approvedFile = `approved-${slug}.png`;
     const candidateFile = `candidate-${slug}.png`;
     const differenceFile = `difference-${slug}.png`;
-    const compared = comparePngs(
-      readFileSync(join(output, approvedFile)),
-      readFileSync(join(output, candidateFile))
-    );
+    const approvedBytes = readFileSync(join(output, approvedFile));
+    const candidateBytes = readFileSync(join(output, candidateFile));
+    const compared = comparePngs(approvedBytes, candidateBytes);
     writeFileSync(join(output, differenceFile), compared.difference);
+    const details = compared.metrics.bounds
+      ? {
+          approved: `detail-approved-${slug}.png`,
+          candidate: `detail-candidate-${slug}.png`,
+          difference: `detail-difference-${slug}.png`,
+          scale: 4,
+        }
+      : null;
+    if (details && compared.metrics.bounds) {
+      writeFileSync(
+        join(output, details.approved),
+        magnifyPng(approvedBytes, compared.metrics.bounds)
+      );
+      writeFileSync(
+        join(output, details.candidate),
+        magnifyPng(candidateBytes, compared.metrics.bounds)
+      );
+      writeFileSync(
+        join(output, details.difference),
+        magnifyPng(compared.difference, compared.metrics.bounds)
+      );
+    }
     return {
       script,
       approved: approvedFile,
       candidate: candidateFile,
       difference: differenceFile,
+      details,
       ...compared.metrics,
     };
   });
@@ -301,7 +346,7 @@ export function runReview(): void {
     join(output, "font-review.json"),
     JSON.stringify(
       {
-        schema: "anuvritti.font-review.v3",
+        schema: "anuvritti.font-review.v4",
         candidate_version: candidateVersion,
         environment,
         faces,

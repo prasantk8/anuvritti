@@ -5,6 +5,7 @@ import {
   comparePngs,
   decodePng,
   encodePng,
+  magnifyPng,
   type RgbaImage,
 } from "../scripts/png-difference.ts";
 
@@ -60,5 +61,32 @@ describe("font review pixel evidence", () => {
     const two = encodePng(image(2, 1, [0, 0, 0, 255, 0, 0, 0, 255]));
 
     assert.throws(() => comparePngs(one, two), /same dimensions/);
+  });
+
+  test("magnifies a padded bound with exact nearest-neighbour pixels", () => {
+    const source = encodePng(image(3, 2, [
+      10, 11, 12, 255, 20, 21, 22, 255, 30, 31, 32, 255,
+      40, 41, 42, 255, 50, 51, 52, 255, 60, 61, 62, 255,
+    ]));
+
+    const detail = decodePng(
+      magnifyPng(source, { x: 1, y: 1, width: 1, height: 1 }, { padding: 1, scale: 2 })
+    );
+
+    assert.equal(detail.width, 6);
+    assert.equal(detail.height, 4);
+    const at = (x: number, y: number) => [...detail.pixels.slice((y * detail.width + x) * 4, (y * detail.width + x + 1) * 4)];
+    assert.deepEqual(at(0, 0), [10, 11, 12, 255]);
+    assert.deepEqual(at(1, 1), [10, 11, 12, 255]);
+    assert.deepEqual(at(2, 2), [50, 51, 52, 255]);
+    assert.deepEqual(at(5, 3), [60, 61, 62, 255]);
+  });
+
+  test("refuses a detail bound outside its frame", () => {
+    const frame = encodePng(image(1, 1, [0, 0, 0, 255]));
+    assert.throws(
+      () => magnifyPng(frame, { x: 1, y: 0, width: 1, height: 1 }),
+      /inside the frame/
+    );
   });
 });

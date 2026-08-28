@@ -164,6 +164,47 @@ export function encodePng(image: RgbaImage): Buffer {
   ]);
 }
 
+export function magnifyPng(
+  bytes: Uint8Array,
+  bounds: PixelBounds,
+  options: { readonly padding?: number; readonly scale?: number } = {}
+): Buffer {
+  const source = decodePng(bytes);
+  if (
+    bounds.x < 0 ||
+    bounds.y < 0 ||
+    bounds.width < 1 ||
+    bounds.height < 1 ||
+    bounds.x + bounds.width > source.width ||
+    bounds.y + bounds.height > source.height
+  ) {
+    throw new Error("font review detail bounds must be inside the frame");
+  }
+  const padding = options.padding ?? 12;
+  const scale = options.scale ?? 4;
+  if (!Number.isInteger(padding) || padding < 0 || !Number.isInteger(scale) || scale < 2) {
+    throw new Error("font review detail padding and scale must be non-negative integers with scale at least 2");
+  }
+  const left = Math.max(0, bounds.x - padding);
+  const top = Math.max(0, bounds.y - padding);
+  const right = Math.min(source.width, bounds.x + bounds.width + padding);
+  const bottom = Math.min(source.height, bounds.y + bounds.height + padding);
+  const cropWidth = right - left;
+  const cropHeight = bottom - top;
+  const width = cropWidth * scale;
+  const height = cropHeight * scale;
+  const pixels = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const sourceY = top + Math.floor(y / scale);
+    for (let x = 0; x < width; x += 1) {
+      const sourceX = left + Math.floor(x / scale);
+      const sourceOffset = (sourceY * source.width + sourceX) * 4;
+      pixels.set(source.pixels.subarray(sourceOffset, sourceOffset + 4), (y * width + x) * 4);
+    }
+  }
+  return encodePng({ width, height, pixels });
+}
+
 function rgb(hex: string): readonly [number, number, number] {
   return [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)) as unknown as readonly [
     number,
