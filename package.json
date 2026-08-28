@@ -4,6 +4,7 @@
   "version": "0.2.0",
   "description": "Anuvritti. The Python server, the design language, the typed client and the app, in one tree.",
   "workspaces": [
+    "apps/*",
     "packages/*"
   ],
   "scripts": {

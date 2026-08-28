@@ -1,8 +1,8 @@
 /** Render complete offline film documents through packages/world/scenes. */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { join } from "node:path";
 import { emitSceneCss } from "../scenes/css.ts";
 import { renderScene, type SceneInput } from "../scenes/scene.ts";
 import { emitCss } from "../src/css.ts";
@@ -11,10 +11,10 @@ interface RenderBatch {
   readonly scenes: readonly SceneInput[];
 }
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(import.meta.url);
 
 function font(family: string, weight: number, file: string): string {
-  const bytes = readFileSync(join(root, "node_modules", "@fontsource", file));
+  const bytes = readFileSync(require.resolve(`@fontsource/${file}`));
   return `@font-face {
   font-family: "${family}";
   font-style: normal;

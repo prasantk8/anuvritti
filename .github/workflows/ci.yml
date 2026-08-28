@@ -61,7 +61,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: pip install -r requirements-dev.txt
-      - run: npm --prefix packages/world install --no-package-lock
+      - name: Install the locked JavaScript workspace
+        run: npm ci
       - name: Install the development-only film browser
         run: python -m playwright install --with-deps chromium
       # pytest collects tests/design too. `make check` builds this ignored output before
