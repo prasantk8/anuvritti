@@ -30,8 +30,10 @@ COPY pyproject.toml ./
 COPY src ./src
 RUN pip install --no-deps .
 
-# --------------------------------------------------------------- runtime stage
-FROM python:3.12-slim-bookworm AS runtime
+# ---------------------------------------------------------- probe-free baseline
+# This is a complete runnable image except for the media probe. CI builds this
+# target too, so the size delta compares otherwise identical images.
+FROM python:3.12-slim-bookworm AS runtime-base
 
 LABEL org.opencontainers.image.title="Anuvritti" \
       org.opencontainers.image.description="Family presence, intent & memory platform" \
@@ -46,10 +48,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     ANUVRITTI_DB_PATH=/var/lib/anuvritti/anuvritti.db \
     ANUVRITTI_MEDIA_DIR=/var/lib/anuvritti/media
 
-# Security patches plus ffprobe's package; no build tooling and no browser runtime.
+# Security patches belong to both sides of the size comparison.
 RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \
-    && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # A dedicated unprivileged account. It owns the data directory and nothing else.
@@ -72,3 +73,14 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 
 ENTRYPOINT ["python", "-m", "uvicorn"]
 CMD ["anuvritti.interfaces.http.asgi:app", "--host", "0.0.0.0", "--port", "8000", "--no-server-header"]
+
+# --------------------------------------------------------------- runtime stage
+FROM runtime-base AS runtime
+
+# Voice duration is measured from the bytes on the family's server. ffmpeg is
+# the Debian package that supplies ffprobe; browsers stay out of production.
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+USER anuvritti:anuvritti

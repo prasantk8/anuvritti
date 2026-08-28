@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DOCKERFILE = (ROOT / "Dockerfile").read_text()
 DOCKERIGNORE = (ROOT / ".dockerignore").read_text()
 STAGES = re.findall(r"^FROM\s+(\S+)(?:\s+AS\s+(\S+))?", DOCKERFILE, re.MULTILINE | re.IGNORECASE)
+EXTERNAL_BASES = [(base, stage) for base, stage in STAGES if ":" in base]
 
 
 class TestMultiStage:
@@ -31,7 +32,7 @@ class TestMultiStage:
 
     def test_no_compiler_or_build_tooling_is_installed_in_the_runtime_stage(self):
         """Checked against what the stage *installs*, not against prose in a LABEL."""
-        runtime = DOCKERFILE[DOCKERFILE.index("AS runtime") :]
+        runtime = DOCKERFILE[DOCKERFILE.index("AS runtime-base") :]
         installs = " ".join(re.findall(r"^RUN [^\n]*(?:\\\n[^\n]*)*", runtime, re.MULTILINE))
         for tool in ("build-essential", "gcc", "g++", "make", "git", "curl", "wget"):
             assert not re.search(rf"install[^\n]*\b{re.escape(tool)}\b", installs), tool
@@ -39,11 +40,11 @@ class TestMultiStage:
 
 class TestBaseImage:
     def test_the_base_is_a_slim_pinned_image(self):
-        base = STAGES[-1][0]
-        assert "slim" in base, f"{base} is larger than it needs to be"
+        for base, _stage in EXTERNAL_BASES:
+            assert "slim" in base, f"{base} is larger than it needs to be"
 
     def test_the_base_tag_is_specific_not_latest(self):
-        for base, _ in STAGES:
+        for base, _ in EXTERNAL_BASES:
             assert not base.endswith(":latest")
             assert ":" in base, f"{base} has no tag at all"
 
@@ -53,7 +54,7 @@ class TestBaseImage:
         requires = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"][
             "requires-python"
         ]
-        assert requires.replace(">=", "") in STAGES[-1][0]
+        assert all(requires.replace(">=", "") in base for base, _ in EXTERNAL_BASES)
 
     def test_security_updates_are_applied(self):
         assert "apt-get upgrade" in DOCKERFILE

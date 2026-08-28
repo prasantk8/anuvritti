@@ -38,6 +38,17 @@ The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse t
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.
 
+The production image includes `ffprobe` so voice-note duration is measured from the
+recording bytes on the server. CI builds the otherwise identical `runtime-base` target,
+measures a known one-second WAV inside production, and publishes both image sizes and
+their delta in the job summary. Rehearse the same proof locally with:
+
+```bash
+docker build --target runtime-base -t anuvritti:probe-free .
+docker build -t anuvritti:local .
+scripts/verify-production-media-probe.sh anuvritti:local anuvritti:probe-free
+```
+
 > **Do not expose port 8000 publicly.** V0 has no authentication — see
 > [HARDENING.md §5.1](HARDENING.md#51-high--there-is-no-authentication). Bind it to
 > localhost or a private network.
