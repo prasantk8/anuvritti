@@ -11,6 +11,7 @@ import { FILM_FONTS, type FilmFontFace, type FilmScript } from "../scenes/fonts.
 import { renderScene, FRAME, type SceneInput } from "../scenes/scene.ts";
 import { assertInstalledFilmFontDigests } from "../scenes/preparation.ts";
 import { emitCss } from "../src/css.ts";
+import { comparePngs, type DifferenceMetrics } from "./png-difference.ts";
 
 interface FaceBytes extends FilmFontFace {
   readonly bytes: Buffer;
@@ -26,6 +27,13 @@ interface ReviewFace {
   readonly approved_sha256: string;
   readonly candidate_sha256: string;
   readonly changed: boolean;
+}
+
+interface ReviewComparison extends DifferenceMetrics {
+  readonly script: FilmScript;
+  readonly approved: string;
+  readonly candidate: string;
+  readonly difference: string;
 }
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -142,12 +150,21 @@ function argument(name: string): string {
   return value;
 }
 
-function reviewMarkdown(candidateVersion: string, faces: ReviewFace[]): string {
+function percent(fraction: number): string {
+  return `${(fraction * 100).toFixed(4)}%`;
+}
+
+function reviewMarkdown(
+  candidateVersion: string,
+  faces: ReviewFace[],
+  comparisons: ReviewComparison[]
+): string {
   const rows = (["Latin", "Arabic", "Devanagari"] as const)
     .map(
       (script) =>
         `| ${script} | ![approved ${script}](approved-${script.toLowerCase()}.png) | ` +
-        `![candidate ${script}](candidate-${script.toLowerCase()}.png) |`
+        `![candidate ${script}](candidate-${script.toLowerCase()}.png) | ` +
+        `![difference map ${script}](difference-${script.toLowerCase()}.png) |`
     )
     .join("\n");
   const changes = faces
@@ -157,9 +174,25 @@ function reviewMarkdown(candidateVersion: string, faces: ReviewFace[]): string {
         `\`${face.candidate_sha256}\` | ${face.changed ? "changed" : "unchanged"} |`
     )
     .join("\n");
+  const measurements = comparisons
+    .map((comparison) => {
+      const bounds = comparison.bounds
+        ? `${comparison.bounds.x},${comparison.bounds.y} · ${comparison.bounds.width}×${comparison.bounds.height}`
+        : "none";
+      return `| ${comparison.script} | ${comparison.changed_pixels.toLocaleString("en-US")} / ` +
+        `${comparison.total_pixels.toLocaleString("en-US")} (${percent(comparison.changed_fraction)}) | ` +
+        `${comparison.mean_changed_channel_delta.toFixed(2)} | ${comparison.maximum_channel_delta} | ${bounds} |`;
+    })
+    .join("\n");
   return `# Film font migration review\n\nCandidate: Fontsource ${candidateVersion}\n\n` +
-    `## Frames\n\n| Script | Approved bytes | Candidate bytes |\n| --- | --- | --- |\n${rows}\n\n` +
-    `Review line breaks, shaping, diacritics, punctuation, weight and rhythm at full size.\n\n` +
+    `## Frames\n\n| Script | Approved bytes | Candidate bytes | Difference map |\n` +
+    `| --- | --- | --- | --- |\n${rows}\n\n` +
+    `Indigo marks pixels Chromium rendered differently; the quiet approved frame remains ` +
+    `underneath for context. Review line breaks, shaping, matras, diacritics, punctuation, ` +
+    `weight and rhythm at full size. A difference is evidence for a person, never an automatic rejection.\n\n` +
+    `## Pixel evidence\n\n| Script | Changed pixels | Mean RGB delta | Maximum delta | Bounds (x,y · w×h) |\n` +
+    `| --- | ---: | ---: | ---: | --- |\n${measurements}\n\n` +
+    `Measurements are exact only for the browser, platform and approved/candidate pair used for this run.\n\n` +
     `## Byte changes\n\n| Face | Approved SHA-256 | Candidate SHA-256 | Result |\n` +
     `| --- | --- | --- | --- |\n${changes}\n\n` +
     `## Decision\n\n- [ ] Approved\n- [ ] Rejected\n\nReviewer: ____________________\n\nDate: ____________________\n`;
@@ -196,18 +229,52 @@ export function runReview(): void {
   const playwright = process.env.PLAYWRIGHT_CLI ?? join(repositoryRoot, ".venv", "bin", "playwright");
   screenshot(basenames, output, playwright);
 
+  const comparisons = (["Latin", "Arabic", "Devanagari"] as const).map((script) => {
+    const slug = script.toLowerCase();
+    const approvedFile = `approved-${slug}.png`;
+    const candidateFile = `candidate-${slug}.png`;
+    const differenceFile = `difference-${slug}.png`;
+    const compared = comparePngs(
+      readFileSync(join(output, approvedFile)),
+      readFileSync(join(output, candidateFile))
+    );
+    writeFileSync(join(output, differenceFile), compared.difference);
+    return {
+      script,
+      approved: approvedFile,
+      candidate: candidateFile,
+      difference: differenceFile,
+      ...compared.metrics,
+    };
+  });
+
   writeFileSync(
     join(output, "font-review.json"),
-    JSON.stringify({ schema: "anuvritti.font-review.v1", candidate_version: candidateVersion, faces }, null, 2)
+    JSON.stringify(
+      {
+        schema: "anuvritti.font-review.v2",
+        candidate_version: candidateVersion,
+        faces,
+        comparisons,
+      },
+      null,
+      2
+    )
   );
-  writeFileSync(join(output, "REVIEW.md"), reviewMarkdown(candidateVersion, faces));
+  writeFileSync(join(output, "REVIEW.md"), reviewMarkdown(candidateVersion, faces, comparisons));
   for (const face of faces) {
     console.log(
       `${face.role}/${face.script} ${face.family} ${face.weight}: ` +
         `${face.approved_sha256} -> ${face.candidate_sha256} ${face.changed ? "changed" : "unchanged"}`
     );
   }
-  console.log(`review ${basenames.length} stills at ${join(output, "REVIEW.md")}`);
+  for (const comparison of comparisons) {
+    console.log(
+      `${comparison.script}: ${comparison.changed_pixels}/${comparison.total_pixels} pixels ` +
+        `changed (${percent(comparison.changed_fraction)})`
+    );
+  }
+  console.log(`review ${basenames.length} stills and ${comparisons.length} difference maps at ${join(output, "REVIEW.md")}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

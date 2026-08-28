@@ -20,6 +20,7 @@ import {
   approveRenderRequirements,
   assertInstalledFilmFontDigests,
 } from "../scenes/preparation.ts";
+import { encodePng } from "../scripts/png-difference.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const domain = readFileSync(
@@ -203,9 +204,14 @@ describe("the film's offline writing systems", () => {
     const temporary = mkdtempSync(join(tmpdir(), "anuvritti-font-review-"));
     const output = join(temporary, "review");
     const fakePlaywright = join(temporary, "playwright");
+    const fixture = join(temporary, "frame.png");
+    writeFileSync(
+      fixture,
+      encodePng({ width: 2, height: 1, pixels: Uint8Array.from([19, 27, 42, 255, 249, 248, 243, 255]) })
+    );
     writeFileSync(
       fakePlaywright,
-      "#!/bin/sh\nfor last do :; done\nprintf 'not-a-real-png' > \"$last\"\n"
+      "#!/bin/sh\nfor last do :; done\ncp \"$PLAYWRIGHT_FIXTURE\" \"$last\"\n"
     );
     chmodSync(fakePlaywright, 0o700);
     try {
@@ -220,12 +226,18 @@ describe("the film's offline writing systems", () => {
           "--output",
           output,
         ],
-        { encoding: "utf8", env: { ...process.env, PLAYWRIGHT_CLI: fakePlaywright } }
+        {
+          encoding: "utf8",
+          env: { ...process.env, PLAYWRIGHT_CLI: fakePlaywright, PLAYWRIGHT_FIXTURE: fixture },
+        }
       );
       assert.equal(reviewed.status, 0, reviewed.stderr);
       const receipt = JSON.parse(readFileSync(join(output, "font-review.json"), "utf8")) as {
+        schema: string;
         faces: { approved_sha256: string; candidate_sha256: string }[];
+        comparisons: { script: string; changed_pixels: number; bounds: unknown }[];
       };
+      assert.equal(receipt.schema, "anuvritti.font-review.v2");
       assert.equal(receipt.faces.length, FILM_FONTS.length);
       assert.ok(
         receipt.faces.every((face) => face.approved_sha256 === face.candidate_sha256)
@@ -235,9 +247,20 @@ describe("the film's offline writing systems", () => {
           assert.ok(readFileSync(join(output, `${state}-${script}.png`)).byteLength > 0);
         }
       }
+      assert.deepEqual(
+        receipt.comparisons.map((comparison) => comparison.script),
+        ["Latin", "Arabic", "Devanagari"]
+      );
+      assert.ok(receipt.comparisons.every((comparison) => comparison.changed_pixels === 0));
+      assert.ok(receipt.comparisons.every((comparison) => comparison.bounds === null));
+      for (const script of ["latin", "arabic", "devanagari"]) {
+        assert.ok(readFileSync(join(output, `difference-${script}.png`)).byteLength > 0);
+      }
       const sheet = readFileSync(join(output, "REVIEW.md"), "utf8");
       assert.match(sheet, /- \[ \] Approved/);
       assert.match(sheet, /Approved SHA-256.*Candidate SHA-256/);
+      assert.match(sheet, /Difference map/);
+      assert.match(sheet, /Devanagari.*0 \/ 2 \(0\.0000%\)/);
     } finally {
       rmSync(temporary, { recursive: true, force: true });
     }
