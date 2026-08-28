@@ -14,7 +14,10 @@ import { fileURLToPath } from "node:url";
 import { FRAME, SCENE_KINDS, escapeHtml, renderScene, type SceneKind } from "../scenes/scene.ts";
 import { emitSceneCss, FILM_ROOT_PX } from "../scenes/css.ts";
 import { FILM_FONTS, FILM_SCRIPTS, unsupportedFilmCodepoints } from "../scenes/fonts.ts";
-import { approveRenderRequirements } from "../scenes/preparation.ts";
+import {
+  approveRenderRequirements,
+  assertInstalledFilmFontDigests,
+} from "../scenes/preparation.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const domain = readFileSync(
@@ -176,6 +179,21 @@ describe("the film's offline writing systems", () => {
           { name: "@anuvritti/world", version: "0.1.0" }
         ),
       /approved pinned font bundle exactly/
+    );
+  });
+
+  test("approves the bytes of every bundled face, not only its package name", () => {
+    const installed = Object.fromEntries(FILM_FONTS.map((face) => [face.file, face.sha256]));
+
+    assert.doesNotThrow(() => assertInstalledFilmFontDigests(installed));
+    assert.ok(FILM_FONTS.every((face) => /^[0-9a-f]{64}$/.test(face.sha256)));
+    assert.throws(
+      () =>
+        assertInstalledFilmFontDigests({
+          ...installed,
+          [FILM_FONTS[0].file]: "0".repeat(64),
+        }),
+      new RegExp(`installed font bytes are not approved: ${FILM_FONTS[0].file}`)
     );
   });
 });

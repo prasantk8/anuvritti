@@ -60,3 +60,17 @@ export function approveRenderRequirements(
   }
   return { scripts };
 }
+
+export function assertInstalledFilmFontDigests(
+  actual: Readonly<Record<string, string>>
+): void {
+  for (const face of FILM_FONTS) {
+    const digest = actual[face.file];
+    if (digest !== face.sha256) {
+      throw new Error(
+        `installed font bytes are not approved: ${face.file} ` +
+          `(expected ${face.sha256}, found ${digest ?? "missing"})`
+      );
+    }
+  }
+}

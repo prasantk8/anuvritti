@@ -44,8 +44,9 @@ FILM_OUTPUT ?= var/film/film.mp4
 FILM_STILL ?= var/film/still.png
 film-prepare:
 	@test -n "$(REQUIREMENTS)" || (echo "usage: make film-prepare REQUIREMENTS=/path/to/render-requirements.json" && exit 2)
-	node packages/world/scripts/prepare-film.ts "$(REQUIREMENTS)"
+	node packages/world/scripts/prepare-film.ts "$(REQUIREMENTS)" --requirements-only
 	npm --prefix packages/world install --no-package-lock
+	node packages/world/scripts/prepare-film.ts "$(REQUIREMENTS)"
 
 film:
 	@test -n "$(ARCHIVE)" || (echo "usage: make film ARCHIVE=/path/to/FilmExport" && exit 2)

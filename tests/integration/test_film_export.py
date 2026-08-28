@@ -50,7 +50,8 @@ def test_compilation_derives_the_exact_world_bundle_without_copying_family_text(
         timeout=30,
         check=True,
     )
-    assert "approved @anuvritti/world@0.1.0 for Latin, Arabic, Devanagari" in checked.stdout
+    assert "ready @anuvritti/world@0.1.0 for Latin, Arabic, Devanagari" in checked.stdout
+    assert "9 font files verified" in checked.stdout
 
 
 def test_unsupported_text_names_the_scene_field_and_codepoint_before_export(tmp_path: Path):

@@ -30,6 +30,11 @@ const packages = Object.fromEntries(
     .sort((left, right) => left.package.localeCompare(right.package))
     .map((face) => [face.package, face.version])
 );
+const fontFiles = Object.fromEntries(
+  FILM_FONTS.map((face) => [face.file, face.sha256]).sort(([left], [right]) =>
+    left.localeCompare(right)
+  )
+);
 const scripts = FILM_SCRIPTS.map((script) => script.name);
 const scriptRanges = FILM_SCRIPTS.map(
   (script) => `    ${JSON.stringify(script.name)}: ${ranges(script.ranges, "    ")},`
@@ -37,9 +42,15 @@ const scriptRanges = FILM_SCRIPTS.map(
 const packageLines = Object.entries(packages)
   .map(([name, version]) => `    ${JSON.stringify(name)}: ${JSON.stringify(version)},`)
   .join("\n");
+const fontFileLines = Object.entries(fontFiles)
+  .map(
+    ([file, digest]) =>
+      `    ${JSON.stringify(file)}: (\n        ${JSON.stringify(digest)}\n    ),`
+  )
+  .join("\n");
 
 const scriptLines = scripts.map((name) => `    ${JSON.stringify(name)},`).join("\n");
-const generated = `\"\"\"Generated from packages/world/scenes/fonts.ts. Do not edit by hand.\"\"\"\n\nfrom typing import Final\n\nWORLD_BUNDLE_NAME: Final = ${JSON.stringify(packageJson.name)}\nWORLD_BUNDLE_VERSION: Final = ${JSON.stringify(packageJson.version)}\nWORLD_FONT_PACKAGES: Final[dict[str, str]] = {\n${packageLines}\n}\nSCRIPT_ORDER: Final[tuple[str, ...]] = (\n${scriptLines}\n)\nCOMMON_RANGES: Final[tuple[tuple[int, int], ...]] = ${ranges(FILM_COMMON_RANGES)}\nSCRIPT_RANGES: Final[dict[str, tuple[tuple[int, int], ...]]] = {\n${scriptRanges}\n}\n`;
+const generated = `\"\"\"Generated from packages/world/scenes/fonts.ts. Do not edit by hand.\"\"\"\n\nfrom typing import Final\n\nWORLD_BUNDLE_NAME: Final = ${JSON.stringify(packageJson.name)}\nWORLD_BUNDLE_VERSION: Final = ${JSON.stringify(packageJson.version)}\nWORLD_FONT_PACKAGES: Final[dict[str, str]] = {\n${packageLines}\n}\nWORLD_FONT_FILES: Final[dict[str, str]] = {\n${fontFileLines}\n}\nSCRIPT_ORDER: Final[tuple[str, ...]] = (\n${scriptLines}\n)\nCOMMON_RANGES: Final[tuple[tuple[int, int], ...]] = ${ranges(FILM_COMMON_RANGES)}\nSCRIPT_RANGES: Final[dict[str, tuple[tuple[int, int], ...]]] = {\n${scriptRanges}\n}\n`;
 
 if (process.argv.includes("--check")) {
   const current = readFileSync(target, "utf8");

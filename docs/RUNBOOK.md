@@ -47,7 +47,10 @@ make film-prepare REQUIREMENTS=/path/to/render-requirements.json
 ```
 
 The preparation command refuses unknown scripts, changed versions, extra packages, and
-`latest`; only after that check does npm fetch the pinned bundle. The compiler itself refuses
+`latest`; only after that check does npm fetch the pinned bundle. It then hashes every
+installed WOFF2 file and refuses to declare the machine ready unless those bytes match the
+digests reviewed in `packages/world/scenes/fonts.ts`. A registry package with the expected
+name and version but changed font bytes is therefore not trusted. The compiler itself refuses
 unsupported text with the scene, rendered field, and Unicode codepoint, while the family
 material is still inside the archive. Once preparation succeeds, point the renderer at the
 folder containing `film.json`, `provenance.json`, `render-requirements.json`, and `media/`:

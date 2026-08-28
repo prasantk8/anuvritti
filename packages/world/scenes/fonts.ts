@@ -16,6 +16,7 @@ export interface FilmFontFace {
   readonly package: string;
   readonly version: "5.3.0";
   readonly file: string;
+  readonly sha256: string;
 }
 
 export const FILM_COMMON_RANGES = [
@@ -51,6 +52,7 @@ export const FILM_FONTS: readonly FilmFontFace[] = [
     package: "@fontsource/newsreader",
     version: "5.3.0",
     file: "newsreader/files/newsreader-latin-400-normal.woff2",
+    sha256: "e66067814f1c672d33a457e4f4d102c818b481420e2234cf685ebdbf2f443904",
   },
   {
     family: "Noto Naskh Arabic",
@@ -60,6 +62,7 @@ export const FILM_FONTS: readonly FilmFontFace[] = [
     package: "@fontsource/noto-naskh-arabic",
     version: "5.3.0",
     file: "noto-naskh-arabic/files/noto-naskh-arabic-arabic-400-normal.woff2",
+    sha256: "9cc2d2e90f7b51904468558b4ed529de8a8206497c8edb5e33122bd077e0158c",
   },
   {
     family: "Noto Serif Devanagari",
@@ -69,6 +72,7 @@ export const FILM_FONTS: readonly FilmFontFace[] = [
     package: "@fontsource/noto-serif-devanagari",
     version: "5.3.0",
     file: "noto-serif-devanagari/files/noto-serif-devanagari-devanagari-400-normal.woff2",
+    sha256: "e64b3b73131abb4074d4b22453bffe54fe8973fa0ea98a32504570df647b2a0a",
   },
   {
     family: "IBM Plex Sans",
@@ -78,6 +82,7 @@ export const FILM_FONTS: readonly FilmFontFace[] = [
     package: "@fontsource/ibm-plex-sans",
     version: "5.3.0",
     file: "ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2",
+    sha256: "3b646991d30055a93a4ecc499713d4347953a74a947ecab435ab72070cbdab0e",
   },
   {
     family: "IBM Plex Sans",
@@ -87,6 +92,7 @@ export const FILM_FONTS: readonly FilmFontFace[] = [
     package: "@fontsource/ibm-plex-sans",
     version: "5.3.0",
     file: "ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2",
+    sha256: "0717336fb31fcdcde4b8deb3675bb4a0f7f6d484864afcd6751ac29975962203",
   },
   ...([400, 500] as const).flatMap((weight) => [
     {
@@ -97,6 +103,10 @@ export const FILM_FONTS: readonly FilmFontFace[] = [
       package: "@fontsource/noto-sans-arabic",
       version: "5.3.0" as const,
       file: `noto-sans-arabic/files/noto-sans-arabic-arabic-${weight}-normal.woff2`,
+      sha256:
+        weight === 400
+          ? "4e2ca0745c908761dc5c5db951662873887c59366fa1a5693ad22c0864abf1bd"
+          : "38599e3046a0ceeae9d10fb9c282424d16b7a05f0838478fabe27908fc922722",
     },
     {
       family: "Noto Sans Devanagari",
@@ -106,6 +116,10 @@ export const FILM_FONTS: readonly FilmFontFace[] = [
       package: "@fontsource/noto-sans-devanagari",
       version: "5.3.0" as const,
       file: `noto-sans-devanagari/files/noto-sans-devanagari-devanagari-${weight}-normal.woff2`,
+      sha256:
+        weight === 400
+          ? "f86f14cbd1004f5795689ee9cc70d5d87d915f5135b30283525c1c7b8f0eb192"
+          : "c9e45ff29dddc46bdb85b0cb97922fde980ae2fcafadee4498ff25bd0448292f",
     },
   ]),
 ] as const;
