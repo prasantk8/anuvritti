@@ -211,7 +211,14 @@ describe("the film's offline writing systems", () => {
     );
     writeFileSync(
       fakePlaywright,
-      "#!/bin/sh\nfor last do :; done\ncp \"$PLAYWRIGHT_FIXTURE\" \"$last\"\n"
+      "#!/bin/sh\n" +
+        "if [ \"$1\" = \"--version\" ]; then echo 'Version 1.62.0'; exit 0; fi\n" +
+        "if [ \"$1\" = \"install\" ]; then\n" +
+        "  echo 'Chrome for Testing 151.0.7922.34 (playwright chromium v1234)'\n" +
+        "  echo '  Install location: /review/chromium-1234'\n" +
+        "  exit 0\n" +
+        "fi\n" +
+        "for last do :; done\ncp \"$PLAYWRIGHT_FIXTURE\" \"$last\"\n"
     );
     chmodSync(fakePlaywright, 0o700);
     try {
@@ -234,10 +241,24 @@ describe("the film's offline writing systems", () => {
       assert.equal(reviewed.status, 0, reviewed.stderr);
       const receipt = JSON.parse(readFileSync(join(output, "font-review.json"), "utf8")) as {
         schema: string;
+        environment: {
+          playwright: { version: string };
+          chromium: { version: string; revision: string; install_path: string };
+          host: { platform: string; release: string; architecture: string };
+        };
         faces: { approved_sha256: string; candidate_sha256: string }[];
         comparisons: { script: string; changed_pixels: number; bounds: unknown }[];
       };
-      assert.equal(receipt.schema, "anuvritti.font-review.v2");
+      assert.equal(receipt.schema, "anuvritti.font-review.v3");
+      assert.deepEqual(receipt.environment.playwright, { version: "1.62.0" });
+      assert.deepEqual(receipt.environment.chromium, {
+        version: "151.0.7922.34",
+        revision: "1234",
+        install_path: "/review/chromium-1234",
+      });
+      assert.ok(receipt.environment.host.platform.length > 0);
+      assert.ok(receipt.environment.host.release.length > 0);
+      assert.equal(receipt.environment.host.architecture, process.arch);
       assert.equal(receipt.faces.length, FILM_FONTS.length);
       assert.ok(
         receipt.faces.every((face) => face.approved_sha256 === face.candidate_sha256)
@@ -261,6 +282,9 @@ describe("the film's offline writing systems", () => {
       assert.match(sheet, /Approved SHA-256.*Candidate SHA-256/);
       assert.match(sheet, /Difference map/);
       assert.match(sheet, /Devanagari.*0 \/ 2 \(0\.0000%\)/);
+      assert.match(sheet, /Playwright 1\.62\.0/);
+      assert.match(sheet, /Chromium 151\.0\.7922\.34 \(revision 1234\)/);
+      assert.match(sheet, new RegExp(`${process.platform} ${process.arch}`));
     } finally {
       rmSync(temporary, { recursive: true, force: true });
     }

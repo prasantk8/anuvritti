@@ -76,10 +76,13 @@ Open `var/film/font-review-5.4.0/REVIEW.md` and inspect the six full-size stills
 three difference maps. A map keeps the approved frame quiet underneath, marks changed
 pixels in the world's indigo, and boxes their exact bounds. The receipt records changed
 pixel count, fraction, mean and maximum RGB delta alongside every old/new WOFF2 digest.
-Those measurements describe this browser and machine; they help a reviewer find a subtle
-shaping or matra change, but never approve or reject one automatically. Do not change a
-font package version or approved digest until a design reviewer signs the sheet; the whole
-review folder is ignored and must never contain family material or be committed.
+The receipt and review sheet also name the exact Playwright version, Chromium product
+version and revision, installation path, operating-system release and architecture. Compare
+pixel counts only when those fingerprints agree; different rasterisers are different
+evidence, not a regression. The measurements help a reviewer find a subtle shaping or matra
+change, but never approve or reject one automatically. Do not change a font package version
+or approved digest until a design reviewer signs the sheet; the whole review folder is
+ignored and must never contain family material or be committed.
 
 The render writes `var/film/film.mp4`, `var/film/film.manifest.json`, and the first
 inspection still. Keep the manifest with the MP4: it is the portable account of the exact

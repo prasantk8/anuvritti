@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { arch, platform, release } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -34,6 +35,20 @@ interface ReviewComparison extends DifferenceMetrics {
   readonly approved: string;
   readonly candidate: string;
   readonly difference: string;
+}
+
+interface RenderEnvironment {
+  readonly playwright: { readonly version: string };
+  readonly chromium: {
+    readonly version: string;
+    readonly revision: string;
+    readonly install_path: string;
+  };
+  readonly host: {
+    readonly platform: string;
+    readonly release: string;
+    readonly architecture: string;
+  };
 }
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -143,6 +158,34 @@ function screenshot(basenames: string[], output: string, playwright: string): vo
   }
 }
 
+function commandOutput(playwright: string, args: string[]): string {
+  const result = spawnSync(playwright, args, { encoding: "utf8" });
+  if (result.status !== 0 || !result.stdout.trim()) {
+    throw new Error(
+      `could not fingerprint ${args.join(" ")}: ${result.stderr || result.stdout || "no output"}`
+    );
+  }
+  return result.stdout.trim();
+}
+
+function renderEnvironment(playwright: string): RenderEnvironment {
+  const playwrightOutput = commandOutput(playwright, ["--version"]);
+  const playwrightVersion = /^Version\s+(\S+)$/m.exec(playwrightOutput)?.[1];
+  const chromiumOutput = commandOutput(playwright, ["install", "--dry-run", "chromium"]);
+  const chromium = /^Chrome for Testing\s+(\S+)\s+\(playwright chromium v(\d+)\)$/m.exec(
+    chromiumOutput
+  );
+  const installPath = /^\s*Install location:\s*(.+)$/m.exec(chromiumOutput)?.[1]?.trim();
+  if (!playwrightVersion || !chromium || !installPath) {
+    throw new Error("Playwright returned an unrecognised Chromium environment description");
+  }
+  return {
+    playwright: { version: playwrightVersion },
+    chromium: { version: chromium[1]!, revision: chromium[2]!, install_path: installPath },
+    host: { platform: platform(), release: release(), architecture: arch() },
+  };
+}
+
 function argument(name: string): string {
   const position = process.argv.indexOf(name);
   const value = position < 0 ? undefined : process.argv[position + 1];
@@ -157,7 +200,8 @@ function percent(fraction: number): string {
 function reviewMarkdown(
   candidateVersion: string,
   faces: ReviewFace[],
-  comparisons: ReviewComparison[]
+  comparisons: ReviewComparison[],
+  environment: RenderEnvironment
 ): string {
   const rows = (["Latin", "Arabic", "Devanagari"] as const)
     .map(
@@ -185,6 +229,10 @@ function reviewMarkdown(
     })
     .join("\n");
   return `# Film font migration review\n\nCandidate: Fontsource ${candidateVersion}\n\n` +
+    `Rendered with Playwright ${environment.playwright.version}; Chromium ` +
+    `${environment.chromium.version} (revision ${environment.chromium.revision}); ` +
+    `${environment.host.platform} ${environment.host.architecture} ` +
+    `${environment.host.release}.\n\n` +
     `## Frames\n\n| Script | Approved bytes | Candidate bytes | Difference map |\n` +
     `| --- | --- | --- | --- |\n${rows}\n\n` +
     `Indigo marks pixels Chromium rendered differently; the quiet approved frame remains ` +
@@ -227,6 +275,7 @@ export function runReview(): void {
     ...renderDocuments("candidate", candidate, output),
   ];
   const playwright = process.env.PLAYWRIGHT_CLI ?? join(repositoryRoot, ".venv", "bin", "playwright");
+  const environment = renderEnvironment(playwright);
   screenshot(basenames, output, playwright);
 
   const comparisons = (["Latin", "Arabic", "Devanagari"] as const).map((script) => {
@@ -252,8 +301,9 @@ export function runReview(): void {
     join(output, "font-review.json"),
     JSON.stringify(
       {
-        schema: "anuvritti.font-review.v2",
+        schema: "anuvritti.font-review.v3",
         candidate_version: candidateVersion,
+        environment,
         faces,
         comparisons,
       },
@@ -261,7 +311,10 @@ export function runReview(): void {
       2
     )
   );
-  writeFileSync(join(output, "REVIEW.md"), reviewMarkdown(candidateVersion, faces, comparisons));
+  writeFileSync(
+    join(output, "REVIEW.md"),
+    reviewMarkdown(candidateVersion, faces, comparisons, environment)
+  );
   for (const face of faces) {
     console.log(
       `${face.role}/${face.script} ${face.family} ${face.weight}: ` +
