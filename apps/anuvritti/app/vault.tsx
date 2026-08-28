@@ -14,7 +14,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Link } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { VoiceNote as Note } from "@anuvritti/client";
@@ -74,6 +75,14 @@ export default function Vault() {
     >
       <HoldToTalk world={world} onKept={kept} saying={said ?? worthSayingOn(today)} />
 
+      {said === KEPT ? (
+        <Link href="/film" asChild>
+          <Pressable accessibilityRole="link" style={styles.toFilm}>
+            <Text style={styles.toFilmText}>{KEPT} →</Text>
+          </Pressable>
+        </Link>
+      ) : null}
+
       {shelf.length === 0 ? (
         <Text style={styles.empty}>{NOTHING_YET}</Text>
       ) : (
@@ -99,6 +108,12 @@ function sheet(world: World) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: world.color.ground },
     content: { paddingHorizontal: world.space[5], gap: world.space[7] },
+    toFilm: { alignSelf: "center", paddingVertical: world.space[2] },
+    toFilmText: {
+      fontFamily: world.font.body,
+      fontSize: world.type.fine,
+      color: world.color.indigo,
+    },
     period: { gap: world.space[3] },
     month: {
       fontFamily: world.font.body,

@@ -39,8 +39,8 @@ describe("the generated surface", () => {
 
     // A deliberate tripwire. Changing this number should be a decision someone made about
     // the API's surface, not something that drifted in with a regeneration.
-    // 22 at v0.2.0; 26 at v0.3.0, when voice arrived (TASK-601..606).
-    assert.equal(methods.length, 26);
+    // 22 at v0.2.0; 26 when voice arrived; 27 with the annual film (TASK-716).
+    assert.equal(methods.length, 27);
   });
 
   it("builds the url from the contract's own path template", async () => {

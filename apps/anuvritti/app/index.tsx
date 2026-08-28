@@ -160,6 +160,12 @@ export default function Today() {
         </Pressable>
       </Link>
 
+      <Link href="/film" asChild>
+        <Pressable accessibilityRole="link" style={styles.toVault}>
+          <Text style={styles.toVaultText}>This year's film →</Text>
+        </Pressable>
+      </Link>
+
       <View style={styles.vault}>
         {sparks.map((spark) => (
           <View key={spark.id} style={styles.slot}>

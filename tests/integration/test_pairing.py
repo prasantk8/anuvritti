@@ -49,6 +49,7 @@ CLOSED_ROUTES = [
     ("GET", "/v1/devices"),
     ("DELETE", "/v1/devices/anything"),
     ("POST", "/v1/pairing/codes"),
+    ("POST", "/v1/film/compile"),
 ]
 
 
