@@ -13,6 +13,7 @@ from anuvritti.application import ports
 from anuvritti.application.ports import (
     EventPublisher,
     FamilyRepository,
+    FilmRenderer,
     IntentEngine,
     LittleThingRepository,
     MediaStore,
@@ -36,6 +37,7 @@ ALL_PORTS = [
     Transcriber,
     EventPublisher,
     UnitOfWork,
+    FilmRenderer,
 ]
 
 

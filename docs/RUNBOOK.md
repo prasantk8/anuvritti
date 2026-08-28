@@ -34,6 +34,57 @@ docker run --rm -p 8000:8000 \
   anuvritti:local
 ```
 
+### Render a FilmExport
+
+Rendering is intentionally a development-machine job: the always-on family server and its
+production image carry neither Chromium nor FFmpeg. After `make install`, point the renderer
+at the folder containing `film.json`, `provenance.json`, and `media/`:
+
+```bash
+make film ARCHIVE=/path/to/FilmExport
+```
+
+The render writes `var/film/film.mp4`, `var/film/film.manifest.json`, and the first
+inspection still. Keep the manifest with the MP4: it is the portable account of the exact
+FilmExport receipts, browser revision, FFmpeg version and arguments, and hashes for every
+held frame and scene video that made the final film.
+
+The film lands at `var/film/film.mp4`; `var/film/still.png` is the first frame for visual
+inspection. The renderer rechecks every media hash and every provenance entry before it
+draws, and the export remains plaintext family material: delete it after the render.
+
+Later, verify the film without restoring that plaintext export or using a network:
+
+```bash
+make film-verify MANIFEST=/path/to/film.manifest.json
+# If the render workspace's frames were retained:
+make film-verify MANIFEST=/path/to/film.manifest.json FRAMES=/path/to/frames
+```
+
+The sibling MP4 is found from the manifest by default; `FILM=/path/to/renamed.mp4` can name
+a copy stored elsewhere. Verification checks its hash and byte count, then independently
+checks the video/audio streams, frame size, and duration with `ffprobe`. When `FRAMES` is
+given, every frame receipt must resolve and match too. A failure names each missing or
+changed artifact; success says explicitly when frame bytes were not available to check.
+
+To distinguish the original receipt from a coordinated replacement of both the MP4 and
+manifest, create a 32-byte family-held key on separate offline storage and anchor the
+manifest after rendering:
+
+```bash
+openssl rand 32 > /offline/family-render.key
+chmod 600 /offline/family-render.key
+make film-anchor MANIFEST=/path/to/film.manifest.json \
+  KEY=/offline/family-render.key ANCHOR=/path/to/film.anchor.json
+make film-verify MANIFEST=/path/to/film.manifest.json \
+  ANCHOR=/path/to/film.anchor.json KEY=/offline/family-render.key
+```
+
+The anchor may travel beside the film; the key must not. The anchor authenticates the exact
+manifest bytes with domain-separated HMAC-SHA-256. Losing the key does not damage the film,
+but it makes authenticity unverifiable; exposing it lets an attacker mint replacement
+anchors, so keep a second encrypted offline copy with the family's backup key custody.
+
 The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse to start**
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.

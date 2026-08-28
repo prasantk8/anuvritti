@@ -8,5 +8,6 @@ pyyaml>=6
 
 # The memory compiler (TASK-701). Deliberately absent from requirements.txt: the
 # family's always-on server never compiles a film, so the production image never
-# grows this - or, one dependency further on, a browser.
--e packages/filmkit
+# grows this - or, one dependency further on, a browser. Chromium is installed by
+# `make install`; neither Playwright nor its browser enters requirements.txt or Dockerfile.
+-e ./packages/filmkit[chromium]

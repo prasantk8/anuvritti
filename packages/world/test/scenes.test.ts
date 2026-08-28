@@ -106,6 +106,16 @@ describe("the document a renderer opens", () => {
     assert.ok(html.includes('href="world.css"'));
     assert.ok(!html.includes("<style"));
   });
+
+  test("can carry the same styles inline for a browser with no base URL", () => {
+    const html = renderScene(
+      { id: "s1", kind: "OPENING", heading: "a heading" },
+      { inlineCss: [":root { --w-color-ground: white; }", ".frame { display: grid; }"] }
+    );
+    assert.ok(html.includes("<style>:root"));
+    assert.ok(html.includes("<style>.frame"));
+    assert.ok(!html.includes("<link"));
+  });
 });
 
 describe("the film's stylesheet", () => {

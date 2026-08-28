@@ -1,10 +1,12 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design filmkit specimen
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design filmkit specimen film film-anchor film-verify
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
+	$(PY) -m playwright install chromium
+	npm --prefix packages/world install --no-package-lock --silent
 
 # packages/world emits the design language. tests/design refuses to run against a
 # stale dist, so the gate builds it first rather than testing yesterday's interface.
@@ -40,6 +42,26 @@ filmkit:
 specimen: world
 	@echo "serving packages/world/specimen at http://127.0.0.1:8765/specimen/"
 	@cd packages/world && python3 -m http.server 8765 --bind 127.0.0.1
+
+# A FilmExport is already plaintext family material. Its browser workspace and the
+# founder's inspection still therefore stay under ignored var/, beside the finished film.
+FILM_OUTPUT ?= var/film/film.mp4
+FILM_STILL ?= var/film/still.png
+film:
+	@test -n "$(ARCHIVE)" || (echo "usage: make film ARCHIVE=/path/to/FilmExport" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.render --archive "$(ARCHIVE)" \
+		--output "$(FILM_OUTPUT)" --still "$(FILM_STILL)" --workspace var/film/work
+
+film-anchor:
+	@test -n "$(MANIFEST)" -a -n "$(KEY)" -a -n "$(ANCHOR)" || (echo "usage: make film-anchor MANIFEST=/path/to/film.manifest.json KEY=/offline/family.key ANCHOR=/path/to/film.anchor.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.verify --manifest "$(MANIFEST)" \
+		--key "$(KEY)" --write-anchor "$(ANCHOR)"
+
+film-verify:
+	@test -n "$(MANIFEST)" || (echo "usage: make film-verify MANIFEST=/path/to/film.manifest.json [FRAMES=/path/to/frames] [ANCHOR=/path/to/film.anchor.json KEY=/offline/family.key]" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.verify --manifest "$(MANIFEST)" \
+		$(if $(FILM),--film "$(FILM)") $(if $(FRAMES),--frames "$(FRAMES)") \
+		$(if $(ANCHOR),--anchor "$(ANCHOR)" --key "$(KEY)")
 
 lint:
 	$(PY) -m ruff check src tests packages/client/codegen

@@ -61,6 +61,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: pip install -r requirements-dev.txt
+      - run: npm --prefix packages/world install --no-package-lock
+      - name: Install the development-only film browser
+        run: python -m playwright install --with-deps chromium
       # pytest collects tests/design too. `make check` builds this ignored output before
       # either coverage pass; a fresh runner must do the same rather than test an empty dist.
       - name: Build the shared visual world for pytest collection
