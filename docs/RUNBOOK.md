@@ -59,6 +59,24 @@ folder containing `film.json`, `provenance.json`, `render-requirements.json`, an
 make film ARCHIVE=/path/to/FilmExport
 ```
 
+Treat a font upgrade as a visual migration, not a package bump. Install candidate
+Fontsource packages into a disposable prefix without changing this repository's lock,
+then render the same Latin, Arabic and Devanagari frames from approved and candidate bytes:
+
+```bash
+npm install --prefix /tmp/anuvritti-font-candidate --no-save \
+  @fontsource/newsreader@5.4.0 @fontsource/ibm-plex-sans@5.4.0 \
+  @fontsource/noto-naskh-arabic@5.4.0 @fontsource/noto-sans-arabic@5.4.0 \
+  @fontsource/noto-serif-devanagari@5.4.0 @fontsource/noto-sans-devanagari@5.4.0
+make film-font-review \
+  CANDIDATE_FONTS=/tmp/anuvritti-font-candidate/node_modules CANDIDATE_VERSION=5.4.0
+```
+
+Open `var/film/font-review-5.4.0/REVIEW.md` and inspect the six full-size PNGs. It prints
+and records every old/new WOFF2 digest and leaves an explicit approve/reject line. Do not
+change a font package version or approved digest until a design reviewer signs that sheet;
+the whole review folder is ignored and must never contain family material or be committed.
+
 The render writes `var/film/film.mp4`, `var/film/film.manifest.json`, and the first
 inspection still. Keep the manifest with the MP4: it is the portable account of the exact
 FilmExport receipts, browser revision, FFmpeg version and arguments, and hashes for every

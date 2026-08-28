@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen film film-prepare
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design specimen film film-prepare film-font-review
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -47,6 +47,12 @@ film-prepare:
 	node packages/world/scripts/prepare-film.ts "$(REQUIREMENTS)" --requirements-only
 	npm --prefix packages/world install --no-package-lock
 	node packages/world/scripts/prepare-film.ts "$(REQUIREMENTS)"
+
+film-font-review:
+	@test -n "$(CANDIDATE_FONTS)" -a -n "$(CANDIDATE_VERSION)" || (echo "usage: make film-font-review CANDIDATE_FONTS=/path/to/node_modules CANDIDATE_VERSION=5.4.0" && exit 2)
+	node packages/world/scripts/review-film-fonts.ts \
+		--candidate-root "$(CANDIDATE_FONTS)" --candidate-version "$(CANDIDATE_VERSION)" \
+		--output var/film/font-review-$(CANDIDATE_VERSION)
 
 film:
 	@test -n "$(ARCHIVE)" || (echo "usage: make film ARCHIVE=/path/to/FilmExport" && exit 2)

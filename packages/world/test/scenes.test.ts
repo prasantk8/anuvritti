@@ -7,9 +7,11 @@
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 
 import { FRAME, SCENE_KINDS, escapeHtml, renderScene, type SceneKind } from "../scenes/scene.ts";
 import { emitSceneCss, FILM_ROOT_PX } from "../scenes/css.ts";
@@ -195,6 +197,50 @@ describe("the film's offline writing systems", () => {
         }),
       new RegExp(`installed font bytes are not approved: ${FILM_FONTS[0].file}`)
     );
+  });
+
+  test("reviews approved and candidate bytes as six multilingual stills", () => {
+    const temporary = mkdtempSync(join(tmpdir(), "anuvritti-font-review-"));
+    const output = join(temporary, "review");
+    const fakePlaywright = join(temporary, "playwright");
+    writeFileSync(
+      fakePlaywright,
+      "#!/bin/sh\nfor last do :; done\nprintf 'not-a-real-png' > \"$last\"\n"
+    );
+    chmodSync(fakePlaywright, 0o700);
+    try {
+      const reviewed = spawnSync(
+        process.execPath,
+        [
+          join(root, "scripts", "review-film-fonts.ts"),
+          "--candidate-root",
+          join(root, "node_modules"),
+          "--candidate-version",
+          "5.3.0",
+          "--output",
+          output,
+        ],
+        { encoding: "utf8", env: { ...process.env, PLAYWRIGHT_CLI: fakePlaywright } }
+      );
+      assert.equal(reviewed.status, 0, reviewed.stderr);
+      const receipt = JSON.parse(readFileSync(join(output, "font-review.json"), "utf8")) as {
+        faces: { approved_sha256: string; candidate_sha256: string }[];
+      };
+      assert.equal(receipt.faces.length, FILM_FONTS.length);
+      assert.ok(
+        receipt.faces.every((face) => face.approved_sha256 === face.candidate_sha256)
+      );
+      for (const state of ["approved", "candidate"]) {
+        for (const script of ["latin", "arabic", "devanagari"]) {
+          assert.ok(readFileSync(join(output, `${state}-${script}.png`)).byteLength > 0);
+        }
+      }
+      const sheet = readFileSync(join(output, "REVIEW.md"), "utf8");
+      assert.match(sheet, /- \[ \] Approved/);
+      assert.match(sheet, /Approved SHA-256.*Candidate SHA-256/);
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
   });
 });
 
