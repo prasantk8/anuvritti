@@ -17,6 +17,7 @@ from anuvritti.domain.access import Device, PairingRequest
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import Family
 from anuvritti.domain.film import CompiledFilm, ConnectiveLine, FilmSpec
+from anuvritti.domain.inbox import FutureMessage, PresentedArtifact, SealLedger
 from anuvritti.domain.media import MediaObject
 from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
@@ -28,6 +29,7 @@ from anuvritti.shared.identity import (
     ChildId,
     DeviceId,
     FamilyId,
+    FutureMessageId,
     MediaId,
     MomentId,
     SparkId,
@@ -121,6 +123,34 @@ class MediaStore(Protocol):
     def list_for_family(
         self, family_id: FamilyId
     ) -> Result[Sequence[MediaObject], DomainError]: ...
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
+
+
+@runtime_checkable
+class FutureInboxStore(Protocol):
+    """The one persistence boundary allowed to make a seal durable.
+
+    Artifact bytes and provenance are arguments to the same operation on purpose. Two
+    independent ``save`` calls would let an application use case create a ledger with no
+    message, or private bytes with no account of what they are.
+    """
+
+    def save(
+        self, message: FutureMessage, artifact: PresentedArtifact
+    ) -> Result[FutureMessage, DomainError]: ...
+
+    def get(self, message_id: FutureMessageId) -> Result[FutureMessage, DomainError]: ...
+
+    def get_artifact(
+        self, message_id: FutureMessageId
+    ) -> Result[PresentedArtifact, DomainError]: ...
+
+    def ledger(self, message_id: FutureMessageId) -> Result[SealLedger, DomainError]: ...
+
+    def list_for_family(
+        self, family_id: FamilyId
+    ) -> Result[Sequence[FutureMessage], DomainError]: ...
 
     def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
 

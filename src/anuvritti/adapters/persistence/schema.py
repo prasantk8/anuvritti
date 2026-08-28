@@ -16,7 +16,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Final
 
-SCHEMA_VERSION: Final = 3
+SCHEMA_VERSION: Final = 4
 
 _MIGRATIONS: Final[tuple[str, ...]] = (
     """
@@ -234,6 +234,26 @@ _MIGRATIONS: Final[tuple[str, ...]] = (
 
     CREATE INDEX IF NOT EXISTS idx_voice_note_family
         ON voice_note(family_id, recorded_at DESC);
+    """,
+    """
+    -- TASK-819. The ledger is searchable and exportable; the family's words or voice are
+    -- encrypted in the file named by storage_key. The adapter publishes that file before
+    -- committing this row and reconciles both sides on startup, so no half-seal is readable.
+    CREATE TABLE IF NOT EXISTS future_inbox (
+        id           TEXT PRIMARY KEY,
+        family_id    TEXT NOT NULL REFERENCES family(id) ON DELETE CASCADE,
+        child_id     TEXT NOT NULL,
+        sealed_by    TEXT NOT NULL,
+        opening_key  TEXT NOT NULL,
+        care         TEXT NOT NULL,
+        sealed_at    TEXT NOT NULL,
+        ledger_json  TEXT NOT NULL,
+        storage_key  TEXT NOT NULL UNIQUE,
+        encrypted    INTEGER NOT NULL CHECK (encrypted = 1)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_future_inbox_family
+        ON future_inbox(family_id, sealed_at);
     """,
 )
 
