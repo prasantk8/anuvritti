@@ -60,7 +60,9 @@ class TestBaseImage:
         assert "apt-get upgrade" in DOCKERFILE
 
     def test_runtime_can_probe_voice_without_shipping_a_browser(self):
-        assert "apt-get install -y --no-install-recommends ffmpeg" in DOCKERFILE
+        runtime = DOCKERFILE[DOCKERFILE.index("FROM runtime-base AS runtime") :]
+        assert "COPY --from=ffprobe-build" in runtime
+        assert all("ffmpeg" not in line for line in re.findall(r"apt-get install[^\n]*", runtime))
         assert "playwright" not in DOCKERFILE.lower()
         assert "chromium" not in DOCKERFILE.lower()
 

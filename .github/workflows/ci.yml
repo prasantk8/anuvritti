@@ -205,8 +205,18 @@ jobs:
           tags: anuvritti:ci-probe-free
           cache-from: type=gha
 
+      - name: Build handset audio fixtures
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: probe-fixtures
+          push: false
+          load: true
+          tags: anuvritti:ci-probe-fixtures
+          cache-from: type=gha
+
       - name: Prove production media probing and publish its image cost
-        run: scripts/verify-production-media-probe.sh anuvritti:ci anuvritti:ci-probe-free
+        run: scripts/verify-production-media-probe.sh anuvritti:ci anuvritti:ci-probe-free anuvritti:ci-probe-fixtures
 
       - name: Verify the image does not run as root
         run: |

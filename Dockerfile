@@ -30,6 +30,80 @@ COPY pyproject.toml ./
 COPY src ./src
 RUN pip install --no-deps .
 
+# ------------------------------------------------------- minimal media probe
+# FFmpeg's Debian runtime links ffprobe to video, display and hardware libraries
+# that a duration-only family server never calls. Build a file-only probe and
+# three replaceable LGPL libraries from a checksummed upstream release instead. The
+# version and source digest make upgrades explicit and give vulnerability reviewers
+# an exact component identity.
+FROM python:3.12-slim-bookworm AS ffprobe-build
+
+ARG FFPROBE_VERSION=9.0.1
+ARG FFPROBE_SOURCE_SHA256=cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential ca-certificates xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+ADD --checksum=sha256:cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635 \
+    https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz /tmp/ffmpeg.tar.xz
+
+RUN mkdir -p /tmp/ffmpeg /opt/ffprobe/bin /opt/ffprobe/usr/share/anuvritti \
+    && tar -xJf /tmp/ffmpeg.tar.xz --strip-components=1 -C /tmp/ffmpeg \
+    && cd /tmp/ffmpeg \
+    && ./configure \
+        --disable-autodetect \
+        --disable-debug \
+        --disable-doc \
+        --disable-everything \
+        --disable-network \
+        --disable-avdevice \
+        --disable-avfilter \
+        --disable-swresample \
+        --disable-swscale \
+        --disable-static \
+        --enable-shared \
+        --enable-small \
+        --enable-ffprobe \
+        --enable-protocol=file \
+        --enable-demuxer=aac,matroska,mov,mp3,ogg,wav \
+        --enable-parser=aac,mpegaudio,opus,vorbis \
+        --enable-decoder=aac,mp3,pcm_s16le,vorbis \
+        --extra-cflags='-Os -ffunction-sections -fdata-sections' \
+        --prefix=/opt/ffprobe \
+        --extra-ldflags='-Wl,-rpath,/usr/local/lib/ffprobe -Wl,--gc-sections' \
+    && make -j"$(nproc)" ffprobe \
+    && make install \
+    && strip /opt/ffprobe/bin/ffprobe /opt/ffprobe/lib/*.so.* \
+    && mkdir -p /opt/ffprobe/runtime-lib \
+    && cp -a /opt/ffprobe/lib/libavformat.so.63* /opt/ffprobe/runtime-lib/ \
+    && cp -a /opt/ffprobe/lib/libavcodec.so.63* /opt/ffprobe/runtime-lib/ \
+    && cp -a /opt/ffprobe/lib/libavutil.so.61* /opt/ffprobe/runtime-lib/ \
+    && mkdir -p /opt/ffprobe/usr/share/licenses/ffprobe \
+    && install -m 0644 COPYING.LGPLv2.1 /opt/ffprobe/usr/share/licenses/ffprobe/COPYING.LGPLv2.1 \
+    && { \
+        echo "component=ffprobe"; \
+        echo "version=$FFPROBE_VERSION"; \
+        echo "source=https://ffmpeg.org/releases/ffmpeg-$FFPROBE_VERSION.tar.xz"; \
+        echo "source_sha256=$FFPROBE_SOURCE_SHA256"; \
+        echo "linkage=shared"; \
+        echo "binary_sha256=$(sha256sum /opt/ffprobe/bin/ffprobe | cut -d ' ' -f 1)"; \
+        echo "architecture=$(dpkg --print-architecture)"; \
+      } > /opt/ffprobe/usr/share/anuvritti/ffprobe-runtime.manifest
+
+# This disposable CI target creates representative bytes for every audio
+# container accepted from iOS and Android. Nothing from it enters production.
+FROM python:3.12-slim-bookworm AS probe-fixtures
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && mkdir -p /fixtures \
+    && ffmpeg -v error -f lavfi -i anullsrc=r=48000:cl=mono -t 1 -c:a aac -f adts /fixtures/known.aac \
+    && ffmpeg -v error -f lavfi -i anullsrc=r=48000:cl=mono -t 1 -c:a aac /fixtures/known.m4a \
+    && ffmpeg -v error -f lavfi -i anullsrc=r=48000:cl=mono -t 1 -c:a libmp3lame /fixtures/known.mp3 \
+    && ffmpeg -v error -f lavfi -i anullsrc=r=8000:cl=mono -t 1 -c:a pcm_s16le /fixtures/known.wav \
+    && ffmpeg -v error -f lavfi -i anullsrc=r=48000:cl=mono -t 1 -c:a libopus /fixtures/known.webm \
+    && rm -rf /var/lib/apt/lists/*
+
 # ---------------------------------------------------------- probe-free baseline
 # This is a complete runnable image except for the media probe. CI builds this
 # target too, so the size delta compares otherwise identical images.
@@ -77,10 +151,16 @@ CMD ["anuvritti.interfaces.http.asgi:app", "--host", "0.0.0.0", "--port", "8000"
 # --------------------------------------------------------------- runtime stage
 FROM runtime-base AS runtime
 
-# Voice duration is measured from the bytes on the family's server. ffmpeg is
-# the Debian package that supplies ffprobe; browsers stay out of production.
+# Voice duration is measured from the bytes on the family's server. Only the
+# checksummed, file-only ffprobe, its three libraries and receipt cross into production;
+# no ffmpeg transcoder, browser, package manager metadata or codec GUI stack.
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=ffprobe-build --chown=root:root /opt/ffprobe/bin/ffprobe /usr/local/bin/ffprobe
+COPY --from=ffprobe-build --chown=root:root /opt/ffprobe/runtime-lib/ /usr/local/lib/ffprobe/
+COPY --from=ffprobe-build --chown=root:root \
+    /opt/ffprobe/usr/share/anuvritti/ffprobe-runtime.manifest \
+    /usr/share/anuvritti/ffprobe-runtime.manifest
+COPY --from=ffprobe-build --chown=root:root \
+    /opt/ffprobe/usr/share/licenses/ffprobe/COPYING.LGPLv2.1 \
+    /usr/share/licenses/ffprobe/COPYING.LGPLv2.1
 USER anuvritti:anuvritti
