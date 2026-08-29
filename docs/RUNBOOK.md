@@ -85,6 +85,32 @@ manifest bytes with domain-separated HMAC-SHA-256. Losing the key does not damag
 but it makes authenticity unverifiable; exposing it lets an attacker mint replacement
 anchors, so keep a second encrypted offline copy with the family's backup key custody.
 
+### Authenticate a Future Inbox ledger offline
+
+Export a message's portable provenance ledger as JSON without changing its bytes, then
+authenticate that exact file with the family-held key. The same key may anchor films and
+Future Inbox ledgers: distinct HMAC contexts prevent a film receipt from being substituted
+for an inbox ledger.
+
+```bash
+make inbox-anchor LEDGER=/path/to/message.ledger.json \
+  KEY=/offline/family-render.key ANCHOR=/path/to/message.anchor.json
+```
+
+Keep the ledger and its small anchor together, but keep the key offline and separate. The
+anchor contains the message identifier, ledger digest, and authentication tag—never the
+message, recording, or key. Years later, verification needs neither the application archive
+nor a network:
+
+```bash
+make inbox-verify LEDGER=/path/to/message.ledger.json \
+  KEY=/offline/family-render.key ANCHOR=/path/to/message.anchor.json
+```
+
+Verification deliberately covers the ledger's exact bytes. Reformatting the JSON or
+renaming the ledger therefore requires a new anchor; replacement of both artifact evidence
+and its ordinary digest still cannot reproduce the family-key authentication tag.
+
 The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse to start**
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.

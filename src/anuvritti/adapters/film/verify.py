@@ -18,13 +18,13 @@ from typing import Any, cast
 from filmkit.compositor import probe
 from filmkit.process import CommandError
 
+from anuvritti.adapters.authenticity import family_authentication_tag, validate_family_key
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.result import Err, Ok, Result
 
 _SCHEMA = "anuvritti.render-manifest.v1"
 _ANCHOR_SCHEMA = "anuvritti.render-anchor.v1"
 _ANCHOR_CONTEXT = b"anuvritti-render-receipt-v1\0"
-_MINIMUM_KEY_BYTES = 32
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
@@ -45,7 +45,7 @@ class RenderReceiptAuthenticator:
 
     def anchor(self, manifest: Path, *, key: bytes, destination: Path) -> Result[Path, DomainError]:
         try:
-            _validate_key(key)
+            validate_family_key(key)
             body = manifest.read_bytes()
             payload = {
                 "schema": _ANCHOR_SCHEMA,
@@ -70,7 +70,7 @@ class RenderReceiptAuthenticator:
         self, manifest: Path, *, key: bytes, anchor: Path
     ) -> Result[None, DomainError]:
         try:
-            _validate_key(key)
+            validate_family_key(key)
             body = manifest.read_bytes()
             payload = _object(json.loads(anchor.read_text(encoding="utf-8")), "anchor")
             expected = {
@@ -205,13 +205,8 @@ def _object(value: object, name: str) -> dict[str, Any]:
     return cast(dict[str, Any], value)
 
 
-def _validate_key(key: bytes) -> None:
-    if not isinstance(key, bytes) or len(key) < _MINIMUM_KEY_BYTES:
-        raise ValueError(f"family key must contain at least {_MINIMUM_KEY_BYTES} bytes")
-
-
 def _authentication_tag(manifest: bytes, key: bytes) -> str:
-    return hmac.new(key, _ANCHOR_CONTEXT + manifest, hashlib.sha256).hexdigest()
+    return family_authentication_tag(manifest, key=key, context=_ANCHOR_CONTEXT)
 
 
 def _objects(value: object, name: str) -> list[dict[str, Any]]:

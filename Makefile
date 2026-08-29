@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design filmkit specimen film film-anchor film-verify
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design filmkit specimen film film-anchor film-verify inbox-anchor inbox-verify
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -62,6 +62,16 @@ film-verify:
 	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.verify --manifest "$(MANIFEST)" \
 		$(if $(FILM),--film "$(FILM)") $(if $(FRAMES),--frames "$(FRAMES)") \
 		$(if $(ANCHOR),--anchor "$(ANCHOR)" --key "$(KEY)")
+
+inbox-anchor:
+	@test -n "$(LEDGER)" -a -n "$(KEY)" -a -n "$(ANCHOR)" || (echo "usage: make inbox-anchor LEDGER=/path/to/message.ledger.json KEY=/offline/family.key ANCHOR=/path/to/message.anchor.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.inbox.authenticity --ledger "$(LEDGER)" \
+		--key "$(KEY)" --write-anchor "$(ANCHOR)"
+
+inbox-verify:
+	@test -n "$(LEDGER)" -a -n "$(KEY)" -a -n "$(ANCHOR)" || (echo "usage: make inbox-verify LEDGER=/path/to/message.ledger.json KEY=/offline/family.key ANCHOR=/path/to/message.anchor.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.inbox.authenticity --ledger "$(LEDGER)" \
+		--key "$(KEY)" --anchor "$(ANCHOR)"
 
 lint:
 	$(PY) -m ruff check src tests packages/client/codegen
