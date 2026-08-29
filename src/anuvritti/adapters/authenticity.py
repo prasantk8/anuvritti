@@ -6,6 +6,7 @@ import hashlib
 import hmac
 
 MINIMUM_FAMILY_KEY_BYTES = 32
+_KEY_ID_CONTEXT = b"anuvritti-family-authenticity-key-id-v1\0"
 
 
 def validate_family_key(key: bytes) -> None:
@@ -17,3 +18,9 @@ def family_authentication_tag(document: bytes, *, key: bytes, context: bytes) ->
     """Authenticate exact portable bytes under a format-specific domain separator."""
     validate_family_key(key)
     return hmac.new(key, context + document, hashlib.sha256).hexdigest()
+
+
+def family_key_id(key: bytes) -> str:
+    """Return a content-free identifier that is safe to place beside an anchor."""
+    validate_family_key(key)
+    return hashlib.sha256(_KEY_ID_CONTEXT + key).hexdigest()

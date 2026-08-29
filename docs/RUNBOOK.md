@@ -111,6 +111,47 @@ Verification deliberately covers the ledger's exact bytes. Reformatting the JSON
 renaming the ledger therefore requires a new anchor; replacement of both artifact evidence
 and its ordinary digest still cannot reproduce the family-key authentication tag.
 
+### Rehearse family authenticity-key recovery and rotation
+
+The authenticity key is not the archive-encryption key. Keep one working copy offline and
+an encrypted recovery bundle in a genuinely separate place. The passphrase file must not
+travel with either copy. Back up the current key, then immediately rehearse recovery to a
+temporary destination and compare the printed key identifier:
+
+```bash
+make family-key-backup KEY=/offline/family-v1.key VERSION=1 \
+  PASSPHRASE=/offline/recovery.passphrase \
+  BUNDLE=/second-location/family-v1.recovery.json
+make family-key-recover BUNDLE=/second-location/family-v1.recovery.json \
+  PASSPHRASE=/offline/recovery.passphrase KEY=/offline/rehearsal-v1.key
+cmp /offline/family-v1.key /offline/rehearsal-v1.key
+rm /offline/rehearsal-v1.key
+```
+
+The bundle uses scrypt and AES-256-GCM, is written atomically with mode `0600`, and exposes
+only its schema, key version, key identifier and creation time. It contains neither the
+plaintext key nor the passphrase. A successful rehearsal is the evidence that the second
+copy is usable; merely possessing the file is not.
+
+Rotate only by adding a new numbered key and recovery bundle. Never overwrite or discard
+an older key while any anchor names its identifier: old films and Future Inbox ledgers
+still need that exact key.
+
+```bash
+make family-key-rotate VERSION=2 PASSPHRASE=/offline/recovery.passphrase \
+  KEY=/offline/family-v2.key BUNDLE=/second-location/family-v2.recovery.json
+make family-key-inventory \
+  BUNDLES='/second-location/family-v1.recovery.json /second-location/family-v2.recovery.json' \
+  ANCHORS='/archive/age-4.anchor.json /archive/leaving-home.anchor.json'
+```
+
+New film and Future Inbox anchors include a content-free key identifier. Inventory reads
+only those anchors and encrypted bundles; it never needs a manifest, ledger, family key or
+passphrase. An `uncovered` line means the corresponding old key bundle is missing and must
+be found before rotation can be considered complete. Version-1 anchors created before
+TASK-823 remain cryptographically verifiable, but cannot be inventoried without their
+content-bearing receipt and should be re-anchored during the ceremony.
+
 The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse to start**
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.

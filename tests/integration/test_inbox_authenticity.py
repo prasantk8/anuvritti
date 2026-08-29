@@ -8,7 +8,7 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
-from anuvritti.adapters.authenticity import family_authentication_tag
+from anuvritti.adapters.authenticity import family_authentication_tag, family_key_id
 from anuvritti.adapters.inbox.authenticity import FutureInboxLedgerAuthenticator
 from anuvritti.adapters.persistence.inbox import AtomicEncryptedFutureInboxStore
 from anuvritti.domain.inbox import FutureMessage, MessageCare, OpeningKey, PresentedArtifact
@@ -48,10 +48,12 @@ def test_family_key_authenticates_a_portable_ledger_without_the_archive(tmp_path
 
     assert authenticator.authenticate(ledger, key=KEY, anchor=anchor).is_ok()
     payload = json.loads(anchor.read_text())
-    assert payload["schema"] == "anuvritti.future-inbox-anchor.v1"
+    assert payload["schema"] == "anuvritti.future-inbox-anchor.v2"
+    assert payload["key_id"] == family_key_id(KEY)
     assert payload["message_id"] == "inbox-1"
     assert set(payload) == {
         "schema",
+        "key_id",
         "ledger",
         "message_id",
         "ledger_sha256",
@@ -77,6 +79,19 @@ def test_the_ledger_loaded_from_atomic_persistence_is_the_one_anchored(tmp_path,
 
     authenticator = FutureInboxLedgerAuthenticator()
     authenticator.anchor(ledger, key=KEY, destination=anchor).unwrap()
+
+    assert authenticator.authenticate(ledger, key=KEY, anchor=anchor).is_ok()
+
+
+def test_legacy_unversioned_inbox_anchor_remains_authentic(tmp_path):
+    ledger = write_ledger(tmp_path / "inbox-1.ledger.json", message())
+    anchor = tmp_path / "inbox-1.anchor.json"
+    authenticator = FutureInboxLedgerAuthenticator()
+    authenticator.anchor(ledger, key=KEY, destination=anchor).unwrap()
+    payload = json.loads(anchor.read_text())
+    payload["schema"] = "anuvritti.future-inbox-anchor.v1"
+    payload.pop("key_id")
+    anchor.write_text(json.dumps(payload))
 
     assert authenticator.authenticate(ledger, key=KEY, anchor=anchor).is_ok()
 

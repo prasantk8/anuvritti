@@ -18,12 +18,17 @@ from typing import Any, cast
 from filmkit.compositor import probe
 from filmkit.process import CommandError
 
-from anuvritti.adapters.authenticity import family_authentication_tag, validate_family_key
+from anuvritti.adapters.authenticity import (
+    family_authentication_tag,
+    family_key_id,
+    validate_family_key,
+)
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.result import Err, Ok, Result
 
 _SCHEMA = "anuvritti.render-manifest.v1"
-_ANCHOR_SCHEMA = "anuvritti.render-anchor.v1"
+_ANCHOR_SCHEMA = "anuvritti.render-anchor.v2"
+_LEGACY_ANCHOR_SCHEMA = "anuvritti.render-anchor.v1"
 _ANCHOR_CONTEXT = b"anuvritti-render-receipt-v1\0"
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
@@ -49,6 +54,7 @@ class RenderReceiptAuthenticator:
             body = manifest.read_bytes()
             payload = {
                 "schema": _ANCHOR_SCHEMA,
+                "key_id": family_key_id(key),
                 "manifest": manifest.name,
                 "manifest_sha256": hashlib.sha256(body).hexdigest(),
                 "hmac_sha256": _authentication_tag(body, key),
@@ -73,12 +79,17 @@ class RenderReceiptAuthenticator:
             validate_family_key(key)
             body = manifest.read_bytes()
             payload = _object(json.loads(anchor.read_text(encoding="utf-8")), "anchor")
+            schema = payload.get("schema")
+            if schema not in {_ANCHOR_SCHEMA, _LEGACY_ANCHOR_SCHEMA}:
+                raise ValueError("render receipt authentication failed")
             expected = {
-                "schema": _ANCHOR_SCHEMA,
+                "schema": cast(str, schema),
                 "manifest": manifest.name,
                 "manifest_sha256": hashlib.sha256(body).hexdigest(),
                 "hmac_sha256": _authentication_tag(body, key),
             }
+            if schema == _ANCHOR_SCHEMA:
+                expected["key_id"] = family_key_id(key)
             if any(
                 not isinstance(payload.get(field), str)
                 or not hmac.compare_digest(payload[field], value)

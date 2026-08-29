@@ -13,12 +13,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from anuvritti.adapters.authenticity import family_authentication_tag, validate_family_key
+from anuvritti.adapters.authenticity import (
+    family_authentication_tag,
+    family_key_id,
+    validate_family_key,
+)
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.result import Err, Ok, Result
 
 _LEDGER_SCHEMA = "anuvritti.future-inbox-provenance.v1"
-_ANCHOR_SCHEMA = "anuvritti.future-inbox-anchor.v1"
+_ANCHOR_SCHEMA = "anuvritti.future-inbox-anchor.v2"
+_LEGACY_ANCHOR_SCHEMA = "anuvritti.future-inbox-anchor.v1"
 _ANCHOR_CONTEXT = b"anuvritti-future-inbox-ledger-v1\0"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _ARTIFACT_KINDS = frozenset({"WRITTEN", "RECORDING"})
@@ -33,6 +38,7 @@ class FutureInboxLedgerAuthenticator:
             body, payload = _ledger(ledger)
             anchor = {
                 "schema": _ANCHOR_SCHEMA,
+                "key_id": family_key_id(key),
                 "ledger": ledger.name,
                 "message_id": payload["message_id"],
                 "ledger_sha256": hashlib.sha256(body).hexdigest(),
@@ -54,13 +60,18 @@ class FutureInboxLedgerAuthenticator:
             validate_family_key(key)
             body, ledger_payload = _ledger(ledger)
             anchor_payload = _object(json.loads(anchor.read_text(encoding="utf-8")), "anchor")
+            schema = anchor_payload.get("schema")
+            if schema not in {_ANCHOR_SCHEMA, _LEGACY_ANCHOR_SCHEMA}:
+                raise ValueError("Future Inbox ledger authentication failed")
             expected = {
-                "schema": _ANCHOR_SCHEMA,
+                "schema": cast(str, schema),
                 "ledger": ledger.name,
                 "message_id": ledger_payload["message_id"],
                 "ledger_sha256": hashlib.sha256(body).hexdigest(),
                 "hmac_sha256": family_authentication_tag(body, key=key, context=_ANCHOR_CONTEXT),
             }
+            if schema == _ANCHOR_SCHEMA:
+                expected["key_id"] = family_key_id(key)
             if any(
                 not isinstance(anchor_payload.get(field), str)
                 or not hmac.compare_digest(anchor_payload[field], value)

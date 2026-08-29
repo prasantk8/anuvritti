@@ -175,6 +175,19 @@ def test_family_held_key_authenticates_the_receipt_before_artifacts(receipt):
     assert film in report.checked
 
 
+def test_legacy_unversioned_anchor_remains_authentic(receipt):
+    manifest, _, _ = receipt
+    key = b"a family-held render receipt key" * 2
+    anchor = manifest.with_suffix(".anchor.json")
+    RenderReceiptAuthenticator().anchor(manifest, key=key, destination=anchor).unwrap()
+    payload = json.loads(anchor.read_text())
+    payload["schema"] = "anuvritti.render-anchor.v1"
+    payload.pop("key_id")
+    anchor.write_text(json.dumps(payload))
+
+    assert OfflineFilmVerifier().verify(manifest, anchor=anchor, key=key).is_ok()
+
+
 def test_coordinated_replacement_of_film_and_manifest_cannot_replace_anchor(receipt):
     manifest, film, _ = receipt
     key = b"a family-held render receipt key" * 2

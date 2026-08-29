@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design filmkit specimen film film-anchor film-verify inbox-anchor inbox-verify
+.PHONY: install lint format types test cov cov-core check run tracker clean world client app design filmkit specimen film film-anchor film-verify inbox-anchor inbox-verify family-key-backup family-key-recover family-key-rotate family-key-inventory
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -72,6 +72,27 @@ inbox-verify:
 	@test -n "$(LEDGER)" -a -n "$(KEY)" -a -n "$(ANCHOR)" || (echo "usage: make inbox-verify LEDGER=/path/to/message.ledger.json KEY=/offline/family.key ANCHOR=/path/to/message.anchor.json" && exit 2)
 	PYTHONPATH=src $(PY) -m anuvritti.adapters.inbox.authenticity --ledger "$(LEDGER)" \
 		--key "$(KEY)" --anchor "$(ANCHOR)"
+
+family-key-backup:
+	@test -n "$(KEY)" -a -n "$(VERSION)" -a -n "$(PASSPHRASE)" -a -n "$(BUNDLE)" || (echo "usage: make family-key-backup KEY=/offline/family.key VERSION=1 PASSPHRASE=/offline/recovery.passphrase BUNDLE=/second-location/family-v1.recovery.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery backup --key "$(KEY)" \
+		--version "$(VERSION)" --passphrase "$(PASSPHRASE)" --bundle "$(BUNDLE)"
+
+family-key-recover:
+	@test -n "$(KEY)" -a -n "$(PASSPHRASE)" -a -n "$(BUNDLE)" || (echo "usage: make family-key-recover BUNDLE=/second-location/family-v1.recovery.json PASSPHRASE=/offline/recovery.passphrase KEY=/offline/rehearsal.key" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery recover --bundle "$(BUNDLE)" \
+		--passphrase "$(PASSPHRASE)" --key "$(KEY)"
+
+family-key-rotate:
+	@test -n "$(KEY)" -a -n "$(VERSION)" -a -n "$(PASSPHRASE)" -a -n "$(BUNDLE)" || (echo "usage: make family-key-rotate VERSION=2 PASSPHRASE=/offline/recovery.passphrase KEY=/offline/family-v2.key BUNDLE=/second-location/family-v2.recovery.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery rotate --version "$(VERSION)" \
+		--passphrase "$(PASSPHRASE)" --key "$(KEY)" --bundle "$(BUNDLE)"
+
+family-key-inventory:
+	@test -n "$(BUNDLES)" || (echo "usage: make family-key-inventory BUNDLES='/path/v1.recovery.json /path/v2.recovery.json' ANCHORS='/path/film.anchor.json /path/inbox.anchor.json'" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery inventory \
+		$(foreach bundle,$(BUNDLES),--bundle "$(bundle)") \
+		$(foreach anchor,$(ANCHORS),--anchor "$(anchor)")
 
 lint:
 	$(PY) -m ruff check src tests packages/client/codegen
