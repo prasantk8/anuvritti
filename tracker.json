@@ -2569,7 +2569,7 @@
             "apps/anuvritti/eas.json",
             "docs/DEVICE.md"
           ],
-          "note": "DEFERRED alongside TASK-910, 2026-08-29. Needs hardware in a hand and no CI runner has one; docs/DEVICE.md lists the five things - the share sheet, the flip, the keychain across a cold start, ten seconds measured, the microphone - that only a phone can answer. Carries runs_on, so it is a release gate rather than a dependency edge; it no longer blocks TASK-1004.",
+          "note": "DEFERRED alongside TASK-910, 2026-08-29, and half-unblocked the same day: a physical iPhone is in hand and an Android is being arranged, so the iOS column of docs/DEVICE.md is executable now. Keeps runs_on because it wants both platforms, so it remains a release gate rather than a dependency edge. Open question that gates two of the five checks and TASK-1005: iOS App Groups need a paid Apple Developer Program membership, and device-vault.ts asks for accessGroup group.com.anuvritti.app. TASK-1003 establishes which account this is.",
           "runs_on": "a real iPhone and a real Android, in a hand"
         },
         {
@@ -2843,7 +2843,7 @@
             "apps/anuvritti/src/capture/native.ts",
             "apps/anuvritti/test/native-capture.test.ts"
           ],
-          "note": "src/sync/budget.ts is declared out of service: metering has no caller."
+          "note": "First chat of wave 2 (docs/prompts/wave-2.md), moved up from round 2 on 2026-08-29. expo-camera is not a dependency and NativeMediaDriver has no implementation, so this builds the driver, the screen and the wiring. Hands to outbox.spool() - custody - which is a different seam from the uploader TASK-1002 picks, so it does not wait on it. Closes TASK-1001 with it."
         },
         {
           "id": "TASK-1005",

@@ -28,22 +28,164 @@ chat in this wave is blocked on hardware or on a month.** If your task genuinely
 phone in a hand, say so in the report and record `blocked` — do not simulate it, and do not
 write down a result you did not observe.
 
+### There is an iPhone now (2026-08-29)
+
+The founder has a physical iPhone in hand and is arranging an Android. That does not
+un-defer TASK-907 — it carries `runs_on: "a real iPhone and a real Android, in a hand"` and
+it wants both — but it does mean the iOS column of [../DEVICE.md](../DEVICE.md) can be
+executed for the first time. So: **where your task can be proven on that iPhone, prove it
+there**, write down what you observed and the date, and tick the DEVICE.md line you closed.
+Where it cannot, say so plainly. A measurement nobody took, written down as though somebody
+took it, is the exact failure this repository has already made once and now gates against.
+
+One thing to establish early and report loudly, because it decides what a device demo can
+contain: `apps/anuvritti/src/vault/device-vault.ts` asks the keychain for
+`accessGroup: "group.com.anuvritti.app"`, and iOS App Groups are **not available under free
+personal provisioning** — they need a paid Apple Developer Program membership. The
+`expo-sharing` share extension in `app.json` needs the same entitlement. On a free account
+the app installs and runs and the camera works, and the App-Group-scoped keychain and the
+share sheet do not. Find out which account this is before anyone promises a demo, and put
+the answer in your report.
+
 ## Order
 
 **Round 1 — four chats, in parallel, start now.**
-TASK-1101, TASK-1002, TASK-1004, TASK-1012.
+TASK-1003 (the camera — closes TASK-1001 with it), TASK-1101, TASK-1004, TASK-1012.
 
-**Round 2 — four chats, after Round 1 reports.**
-TASK-1003 (wants TASK-1002's decision about which uploader survives), TASK-1008 (meters
-the drain TASK-1002 rebuilt), TASK-819 and TASK-908 (both touch the composition root
-TASK-1101 changes — run these two one after the other, not together).
+TASK-1003 moved up out of Round 2 on 2026-08-29. It was sequenced behind TASK-1002 on the
+reasoning that its capture path "ends in the uploader", and that reading was wrong: the
+capture path ends at `outbox.spool(...)`, which is *custody*, and custody is not transfer.
+Whichever uploader TASK-1002 leaves standing stands behind the same Outbox either way. So
+the camera does not wait — and it is the one chat in this wave whose output the founder can
+hold in a hand, which is what the wave is for.
 
-**Held, and honestly.** TASK-1005 and TASK-1010 are in the last section. Neither is a chat
-you open today.
+**Round 2 — five chats, after Round 1 reports.**
+TASK-1002 (which uploader survives) and then TASK-1008 (meters the drain TASK-1002 leaves —
+after it, not beside it); TASK-819 and TASK-908, which both touch the composition root
+TASK-1101 changes, one after the other rather than together; TASK-807.
+
+**Held, and honestly.** TASK-1005 and TASK-1010 are in the last section.
+
+## How each chat gets reviewed
+
+Every chat writes `var/reviews/TASK-NNN.md` and stops there. The review that follows is not
+a formality, and it is not `make check` — `make check` is the floor, and a report that
+offers green as its evidence has offered nothing. Five questions, in this order:
+
+1. **Is the excuse line gone?** Deleting your module's line from `NOT_IN_SERVICE` or
+   `TS_NOT_IN_SERVICE` in `tests/architecture/test_reachability.py` is the definition of
+   wired. If it is still there, the task is not done, whatever else is true.
+2. **Does something a person can reach construct it?** A screen, a route, a container, a
+   CLI. Not a test — a test is a caller and the test suite is not production
+   (CLAUDE.md section 4).
+3. **Is it proven through the real thing?** Against the real migrated schema, through the
+   real app, over the real client. A test that builds its own convenient world proves that
+   the world was convenient.
+4. **Does the report say what happened, or what was supposed to happen?** Every number in
+   it should be one you watched appear. If you did not run it, the report says you did not
+   run it.
+5. **Is the board true afterwards?** `tracker.py set` with every changed file, a `--note`
+   in the present tense saying what is true now, and `tracker.py audit` clean.
+
+A chat that cannot honestly clear one of these should say so and record `blocked`. That is
+a good outcome and it costs nothing. The bad outcome is the other one.
 
 ---
 
 ## Round 1
+
+### TASK-1003 — the camera, and the vault on the path it takes
+
+This is the first chat of the wave and the most ambitious one in it. It closes TASK-1001
+with it.
+
+```
+Read docs/prompts/WORKING.md and hold to it. Your task is TASK-1003, and TASK-1001 closes
+with it. Start with `python3 scripts/tracker.py brief TASK-1003`.
+
+Sit with this sentence before you plan anything: THIS PRODUCT CANNOT TAKE A PHOTOGRAPH. A
+parent can share one in from Photos, and can hold a button and talk. They cannot point
+Anuvritti at their child and press. The one gesture the whole product is named for does not
+exist, and you are building it — on a real iPhone, this week, in the founder's hand.
+
+## What is already true, is good, and runs nowhere
+
+- apps/anuvritti/src/capture/native.ts — `NativeCaptureManager`, `COLD_START_BUDGET_MS =
+  10000`, and a `NativeMediaDriver` interface that has NO implementation anywhere in this
+  repository. It is an interface waiting for a camera.
+- apps/anuvritti/src/vault/device-vault.ts — AES-256-GCM envelope encryption, the key held
+  in the Secure Enclave under `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, `accessGroup: APP_GROUP`.
+
+Both are excused in `TS_NOT_IN_SERVICE`. Deleting BOTH lines is the definition of done, and
+it is the only definition. `expo-camera` is not in package.json — check for yourself; the
+driver does not exist because the dependency does not either.
+
+## The design question, and you have to answer it before you write a line
+
+There are two custody stories in this app and they do not currently meet.
+
+`src/upload/spool.ts` is the Outbox (TASK-713). It takes a file, moves it into the app's own
+document directory, writes one row, and only then queues the Spark that points at it. It
+survives the app being killed and it lands exactly once. `provider.tsx` already calls
+`outbox.spool({ uri, mimeType, name }, { kind: "spark", media })` for a shared photograph.
+That is the seam, and it is the live one.
+
+`native.ts` tells a different story: it takes a `QueueStore` and a `DeviceVault` and returns
+a `queueId`, encrypting into the queue rather than handing a file to the Outbox.
+
+You may not ship both. A second custody path is how the app and the archive come to
+disagree about what "saved" means, and "saved" is the only word this product says to a
+parent. Read both, decide which story the camera tells, and say why in the report. The
+likely shape — decide it from the code, not from this paragraph — is that the Outbox keeps
+custody, and the vault encrypts what the Outbox holds, so that everything in the app's
+keeping is encrypted whether it came from the camera or the share sheet. If your reading
+differs, follow your reading and defend it.
+
+Do NOT touch the transfer layer. `src/sync/uploader.ts` versus `spool.ts`'s sender is
+TASK-1002's decision in Round 2. Custody is yours; transfer is theirs.
+
+## The screen
+
+This is the most-used surface in the product, so it is a design task at least as much as a
+wiring task. Read docs/PRD.md 11 and 8.2, docs/DESIGN-BRIEF.md, and packages/world before
+you draw anything, and read app/index.tsx and src/components/HoldToTalk.tsx to learn how
+this app already speaks.
+
+The bar is not "a camera screen exists". The bar is the ten seconds, and the ten seconds are
+a felt thing, not an assertion: app icon tapped, viewfinder live, shutter, and the word
+"Saved." — under ten, on a cold start, with the parent never once wondering whether it
+worked. PRD 8.2 says saving a memory is a local disk write; the network happens afterwards
+and the parent never waits on it. If the bytes are on disk and encrypted, you may say
+"Saved.", and if they are not, you may not.
+
+Hold to talk already exists and is good. The camera should feel like it was made by the same
+hand, on the same day.
+
+## The iPhone
+
+There is a physical iPhone available now. Verify every native API by reading the installed
+package, not from memory — Expo's surface moves fast enough that recall is unreliable — and
+pin `expo-camera` to the version in Expo SDK 57's own `bundledNativeModules.json`, because
+four dependencies in this app were once pinned to versions that did not exist and the whole
+device checklist went unstarted for it.
+
+Then take it to the device: `npx expo prebuild`, `npx expo run:ios`, and measure the ten
+seconds with a stopwatch rather than with `Date.now()`. Write what you measured, and the
+date, into docs/DEVICE.md — item 4 ("Ten seconds") is yours to close for iOS. If the founder
+is on a free Apple account, `accessGroup: "group.com.anuvritti.app"` will not provision;
+report that as a finding, keep the vault's App Group in the code, and say exactly what could
+not be proven on hardware rather than mocking it and calling it proven. Android stays open;
+say so.
+
+## Done means
+
+Both lines DELETED from TS_NOT_IN_SERVICE. A test that drives the real capture path and
+fails when the cold-start budget is exceeded. `make check` green. TASK-1001 recorded
+`completed` with a note naming what now constructs the vault. A report at
+var/reviews/TASK-1003.md that describes the ten seconds the way a parent lives them, names
+the custody decision you made and the one you rejected, and separates what you measured on
+the phone from what you did not.
+```
 
 ### TASK-1101 — the container rehearses a migration before it applies one
 
@@ -72,39 +214,6 @@ Done means: the line for `anuvritti.adapters.persistence.migrations` is DELETED 
 NOT_IN_SERVICE (deleting a line there is the definition of "wired"), a test proves the
 container refuses to start when a rehearsal fails, `make check` is green, and the report
 says what happens on the next real deployment.
-```
-
-### TASK-1002 — one uploader, and it is the resumable one
-
-```
-Read docs/prompts/WORKING.md and hold to it. Your task is TASK-1002; start with
-`python3 scripts/tracker.py brief TASK-1002`.
-
-Read this before you plan: THE APP ALREADY HAS A WORKING UPLOADER. apps/anuvritti/src/upload/spool.ts
-is the Outbox from TASK-713 — it holds files rather than JSON, writes before it sends,
-survives the app being killed, and lands exactly once. It is wired into provider.tsx and it
-drains on connect, on foreground, and on launch. Phase 10 then built a SECOND uploader,
-apps/anuvritti/src/sync/uploader.ts, which adds the thing the first one does not have:
-chunked, byte-resumable transfer that picks up mid-file after the process dies. Nothing
-imports it.
-
-So this task is not "wire it in". It is a reconciliation, and the deliverable is ONE
-uploader. Read both, honestly. The likely answer is that the Outbox keeps its custody and
-exactly-once semantics and delegates the actual transfer to the resumable uploader, so a
-parent on a train who loses signal 8MB into a 12MB video resumes at 8MB instead of at zero —
-but decide it from the code, and if the right answer is to fold the resumable logic into
-spool.ts and delete sync/uploader.ts, do that and say why. Two implementations of the same
-promise is how the app and the archive come to disagree about what "uploaded" means.
-
-The server side has to agree. Chunked resumable upload is an HTTP contract: read
-docs/contracts/openapi.yaml, decide whether the media endpoint already supports a byte
-range or needs to, and if it changes, change the contract and regenerate the client
-(`make client` — say so in the report).
-
-Done means: src/sync/uploader.ts is DELETED from TS_NOT_IN_SERVICE in
-tests/architecture/test_reachability.py (or the file is gone and its logic lives in
-spool.ts), a test kills the process mid-transfer and proves the resume, `make check` is
-green, and the report names the uploader that survived and the one that did not.
 ```
 
 ### TASK-1004 — the return arrives on the lock screen
@@ -178,39 +287,37 @@ now hears.
 
 ## Round 2
 
-### TASK-1003 — the camera is in the app, and the vault is on the path
+### TASK-1002 — one uploader, and it is the resumable one
 
 ```
-Read docs/prompts/WORKING.md and hold to it. Your task is TASK-1003; start with
-`python3 scripts/tracker.py brief TASK-1003`. Read var/reviews/TASK-1002.md first — that
-chat decided which uploader survives, and your capture path ends in it.
+Read docs/prompts/WORKING.md and hold to it. Your task is TASK-1002; start with
+`python3 scripts/tracker.py brief TASK-1002`.
 
-What is true right now: apps/anuvritti/src/capture/native.ts (NativeCaptureManager, a 10
-second cold-start budget) and apps/anuvritti/src/vault/device-vault.ts (AES-256-GCM envelope
-encryption, key in the Secure Enclave under WHEN_UNLOCKED_THIS_DEVICE_ONLY, in the App
-Group) are both complete, both tested, and both dark. There is no camera screen. A parent
-can share a photograph in from another app and can hold a button to talk — they cannot point
-this app at their child and press.
+Read this before you plan: THE APP ALREADY HAS A WORKING UPLOADER. apps/anuvritti/src/upload/spool.ts
+is the Outbox from TASK-713 — it holds files rather than JSON, writes before it sends,
+survives the app being killed, and lands exactly once. It is wired into provider.tsx and it
+drains on connect, on foreground, and on launch. Phase 10 then built a SECOND uploader,
+apps/anuvritti/src/sync/uploader.ts, which adds the thing the first one does not have:
+chunked, byte-resumable transfer that picks up mid-file after the process dies. Nothing
+imports it.
 
-Build the screen. This is the most-used surface in the product and the one the ten-second
-budget is about, so it is a design task as much as a wiring task: read docs/PRD.md 11 and
-8.2, docs/DESIGN-BRIEF.md, and packages/world. Cold start to encrypted local save under ten
-seconds, measured, not asserted — and the capture is saved before anything touches the
-network, because PRD 8.2 says saving a memory is a local disk write.
+So this task is not "wire it in". It is a reconciliation, and the deliverable is ONE
+uploader. Read both, honestly. The likely answer is that the Outbox keeps its custody and
+exactly-once semantics and delegates the actual transfer to the resumable uploader, so a
+parent on a train who loses signal 8MB into a 12MB video resumes at 8MB instead of at zero —
+but decide it from the code, and if the right answer is to fold the resumable logic into
+spool.ts and delete sync/uploader.ts, do that and say why. Two implementations of the same
+promise is how the app and the archive come to disagree about what "uploaded" means.
 
-The vault closes with you. src/vault/device-vault.ts is excused under TASK-1001 for exactly
-one reason — its only importer is capture/native.ts, which is dark — so when your screen is
-real, `encryptedQueueStore` must be on the actual capture path and not merely importable.
-Record TASK-1001 completed too, with a note saying what now constructs it.
+The server side has to agree. Chunked resumable upload is an HTTP contract: read
+docs/contracts/openapi.yaml, decide whether the media endpoint already supports a byte
+range or needs to, and if it changes, change the contract and regenerate the client
+(`make client` — say so in the report).
 
-Verify the native APIs by reading the installed packages (expo-camera, expo-audio,
-expo-secure-store), not from memory. If a capability genuinely needs a device to prove —
-whether the Secure Enclave key really is device-only — say so in the report and add it to
-docs/DEVICE.md rather than mocking it and calling it proven.
-
-Done means: src/capture/native.ts AND src/vault/device-vault.ts are both DELETED from
-TS_NOT_IN_SERVICE, a test measures the cold-start path against the budget, `make check` is
-green, and the report describes the ten seconds as a parent experiences them.
+Done means: src/sync/uploader.ts is DELETED from TS_NOT_IN_SERVICE in
+tests/architecture/test_reachability.py (or the file is gone and its logic lives in
+spool.ts), a test kills the process mid-transfer and proves the resume, `make check` is
+green, and the report names the uploader that survived and the one that did not.
 ```
 
 ### TASK-1008 — the budget meters the drain
@@ -327,15 +434,21 @@ Done means: src/model/today.ts is DELETED from TS_NOT_IN_SERVICE — rendered or
 ## Held, and honestly
 
 Neither of these is a chat to open today, and both stay open on the board rather than being
-quietly closed.
+quietly closed. The iPhone changes what *blocks* the first one, and it does not unblock it.
 
 **TASK-1005 — the widget.** `src/widgets/right-now-widget.ts` builds a correct payload for
-the lock screen and the home screen, and iOS and Android widgets are native targets: a
-WidgetKit extension and an App Widget provider, reached through a prebuild and signed with
-provisioning this repository does not have. The same wall as the share extension. What
-*could* be done without a device — writing the payload into the App Group on a schedule, so
-the native side has something real to read the moment it exists — is worth proposing as its
-own task; say so if you take it on. Until then the payload is honestly dark.
+the lock screen and the home screen. Both platforms' widgets are native targets — a
+WidgetKit extension, an App Widget provider — added by a config plugin through a prebuild,
+and on iOS the extension reads the payload out of the App Group. So this task's real
+blocker was never the absence of a phone; it is the entitlement. **App Groups require a paid
+Apple Developer Program membership**, and free personal provisioning will not sign them.
+That is the same wall the share extension is already standing at, which means one answer
+unblocks both — and it is a hundred dollars and a form, not an engineering problem.
+
+Establish the answer during TASK-1003 (that chat is asked to). If the membership exists,
+TASK-1005 becomes a real chat as soon as the camera lands, and it is a good one. If it does
+not, the payload stays honestly dark and the share sheet does too, and that should be said
+out loud rather than discovered during a demo.
 
 **TASK-1010 — on-device end to end in CI.** It claims a device matrix. `.github/workflows/device.yml`
 runs `npm --prefix apps/anuvritti test` on a GitHub runner, and `device-e2e.test.ts` mocks

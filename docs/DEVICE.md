@@ -9,6 +9,22 @@ writing a notification scheduler required the app to already be installed. That 
 cut. The checklist is not — TASK-907 carries `runs_on: "a real iPhone and a real Android,
 in a hand"`, which keeps it a release gate and stops it being a dependency again.
 
+**An iPhone exists (2026-08-29).** The founder has a physical iPhone available and is
+arranging an Android. TASK-907 stays open, because it wants both — but the iOS column below
+is executable now, and it should be executed rather than left as a document. Each item takes
+a date and an observation when it is closed, and an item nobody has performed keeps saying
+so.
+
+**The entitlement, before anything else.** `apps/anuvritti/src/vault/device-vault.ts` asks
+the keychain for `accessGroup: "group.com.anuvritti.app"`, and `app.json` declares the same
+App Group for the `expo-sharing` extension. **iOS App Groups are not available under free
+personal provisioning; they need a paid Apple Developer Program membership.** On a free
+account items 1 (the share sheet) and 3 (the keychain across the App Group) cannot be
+performed at all, while 2, 4 and 5 can — the app installs, the camera runs, the flip either
+reads as an object or it does not. This is a hundred dollars and a form rather than an
+engineering problem, and it gates the widget (TASK-1005) as well. Establish which account
+this is before scheduling any of it.
+
 `tests/e2e/test_the_app_against_the_server.py` runs the whole golden path through the real
 generated client against the real server over a real socket. It covers pairing, capture,
 the offline queue, idempotent replay, the Return Engine, and export.

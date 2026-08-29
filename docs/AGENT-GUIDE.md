@@ -209,6 +209,12 @@ carry `runs_on` in `tracker.json` — `"one family, thirty days"`, `"a real iPho
 Android, in a hand"` — and `scripts/tracker.py validate` now refuses any dependency edge
 onto a task that carries one. A gate no build can run is held in writing, never as an edge.
 
+Later the same day an iPhone arrived, and an Android is being arranged. TASK-907 stays open
+— it wants both — but its iOS column is now something nobody has done rather than something
+nobody can do, and `docs/DEVICE.md` says which of its five checks that covers. One answer
+gates two of them and the widget besides: App Groups need a paid Apple Developer Program
+membership, and `device-vault.ts` asks for one.
+
 The order behind it: make the product visible, run it end to end, fix what that finds, and
 *then* spend thirty real days on something worth thirty real days.
 
