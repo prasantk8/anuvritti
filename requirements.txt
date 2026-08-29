@@ -3,3 +3,7 @@ uvicorn[standard]>=0.30
 pydantic>=2.7
 cryptography>=42
 python-multipart>=0.0.20
+
+# The server probes recordings at keep time (TASK-717). This is filmkit's dependency-free
+# core only; its `chromium` extra remains confined to requirements-dev.txt.
+-e packages/filmkit

@@ -18,6 +18,7 @@ definition of "wired". The list only ever shrinks.
 from __future__ import annotations
 
 import ast
+import json
 import re
 from pathlib import Path
 
@@ -34,23 +35,27 @@ PY_ENTRY_POINTS = (
     "anuvritti.config.settings",
 )
 
-#: Everything under `scripts/` is a front door - backup, restore, the SBOM, the image
-#: scan, key rotation, the retention cron, the release runner. They are parsed rather than
-#: listed, because a hand-maintained list is a second place to remember: `rotate_keys.py`
-#: and `retention_cron.py` arrived in TASK-1107 and TASK-1108, and the list did not know.
+#: Every front door this repository has that is not the ASGI app. They are *found*, not
+#: listed: `scripts/*.py` are parsed for their imports, and the Makefile is read for
+#: `python -m anuvritti.…`, because a hand-maintained list is a second place to remember
+#: and it always falls behind. It did not know about `rotate_keys.py` or
+#: `retention_cron.py` (TASK-1107, TASK-1108), which is why `observability.slo` read as an
+#: orphan while `scripts/release.py` was importing it.
 SCRIPTS = ROOT / "scripts"
+MAKEFILE = ROOT / "Makefile"
 
-#: The two shell scripts embed their Python in a `python3 -c` heredoc, which no parser
-#: walking `scripts/*.py` will ever see. `backup.sh` and `restore.sh` both call this.
+_MAKE_MODULE = re.compile(r"-m\s+(anuvritti(?:\.[A-Za-z_][A-Za-z0-9_]*)+)")
+
+#: The one thing neither parser can see: `backup.sh` and `restore.sh` embed their Python
+#: in a `python3 -c` heredoc, so the module they import has to be named here.
 PY_SCRIPT_IMPORTS = ("anuvritti.adapters.backup",)
 
 #: Reached by nothing that runs. Each line is a debt with an owner, not an exemption.
 NOT_IN_SERVICE: dict[str, str] = {
-    "anuvritti.application.film": "TASK-706 - the compiler runs, no route composes a film yet",
-    "anuvritti.application.provenance": "TASK-706 - reachable only through application.film",
-    "anuvritti.adapters.film.filmkit_compiler": "TASK-706 - only via application.film",
-    "anuvritti.adapters.film.export": "TASK-706 - reachable only through application.film",
     "anuvritti.application.import_": "TASK-1102 - importer has no CLI and no route",
+    "anuvritti.adapters.persistence.inbox": (
+        "TASK-806 - the Future Inbox store is built and the container does not hold it"
+    ),
     "anuvritti.adapters.persistence.migrations": "TASK-1101 - container calls schema.migrate()",
 }
 
@@ -93,6 +98,7 @@ def _reachable_python() -> set[str]:
     queue = [*PY_ENTRY_POINTS, *PY_SCRIPT_IMPORTS]
     for script in sorted(SCRIPTS.glob("*.py")):
         queue.extend(_imports_of(script))
+    queue.extend(_MAKE_MODULE.findall(MAKEFILE.read_text()))
     while queue:
         name = queue.pop()
         if name in seen or name not in modules:
@@ -123,8 +129,32 @@ def test_nothing_declared_out_of_service_is_actually_wired():
 
 
 def test_every_excuse_names_a_task():
-    for module, reason in NOT_IN_SERVICE.items():
+    for module, reason in (*NOT_IN_SERVICE.items(), *TS_NOT_IN_SERVICE.items()):
         assert re.match(r"TASK-\d+", reason), f"{module}: '{reason}' names no task"
+
+
+def test_every_excuse_names_a_task_that_is_still_open():
+    """An excuse is a debt. A debt whose task is closed is a lie the board is telling.
+
+    `docs/AGENT-GUIDE.md` section 2 says a module the walk cannot reach must name "a reason
+    and an *open* task id". Nothing checked the second half, and the board drifted until
+    nine excuses here pointed at tasks marked `completed` - the module unreachable, the
+    task done, and `tracker.py audit` reporting "board OK" because it only ever compared
+    tasks to each other. Two records of the same fact disagreeing is exactly what a
+    fitness function is for.
+    """
+    board = json.loads((ROOT / "tracker.json").read_text())
+    status = {task["id"]: task["status"] for phase in board["phases"] for task in phase["tasks"]}
+    closed = {
+        f"{module} -> {reason}"
+        for module, reason in (*NOT_IN_SERVICE.items(), *TS_NOT_IN_SERVICE.items())
+        if status.get(re.match(r"TASK-\d+", reason).group(0)) == "completed"  # type: ignore[union-attr]
+    }
+    assert not closed, (
+        "these modules are out of service and the task that would wire them is closed:\n  "
+        + "\n  ".join(sorted(closed))
+        + "\nReopen the task, or wire the module and delete its line."
+    )
 
 
 # ---------------------------------------------------------------- typescript

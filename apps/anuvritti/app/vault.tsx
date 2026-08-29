@@ -14,7 +14,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Link } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { VoiceNote as Note } from "@anuvritti/client";
@@ -33,7 +34,7 @@ export default function Vault() {
   const t = useTranslator();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
-  const { anuvritti, queue, drain, baseUrl, today } = useAnuvritti();
+  const { anuvritti, outbox, drain, media, today } = useAnuvritti();
 
   const [recordings, setRecordings] = useState<readonly Note[]>([]);
   const [said, setSaid] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export default function Vault() {
 
   const kept = useCallback(
     async ({ uri, seconds }: Kept) => {
-      const result = await keepRecording({ api: anuvritti.api, queue }, { uri, seconds });
+      const result = await keepRecording({ outbox }, { uri, seconds });
       if (!result.ok) {
         // The one honest failure on this path: the bytes never left the phone, so saying
         // "saved" would be a lie. The recording is still in the app's own directory.
@@ -60,7 +61,7 @@ export default function Vault() {
       void drain();
       void load();
     },
-    [anuvritti, drain, load, queue, t]
+    [drain, load, outbox, t]
   );
 
   const shelf = shelve(recordings);
@@ -75,6 +76,14 @@ export default function Vault() {
     >
       <HoldToTalk world={world} onKept={kept} saying={said ?? worthSayingOn(today)} />
 
+      {said === KEPT ? (
+        <Link href="/film" asChild>
+          <Pressable accessibilityRole="link" style={styles.toFilm}>
+            <Text style={styles.toFilmText}>{KEPT} →</Text>
+          </Pressable>
+        </Link>
+      ) : null}
+
       {shelf.length === 0 ? (
         <Text style={styles.empty}>{t.catalog.voice.emptyVault}</Text>
       ) : (
@@ -86,7 +95,7 @@ export default function Vault() {
                 key={note.media_id}
                 note={note}
                 world={world}
-                sourceUrl={`${baseUrl}/v1/media/${note.media_id}`}
+                source={media(note.media_id)}
               />
             ))}
           </View>
@@ -100,6 +109,12 @@ function sheet(world: World) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: world.color.ground },
     content: { paddingHorizontal: world.space[5], gap: world.space[7] },
+    toFilm: { alignSelf: "center", paddingVertical: world.space[2] },
+    toFilmText: {
+      fontFamily: world.font.body,
+      fontSize: world.type.fine,
+      color: world.color.indigo,
+    },
     period: { gap: world.space[3] },
     month: {
       fontFamily: world.font.body,

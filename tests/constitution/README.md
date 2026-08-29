@@ -15,3 +15,4 @@ crossed a line the founder said it would not cross.
 | `test_ai_honesty.py` | §8.7, §13 — AI interpretation is never presented as truth |
 | `test_film_provenance.py` | §8.7, §47 — a film may only claim what the archive can show |
 | `test_real_voice.py` | §12, §39, §47 — the voice in a family's film is the family's voice |
+| `test_inbox_sealed.py` | §20, §44, §47 — exact sealed messages; sensitive openings stay human |

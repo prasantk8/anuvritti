@@ -30,7 +30,7 @@ export default function Today() {
   const t = useTranslator();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
-  const { anuvritti, justSaved, acknowledge, baseUrl } = useAnuvritti();
+  const { anuvritti, justSaved, acknowledge, media } = useAnuvritti();
 
   const [suggestions, setSuggestions] = useState<readonly Suggestion[]>([]);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
@@ -125,7 +125,7 @@ export default function Today() {
                   : bringingBack.suggestion.spark.id
               )
             }
-            baseUrl={baseUrl}
+            media={media}
           />
 
           <View style={styles.answers}>
@@ -156,6 +156,18 @@ export default function Today() {
         </Pressable>
       </Link>
 
+      <Link href="/pairing-code" asChild>
+        <Pressable accessibilityRole="link" style={styles.toVault}>
+          <Text style={styles.pairPhone}>{t.catalog.today.pairAnotherPhone}</Text>
+        </Pressable>
+      </Link>
+
+      <Link href="/film" asChild>
+        <Pressable accessibilityRole="link" style={styles.toVault}>
+          <Text style={styles.toVaultText}>{t.catalog.today.thisYearsFilm}</Text>
+        </Pressable>
+      </Link>
+
       <View style={styles.vault}>
         {sparks.map((spark) => (
           <View key={spark.id} style={styles.slot}>
@@ -166,7 +178,7 @@ export default function Today() {
               onFlip={() => setFlipped((current) => (current === spark.id ? null : spark.id))}
               onCorrect={() => correct(spark)}
               sayingIntent={corrections[spark.id] ?? undefined}
-              baseUrl={baseUrl}
+              media={media}
             />
           </View>
         ))}
@@ -186,7 +198,10 @@ function sheet(world: World) {
     screen: { flex: 1, backgroundColor: world.color.ground },
     content: { paddingHorizontal: world.space[4], paddingBottom: world.space[9], gap: world.space[6] },
     saved: {
-      backgroundColor: world.color["saffron-wash"],
+      // Indigo, not saffron. `packages/world/src/color.ts` rations saffron to one meaning
+      // in the entire product - a person's voice - and a capture confirmation is the
+      // application speaking, which is exactly what indigo is for.
+      backgroundColor: world.color["indigo-wash"],
       borderRadius: world.radius.cut,
       padding: world.space[4],
       gap: world.space[1],
@@ -194,7 +209,7 @@ function sheet(world: World) {
     savedWord: {
       fontFamily: world.font.display,
       fontSize: world.type.chapter,
-      color: world.color.saffron,
+      color: world.color.indigo,
     },
     savedWhat: {
       fontFamily: world.font.body,
@@ -206,6 +221,11 @@ function sheet(world: World) {
       fontFamily: world.font.body,
       fontSize: world.type.body,
       color: world.color.indigo,
+    },
+    pairPhone: {
+      fontFamily: world.font.body,
+      fontSize: world.type.fine,
+      color: world.color["ink-faint"],
     },
     bringingBack: { gap: world.space[4] },
     reason: {

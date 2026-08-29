@@ -16,12 +16,37 @@ import hashlib
 import importlib.metadata
 import json
 import logging
+import re
 import uuid
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _distribution_name(requirement: str) -> str:
+    """The installed distribution a requirement line names.
+
+    `requirements.txt` holds two kinds of line. Most are ordinary PyPI pins. One is
+    `-e packages/filmkit`, which is first-party source in this monorepo (TASK-717) - and
+    reading that line as a package name produced a component literally called
+    `-e packages/filmkit`, at version "pinned", with a hash of the text of the line.
+    An SBOM is a claim about what is inside the image; that entry was a claim about a
+    string in a file.
+    """
+    stripped = requirement.strip()
+    if stripped.startswith(("-e ", "--editable ")):
+        path = ROOT / stripped.split(maxsplit=1)[1].split("[")[0].strip()
+        pyproject = path / "pyproject.toml"
+        if pyproject.exists():
+            found = re.search(r'^name\s*=\s*["\']([^"\']+)["\']', pyproject.read_text(), re.M)
+            if found:
+                return found.group(1)
+        return path.name
+    for separator in ("==", ">=", "<=", "~=", "!=", ">", "<", "["):
+        stripped = stripped.split(separator)[0]
+    return stripped.strip()
 
 
 def get_python_components() -> list[dict[str, Any]]:
@@ -35,14 +60,7 @@ def get_python_components() -> list[dict[str, Any]]:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            name = (
-                line.split("==")[0]
-                .split(">=")[0]
-                .split("<=")[0]
-                .split("~=")[0]
-                .split("[")[0]
-                .strip()
-            )
+            name = _distribution_name(line)
             if not name or name in seen:
                 continue
             seen.add(name)
@@ -50,11 +68,18 @@ def get_python_components() -> list[dict[str, Any]]:
             try:
                 version = importlib.metadata.version(name)
                 dist = importlib.metadata.distribution(name)
-                meta = dist.read_text("METADATA") or dist.read_text("RECORD") or line
-                content_hash = hashlib.sha256(meta.encode("utf-8")).hexdigest()
-            except Exception:
-                version = "pinned"
-                content_hash = hashlib.sha256(line.encode("utf-8")).hexdigest()
+            except importlib.metadata.PackageNotFoundError as exc:
+                # No placeholder. An SBOM is read by someone asking "am I affected by
+                # CVE-X", and a component whose version field says "pinned" answers that
+                # question with a word that looks like an answer and is not one. If a
+                # requirement cannot be resolved, the document does not get written.
+                raise RuntimeError(
+                    f"{line!r} in requirements.txt resolves to no installed distribution "
+                    f"({name!r}), so its version and hash cannot be stated. "
+                    "Run `make install` before generating an SBOM."
+                ) from exc
+            meta = dist.read_text("METADATA") or dist.read_text("RECORD") or line
+            content_hash = hashlib.sha256(meta.encode("utf-8")).hexdigest()
 
             components.append(
                 {

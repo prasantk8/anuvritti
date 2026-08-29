@@ -92,11 +92,19 @@ export interface QueueConfig {
 }
 
 export interface CaptureQueue {
-  /** Write and return. Never touches the network. */
+  /**
+   * Write and return. Never touches the network.
+   *
+   * `id` is for a caller that already has a durable identity for this capture and needs the
+   * entry to inherit it — the app's upload spool (TASK-713) queues a voice note under the
+   * spool row's own id, so a replay after a half-finished keep is the same entry rather
+   * than a second recording of the same four seconds. Left out, one is generated.
+   */
   enqueue(
     operation: QueueableOperation,
     body: unknown,
-    pathArgs?: readonly string[]
+    pathArgs?: readonly string[],
+    id?: string
   ): Promise<QueuedCapture>;
   /** Attempt everything that is due. Safe to call often; safe to call with no signal. */
   drain(): Promise<DrainReport>;
@@ -109,11 +117,12 @@ export function createQueue(config: QueueConfig): CaptureQueue {
   async function enqueue(
     operation: QueueableOperation,
     body: unknown,
-    pathArgs: readonly string[] = []
+    pathArgs: readonly string[] = [],
+    id?: string
   ): Promise<QueuedCapture> {
     const now = clock.now();
     const entry: QueuedCapture = {
-      id: random.id(),
+      id: id ?? random.id(),
       operation,
       pathArgs,
       body,

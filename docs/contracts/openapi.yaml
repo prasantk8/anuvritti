@@ -224,6 +224,18 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CorrectTranscript" } } } }
       responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/VoiceNote" } } } }, "404": { $ref: "#/components/responses/Error" } }
 
+  /film/compile:
+    post:
+      summary: Assemble this year's film shelf from what the family actually kept
+      operationId: compileFilm
+      description: >
+        Returns the evidence in capture order. `rendered_media_id` is null until the
+        provenance-verified renderer has deposited an MP4 in the family archive; null is
+        an honest not-yet, never a progress state.
+      responses:
+        "200": { description: compiled, content: { application/json: { schema: { $ref: "#/components/schemas/FilmCompilation" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+
   /media:
     post:
       summary: Upload media (encrypted at rest, PRD §44)
@@ -636,6 +648,28 @@ components:
       required: [recordings]
       properties:
         recordings: { type: array, items: { $ref: "#/components/schemas/VoiceNote" } }
+
+    FilmMaterial:
+      type: object
+      required: [kind, captured_at]
+      description: One real source for the annual film; exactly one payload is present.
+      properties:
+        kind: { type: string, enum: [RECORDING, SPARK] }
+        captured_at: { type: string, format: date-time }
+        recording: { $ref: "#/components/schemas/VoiceNote" }
+        spark: { $ref: "#/components/schemas/Spark" }
+
+    FilmCompilation:
+      type: object
+      required: [child_name, year, materials]
+      description: >
+        The phone's truthful view of this year's film. Deliberately no scene count,
+        duration, completion, percentage or target.
+      properties:
+        child_name: { type: string }
+        year: { type: integer }
+        materials: { type: array, items: { $ref: "#/components/schemas/FilmMaterial" } }
+        rendered_media_id: { type: string, nullable: true }
 
     KeepVoiceNote:
       type: object

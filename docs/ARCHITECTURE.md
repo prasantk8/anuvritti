@@ -295,6 +295,17 @@ LLM is a one-file change and requires no domain change.
 | AI provenance visible | every inferred field returns `source`/`confidence`/`human_override` in the API |
 | No surveillance (§46) | No location tracking, no screen monitoring, no scoring. Enforced by constitution test |
 
+### Future Inbox durability
+
+A Future Inbox seal crosses SQLite and the filesystem through one `FutureInboxStore` port;
+the application cannot save its private artifact and provenance ledger separately. The adapter
+encrypts and fsyncs the artifact to private staging, begins the SQLite writer transaction,
+atomically publishes the file, inserts the portable ledger row, then commits. On boot it deletes
+staging and unreferenced ciphertext and removes any ledger whose artifact is missing. Thus a
+power loss may leave cleanup work, but no public read can observe or open half a seal. Family
+erasure removes both halves. The encryption key remains `ANUVRITTI_MEDIA_KEY`; no second family
+secret is introduced for confidentiality.
+
 ### Ethical Constitution as executable tests
 `tests/constitution/` asserts the §47 boundaries the code must never cross — e.g. no field named
 `streak`/`score` is ever exposed to the client, suggestion payloads contain no urgency vocabulary,

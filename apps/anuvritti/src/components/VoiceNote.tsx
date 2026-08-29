@@ -12,6 +12,14 @@
  * `useAudioPlayerStatus(player)` is the subscription — `player.playing` alone does not
  * re-render. `player.seekTo(0)` is needed before replaying a finished clip, because a
  * player parked at the end answers `play()` by doing nothing at all.
+ *
+ * The source is an object, not a URL (TASK-713). `AudioSource` is
+ * `string | number | null | { uri?, assetId?, headers?, name? }`, and the player fetches
+ * the bytes itself — outside `@anuvritti/client`, and so outside the one place that knows
+ * this family's token. Handed a bare URL it asked anonymously, was told 401, and rendered
+ * a complete, silent recording. `src/media.ts` builds the source; `null` is a legal one and
+ * is what an unpaired phone gets, because a player that cannot be let in should not be
+ * pointed at the door.
  */
 
 import { useCallback } from "react";
@@ -20,6 +28,8 @@ import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
 import type { VoiceNote as Note } from "@anuvritti/client";
 
+import type { MediaSource } from "../media.ts";
+import { SAID } from "../said.ts";
 import { describe, lengthOf, whatToShow } from "../voice/playback.ts";
 import { FLOOR_HEIGHT, summarise } from "../voice/waveform.ts";
 import type { World } from "../world.ts";
@@ -30,15 +40,15 @@ const BARS = 28;
 export interface VoiceNoteProps {
   readonly note: Note;
   readonly world: World;
-  /** Where the bytes live. `src/api.ts` knows the base url; this component does not. */
-  readonly sourceUrl: string;
+  /** The bytes, and this phone's right to them. `null` when there is no token yet. */
+  readonly source: MediaSource | null;
   /** The recorded shape, when the device that made it kept one. */
   readonly shape?: readonly number[];
 }
 
-export function VoiceNote({ note, world, sourceUrl, shape }: VoiceNoteProps) {
+export function VoiceNote({ note, world, source, shape }: VoiceNoteProps) {
   const shown = whatToShow(note);
-  const player = useAudioPlayer(sourceUrl);
+  const player = useAudioPlayer(source);
   const status = useAudioPlayerStatus(player);
   const styles = sheet(world);
 
@@ -62,7 +72,7 @@ export function VoiceNote({ note, world, sourceUrl, shape }: VoiceNoteProps) {
         onPress={toggle}
         accessibilityRole="button"
         accessibilityLabel={describe(shown)}
-        accessibilityHint={status.playing ? "Pause" : "Play"}
+        accessibilityHint={status.playing ? SAID.voice.pause : SAID.voice.play}
         style={styles.player}
       >
         <View style={styles.glyph}>
@@ -80,7 +90,7 @@ export function VoiceNote({ note, world, sourceUrl, shape }: VoiceNoteProps) {
                   // Played bars are inked; the rest are thread. A progress *bar* under a
                   // waveform would be two things saying the same thing.
                   backgroundColor:
-                    index / BARS <= played ? world.color["indigo"] : world.color["thread"],
+                    index / BARS <= played ? world.color.saffron : world.color["thread"],
                 },
               ]}
             />
@@ -125,9 +135,9 @@ function sheet(world: World) {
       borderRadius: world.radius.round,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: world.color["indigo-wash"],
+      backgroundColor: world.color["saffron-wash"],
     },
-    glyphText: { fontSize: world.type.fine, color: world.color["indigo"] },
+    glyphText: { fontSize: world.type.fine, color: world.color.saffron },
     wave: { flex: 1, flexDirection: "row", alignItems: "center", gap: 2, height: 32 },
     bar: { flex: 1, borderRadius: world.radius.round, minHeight: 3 },
     length: {

@@ -8,34 +8,44 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "prebuild": "expo prebuild --clean",
-    "test": "node --test \"test/**/*.test.ts\""
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck --silent && node --test \"test/**/*.test.ts\""
   },
   "dependencies": {
-    "expo": "~57.0.17",
-    "expo-router": "~57.0.17",
-    "expo-audio": "~57.0.4",
-    "expo-constants": "~57.0.15",
-    "expo-linking": "~57.0.8",
-    "expo-secure-store": "~57.0.2",
-    "expo-sqlite": "~57.0.2",
-    "expo-crypto": "~57.0.2",
-    "expo-file-system": "~57.0.6",
-    "expo-sharing": "~57.0.16",
-    "expo-status-bar": "~57.0.1",
-    "expo-font": "~57.0.1",
-    "@expo-google-fonts/newsreader": "^0.4.1",
-    "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
-    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
+    "@anuvritti/client": "file:../../packages/client",
+    "@anuvritti/world": "file:../../packages/world",
+    "@expo-google-fonts/ibm-plex-mono": "0.4.1",
+    "@expo-google-fonts/ibm-plex-sans": "0.4.1",
+    "@expo-google-fonts/newsreader": "0.4.1",
     "@react-native-community/netinfo": "12.0.1",
+    "expo": "57.0.18",
+    "expo-asset": "57.0.15",
+    "expo-audio": "57.0.4",
+    "expo-constants": "57.0.16",
+    "expo-crypto": "57.0.2",
+    "expo-file-system": "57.0.6",
+    "expo-font": "57.0.2",
+    "expo-linking": "57.0.8",
+    "expo-router": "57.0.17",
+    "expo-secure-store": "57.0.2",
+    "expo-sharing": "57.0.16",
+    "expo-sqlite": "57.0.2",
+    "expo-status-bar": "57.0.1",
+    "expo-video": "57.0.3",
     "react": "19.2.3",
     "react-native": "0.86.3",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.0",
+    "react-native-gesture-handler": "2.32.0",
     "react-native-reanimated": "4.5.1",
-    "react-native-gesture-handler": "~2.32.0"
+    "react-native-safe-area-context": "5.7.0",
+    "react-native-screens": "4.26.0",
+    "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
-    "@types/react": "~19.2.0",
-    "typescript": "~5.9.2"
+    "@types/node": "22.14.0",
+    "@types/react": "19.2.0",
+    "typescript": "6.0.3"
+  },
+  "overrides": {
+    "react-dom": "19.2.3"
   }
 }

@@ -16,6 +16,7 @@
  */
 
 import type { Suggestion } from "@anuvritti/client";
+import { SAID } from "../said.ts";
 
 /**
  * What the screen shows: one thing, or nothing, and never a number.
@@ -52,11 +53,7 @@ export function whatToBringBack(
  * the affirmative first makes the other two read as refusals of an invitation, and the whole
  * point is that all three are equally fine answers.
  */
-export const ANSWERS = [
-  { action: "maybe_later", said: "Maybe later" },
-  { action: "lets_do_it", said: "Let's do it" },
-  { action: "not_relevant_anymore", said: "Not anymore" },
-] as const;
+export const ANSWERS = SAID.today.answers;
 
 export type Answer = (typeof ANSWERS)[number]["action"];
 
@@ -67,11 +64,7 @@ export type Answer = (typeof ANSWERS)[number]["action"];
  * promise and a snooze button. "Not anymore" is permanent and says so, because a parent who
  * does not believe it will not use it.
  */
-export const ACKNOWLEDGEMENT: Readonly<Record<Answer, string>> = {
-  maybe_later: "Put away for a while.",
-  lets_do_it: "Good. It's on the list.",
-  not_relevant_anymore: "Gone. Won't come back.",
-};
+export const ACKNOWLEDGEMENT: Readonly<Record<Answer, string>> = SAID.today.acknowledgement;
 
 /**
  * When there is nothing.
@@ -79,4 +72,4 @@ export const ACKNOWLEDGEMENT: Readonly<Record<Answer, string>> = {
  * Present tense, no apology, no "check back later" — which is a request to return, and this
  * screen is not allowed to make one.
  */
-export const NOTHING_TODAY = "Nothing today. That's normal.";
+export const NOTHING_TODAY = SAID.today.nothing;

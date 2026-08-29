@@ -61,10 +61,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: pip install -r requirements-dev.txt
+      - name: Install the locked JavaScript workspace
+        run: npm ci
       # pytest collects tests/design too. `make check` builds this ignored output before
       # either coverage pass; a fresh runner must do the same rather than test an empty dist.
       - name: Build the shared visual world for pytest collection
         run: npm --prefix packages/world run build --silent
+      - name: Install the development-only film browser
+        run: python -m playwright install --with-deps chromium
 
       # CLAUDE.md: >= 90% unit. The domain and application layers hold every rule
       # the PRD promises, so they carry the strict gate.
@@ -148,6 +152,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Audit the locked JavaScript tree
+        run: npm run audit
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -194,6 +205,29 @@ jobs:
           tags: anuvritti:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build probe-free size baseline
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime-base
+          push: false
+          load: true
+          tags: anuvritti:ci-probe-free
+          cache-from: type=gha
+
+      - name: Build handset audio fixtures
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: probe-fixtures
+          push: false
+          load: true
+          tags: anuvritti:ci-probe-fixtures
+          cache-from: type=gha
+
+      - name: Prove production media probing and publish its image cost
+        run: scripts/verify-production-media-probe.sh anuvritti:ci anuvritti:ci-probe-free anuvritti:ci-probe-fixtures
 
       - name: Verify the image does not run as root
         run: |

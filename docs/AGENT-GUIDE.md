@@ -192,25 +192,45 @@ saw one somewhere.
 
 ## What is actually open
 
-**Reopened, with the evidence in each tracker note.** TASK-910 and TASK-907 (documents
-describing things that did not happen), TASK-1010, TASK-1006, TASK-1012 (built but never
-reaches a screen), TASK-1103, TASK-1105, TASK-1106, TASK-1107, TASK-1108, TASK-1109,
-TASK-1110 (HARDENING items reported closed and not closed).
+Re-checked 2026-08-29, after Phases 7-11 were merged onto `main` and every gate ran green.
+Each line below is a claim the evidence did not support, and the evidence is named.
 
-Most of that code is salvageable. `keys.py` is good work that needs a caller.
-`BlueGreenDeployer` has the right shape and stub collaborators. `migrations.py` is a real
-rehearse-before-apply engine that the container does not call. Closing these is mostly
-wiring, correcting three modules to the real schema, and replacing four claims with either
-the thing or an honest "not yet".
+**Not run, and the documents say so.** TASK-910 (`docs/VALIDATION.md`: thirty days with one
+real family) and TASK-907 (`docs/DEVICE.md`: five things that need hardware). Both documents
+now open with **NOT RUN**, which is the honest deliverable. The tracker did not agree with
+them until now. TASK-910 is the root of the board: seventeen completed tasks depend on it,
+which is what `tracker.py audit` has been trying to say.
 
-**Phase 8 still holds fifteen pending tasks** (802–805, 808–818) and is the phase where the
-product becomes magical rather than merely correct. It was in progress when this happened.
+**Built, and nothing calls it.** TASK-806 (Future Inbox store), TASK-1101 (the
+rehearse-before-apply migration engine - the container still calls `schema.migrate()`),
+TASK-1102 (the importer, no CLI and no route), and on the phone TASK-1002, TASK-1003,
+TASK-1004, TASK-1005, TASK-1008, TASK-1009. Every one of these is *already* named in
+`NOT_IN_SERVICE` or `TS_NOT_IN_SERVICE` with its own task id as the reason - the module was
+honest and the board was not. `test_every_excuse_names_a_task_that_is_still_open` compares
+the two records now, so they cannot disagree again.
 
-**Two things worth doing regardless of task order.** `pip install -e .` does not work, so
-`make run` and `docs/CONTINUITY.md` item 6 fail with `ModuleNotFoundError` — the document
-whose whole purpose is to work when everything else has failed contains a command that
-does not run. And this is still not a git repository, so nothing above is recoverable if a
-file is overwritten.
+**Claimed wider than it is.** TASK-1010 said a device matrix; `device.yml` runs
+`npm --prefix apps/anuvritti test` on a GitHub runner and `device-e2e.test.ts` mocks
+`SecureKeyStorage` and `NativeMediaDriver`. A good subsystem test, not a device. TASK-1012
+said zero hardcoded literals; the visible copy is translated into three languages and every
+screen-reader announcement in `src/a11y/accessibility.ts` is hardcoded English, so a parent
+using Anuvritti in Hindi with VoiceOver hears an English app.
+
+**Closed, and they stayed closed.** TASK-1103, 1105, 1106, 1107, 1108, 1109 and 1110 are
+wired and reachable, and `make check` is green on all of it. Three things had to be fixed
+first, and all three are the same shape as everything above: `rewrap_all` counted successes
+and swallowed the files no key could open, `scan_image.py` skipped layer members it could
+not read, and the SBOM emitted a component called `-e packages/filmkit` at version
+`"pinned"`. Each was a routine that reported success about work it had not done.
+
+**Phase 8 still holds fourteen pending tasks** (802-805, 808-818) and is the phase where the
+product becomes magical rather than merely correct.
+
+**Both of the things "worth doing regardless" are done.** `pip install -e .` works -
+`requirements-dev.txt` never installed the project, `pythonpath = ["src"]` hid it from every
+test for eleven phases, and two gates in `tests/foundation/test_toolchain.py` now hold it.
+And everything is on `git@github.com:prasantk8/anuvritti.git`: twenty-eight branches that
+existed only on one laptop are merged into `main`, and `main` is the only branch left.
 
 ---
 

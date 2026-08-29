@@ -1,26 +1,32 @@
 /**
- * From a file on the phone to a recording in the archive (TASK-601, TASK-605).
+ * From a file on the phone to a recording in the archive (TASK-601, TASK-605, TASK-713).
  *
- * Two requests, in this order, and the order is the whole design:
+ * Three things happen, and the order is the whole design:
  *
- * 1. `POST /v1/media` — the bytes. The slow one, and it starts the instant the button is
- *    released, while the parent is still deciding whether to say anything about it.
- * 2. `POST /v1/voice` — what they are. Small, replayable, and queueable.
+ * 1. **The recording is taken into the app's own keeping and written down.** No network.
+ *    `expo-audio` leaves its file in the cache directory, which iOS empties whenever it
+ *    likes; the spool moves it into the document directory and records a row saying it
+ *    exists and has not gone up yet. This is the only step a parent waits for, and it is
+ *    a file move — well inside the ten seconds PRD §11 allows the whole of capture.
+ * 2. **The bytes go up** — `POST /v1/media`, the slow one.
+ * 3. **What they are goes up** — `POST /v1/voice`, small, and queued rather than awaited.
  *
- * A single multipart call would have to wait for both, which is the wrong trade against the
- * ten-second budget in PRD §11. It would also make the whole thing unqueueable: the offline
- * queue stores JSON in SQLite, and a file is not JSON.
+ * ## What changed, and why it matters
  *
- * ## Which half survives losing the signal
+ * This used to upload synchronously and, when the upload failed, return a failure and leave
+ * the file wherever the recorder had put it. The screen said "Still on your phone. It will
+ * go up when there's signal", and nothing in the app was arranged to make the second half
+ * of that sentence true: nothing remembered the file, and the directory it was in was the
+ * one the OS reclaims first. A parent in a lift lost four seconds of their own voice and
+ * was told they had not.
  *
- * The upload cannot be queued, so when it fails the recording stays on the phone and this
- * returns a failure. That is honest, and it is the one path where "Saved." would be a lie.
- * Once the bytes are up, the small call is queued rather than awaited, so from that point
- * on nothing can lose it: a replayed `keepVoiceNote` carries its own idempotency key and
- * the server answers the second attempt with the first attempt's note.
+ * Now the sentence is true. The failure this returns is `waiting`, not `lost` — the
+ * recording is written down, and it goes up on the next drain, the next time the app comes
+ * forward, or the next time the phone finds a network. See `src/upload/spool.ts` for how it
+ * lands exactly once.
  */
 
-import type { CaptureQueue, Contract, Result } from "@anuvritti/client";
+import type { Outbox } from "../upload/spool.ts";
 
 export interface Recorded {
   /** A `file://` uri from `expo-audio`. */
@@ -32,49 +38,38 @@ export interface Recorded {
 }
 
 export interface KeepDeps {
-  readonly api: Contract;
-  readonly queue: CaptureQueue;
+  readonly outbox: Outbox;
 }
 
 export type Kept =
-  | { readonly ok: true; readonly mediaId: string }
-  | { readonly ok: false; readonly why: "upload" };
+  | { readonly ok: true }
+  /** Safe on the phone, not yet in the archive. Not a loss, and not a thing to redo. */
+  | { readonly ok: false; readonly why: "waiting" }
+  /** The server will not take these bytes, ever. The file is still on the phone. */
+  | { readonly ok: false; readonly why: "refused" };
 
-/**
- * Upload the audio, then queue the note.
- *
- * `FormData` with a `{ uri, name, type }` part is React Native's own extension: the runtime
- * streams the file off disk rather than reading it into JavaScript. Passing a `Blob` here
- * instead would load a whole recording into memory on a device that has just been holding
- * a microphone open, and Hermes has no `File` at all.
- */
-export async function keepRecording(
-  { api, queue }: KeepDeps,
-  recorded: Recorded
-): Promise<Kept> {
-  const form = new FormData();
-  form.append("file", {
-    uri: recorded.uri,
-    name: nameFor(recorded.uri),
-    type: mimeFor(recorded.uri),
-  } as unknown as Blob);
+export async function keepRecording({ outbox }: KeepDeps, recorded: Recorded): Promise<Kept> {
+  const entry = await outbox.spool(
+    { uri: recorded.uri, mimeType: mimeFor(recorded.uri) },
+    {
+      kind: "voice",
+      seconds: recorded.seconds,
+      heard: recorded.heard,
+      heardConfidence: recorded.heardConfidence,
+    }
+  );
 
-  const uploaded: Result<{ id: string }> = await api.uploadMedia(form);
-  if (!uploaded.ok) return { ok: false, why: "upload" };
+  // Try immediately, because most of the time there is a network and a parent should see
+  // their recording arrive on the shelf. Failing here is not a failure of the keep — the
+  // recording is already written down and the spool owns it from now on.
+  const report = await outbox.drain();
+  if (report.refused.some(({ entry: refused }) => refused.id === entry.id)) {
+    return { ok: false, why: "refused" };
+  }
 
-  await queue.enqueue("keepVoiceNote", {
-    media_id: uploaded.value.id,
-    duration_seconds: recorded.seconds,
-    heard_text: recorded.heard,
-    heard_confidence: recorded.heardConfidence,
-  });
-
-  return { ok: true, mediaId: uploaded.value.id };
-}
-
-function nameFor(uri: string): string {
-  const last = uri.split("/").pop();
-  return last && last.includes(".") ? last : "recording.m4a";
+  const waiting = await outbox.pending();
+  if (waiting.some((pending) => pending.id === entry.id)) return { ok: false, why: "waiting" };
+  return { ok: true };
 }
 
 /**

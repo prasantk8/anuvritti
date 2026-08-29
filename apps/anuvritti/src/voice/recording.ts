@@ -22,12 +22,27 @@
  * cancel gesture exists to throw away a recording that already happened, which is the one
  * thing this file is built to make impossible.
  *
+ * ## The first press is not a press (TASK-713)
+ *
+ * The very first time, the press puts up the OS microphone dialog instead of starting
+ * anything. The button a parent is holding is now under a system alert, and almost everyone
+ * lifts their finger there. The answer — "Allow" — then arrives on a phone nobody is
+ * touching, and treating it as the start of a hold left a first-time user recording, with
+ * no visible way to stop.
+ *
+ * So asking is a **state**, not a flag. A release during it goes back to rest, and an answer
+ * that arrives at rest starts nothing. The arming clock is measured from the *answer*, not
+ * from the press it followed: the 200ms exists to tell a tap from a hold, and a threshold
+ * measured from three seconds ago has already elapsed.
+ *
  * ## Interruptions keep what was said
  *
  * A phone call during a recording ends it, and ending it means **keeping** it. The
  * alternative — treating an interruption as an abandonment — loses four seconds of a
  * parent's voice to an incoming spam call, and there is no way to ask for them back.
  */
+
+import { SAID } from "../said.ts";
 
 /** How long a press must be held before any audio is captured. */
 export const ARMING_MS = 200;
@@ -41,6 +56,8 @@ export const TYPICAL_SECONDS = 5;
 export type Phase =
   /** Nothing is happening. */
   | "resting"
+  /** The OS is asking about the microphone. Held, but the finger is over a system alert. */
+  | "asking"
   /** Held, but not yet long enough to be meant. No audio exists. */
   | "arming"
   /** Audio is being captured. */
@@ -67,6 +84,12 @@ export const RESTING: Recording = {
 
 export type Signal =
   | { readonly kind: "press"; readonly at: number }
+  /** The permission sheet went up. Nothing is being captured behind it. */
+  | { readonly kind: "ask"; readonly at: number }
+  /** The parent allowed it. Only means anything if the finger is still down. */
+  | { readonly kind: "granted"; readonly at: number }
+  /** The parent did not. */
+  | { readonly kind: "refused" }
   | { readonly kind: "tick"; readonly at: number }
   | { readonly kind: "release"; readonly at: number }
   /** The system took the microphone away: a call, another app, a media-services reset. */
@@ -102,6 +125,28 @@ export function step(state: Recording, signal: Signal): Step {
           state: { phase: "arming", pressedAt: signal.at, startedAt: 0, seconds: 0 },
           effect: "none",
         };
+      }
+      if (signal.kind === "ask") {
+        return {
+          state: { phase: "asking", pressedAt: signal.at, startedAt: 0, seconds: 0 },
+          effect: "none",
+        };
+      }
+      // A `granted` that lands here is a permission answer for a finger that has already
+      // lifted. It starts nothing — which is the entire point of this state existing.
+      return { state, effect: "none" };
+
+    case "asking":
+      if (signal.kind === "granted") {
+        // Armed from the answer, not from the press: see the note at the top of the file.
+        return {
+          state: { ...state, phase: "arming", pressedAt: signal.at },
+          effect: "none",
+        };
+      }
+      if (signal.kind === "refused" || signal.kind === "release" || signal.kind === "interrupted") {
+        // Nothing was ever captured behind a permission sheet, so nothing is thrown away.
+        return { state: RESTING, effect: "none" };
       }
       return { state, effect: "none" };
 
@@ -167,12 +212,13 @@ export function isLive(state: Recording): boolean {
 export function announce(phase: Phase): string {
   switch (phase) {
     case "recording":
-      return "Recording.";
+      return SAID.voice.recording;
     case "keeping":
-      return "Saved.";
+      return SAID.voice.saved;
+    case "asking":
     case "arming":
     case "resting":
-      return "Hold to talk.";
+      return SAID.voice.resting;
   }
 }
 

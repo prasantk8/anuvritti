@@ -2094,7 +2094,7 @@
             "PRD 50",
             "PRD 52"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "src/anuvritti/domain/inbox.py",
             "src/anuvritti/shared/identity.py",
@@ -2102,7 +2102,8 @@
             "tests/constitution/test_inbox_sealed.py",
             "tests/constitution/README.md"
           ],
-          "commit": "d623533"
+          "commit": "d623533",
+          "note": "src/anuvritti/adapters/persistence/inbox.py is declared out of service: the Future Inbox store is built and the container does not hold it."
         },
         {
           "id": "TASK-807",
@@ -2438,7 +2439,7 @@
     {
       "name": "Phase 9: Real - a server, a backup, a phone, a month",
       "owner": "Principal SRE & DevSecOps Lead / Founder",
-      "status": "completed",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-905",
@@ -2497,11 +2498,12 @@
             "HARDENING 5.4",
             "PRD 8.6"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "src/anuvritti/adapters/persistence/migrations.py",
             "tests/integration/test_migrations.py"
-          ]
+          ],
+          "note": "src/anuvritti/adapters/persistence/migrations.py is declared out of service: the container calls schema.migrate(), so the rehearse-before-apply engine never runs."
         },
         {
           "id": "TASK-906",
@@ -2542,12 +2544,12 @@
             "PRD 8.2",
             "PRD 48 F1"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/eas.json",
             "docs/DEVICE.md"
           ],
-          "note": "EAS internal distribution profiles configured in eas.json and honest hardware execution checklist in docs/DEVICE.md"
+          "note": "NOT RUN. docs/DEVICE.md says so at the top: the five things it lists - the share sheet, the flip, the keychain across a cold start, ten seconds measured, the microphone - all need hardware, and no hardware has run them."
         },
         {
           "id": "TASK-1102",
@@ -2562,12 +2564,13 @@
             "PRD 44",
             "PRD 46"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "src/anuvritti/config/logging.py",
             "src/anuvritti/shared/logging.py",
             "tests/constitution/test_log_privacy.py"
-          ]
+          ],
+          "note": "src/anuvritti/application/import_.py is declared out of service: the importer has no CLI and no route."
         },
         {
           "id": "TASK-1009",
@@ -2582,10 +2585,11 @@
             "PRD 8.2",
             "PRD 8.6"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/test/crash-recovery.test.ts"
-          ]
+          ],
+          "note": "src/widgets/right-now-widget.ts is declared out of service: no native widget extension consumes it."
         },
         {
           "id": "TASK-1004",
@@ -2601,11 +2605,12 @@
             "PRD 8.3",
             "PRD 8.5"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/return/notifications.ts",
             "apps/anuvritti/test/notifications.test.ts"
-          ]
+          ],
+          "note": "src/return/notifications.ts is declared out of service: no screen registers the scheduler."
         },
         {
           "id": "TASK-908",
@@ -2663,12 +2668,12 @@
             "PRD 64",
             "PRD 50"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "docs/VALIDATION.md",
             "tests/e2e/test_thirty_days.py"
           ],
-          "note": "Validation protocol documented in docs/VALIDATION.md and verified via 30-day automated lifecycle test in test_thirty_days.py"
+          "note": "NOT RUN. docs/VALIDATION.md says so at the top. Thirty days with one real family, then a document written from it; the previous close was a document written from tests/e2e fixtures."
         },
         {
           "id": "TASK-902",
@@ -2756,7 +2761,7 @@
     {
       "name": "Phase 10: The Thing in Your Pocket",
       "owner": "Principal Mobile Engineer / Design Lead",
-      "status": "completed",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-1001",
@@ -2794,11 +2799,12 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/sync/uploader.ts",
             "apps/anuvritti/test/uploader.test.ts"
-          ]
+          ],
+          "note": "src/capture/native.ts and src/sync/uploader.ts are declared out of service in test_reachability.py: no screen reaches the in-app camera or the resumable uploader."
         },
         {
           "id": "TASK-1003",
@@ -2815,11 +2821,12 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/capture/native.ts",
             "apps/anuvritti/test/native-capture.test.ts"
-          ]
+          ],
+          "note": "src/sync/budget.ts is declared out of service: metering has no caller."
         },
         {
           "id": "TASK-1005",
@@ -2835,12 +2842,13 @@
             "PRD 18",
             "PRD 8.4"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/widgets/right-now-widget.ts",
             "apps/anuvritti/src/widgets/index.ts",
             "apps/anuvritti/test/widgets.test.ts"
-          ]
+          ],
+          "note": "src/vault/device-vault.ts is declared out of service: reachable only from capture/native.ts, which is itself dark."
         },
         {
           "id": "TASK-1006",
@@ -2907,11 +2915,12 @@
             "PRD 8.2",
             "PRD 46"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/sync/budget.ts",
             "apps/anuvritti/test/budget.test.ts"
-          ]
+          ],
+          "note": "src/model/today.ts is declared out of service: papaToday has no screen."
         },
         {
           "id": "TASK-1010",
@@ -2928,12 +2937,12 @@
           "prd_refs": [
             "PRD 48"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             ".github/workflows/device.yml",
             "apps/anuvritti/test/device-e2e.test.ts"
           ],
-          "note": "CI matrix configured in device.yml and full mobile lifecycle verified in device-e2e.test.ts"
+          "note": "device.yml runs 'npm --prefix apps/anuvritti test' on a GitHub runner, and device-e2e.test.ts mocks SecureKeyStorage and NativeMediaDriver. That is a good subsystem test and it is not a device matrix; depends on TASK-907 either way."
         },
         {
           "id": "TASK-1011",
@@ -2970,7 +2979,7 @@
             "PRD 40",
             "PRD 56"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "packages/world/src/language/catalog.ts",
             "packages/world/src/language/translator.ts",
@@ -2981,7 +2990,7 @@
             "apps/anuvritti/app/pair.tsx",
             "packages/world/test/language.test.ts"
           ],
-          "note": "Language catalog wired into screens via useTranslator hook with zero hardcoded literals"
+          "note": "Visible copy is translated into three languages; every screen-reader announcement in src/a11y/accessibility.ts is hardcoded English. A parent using Anuvritti in Hindi with VoiceOver hears an English app."
         }
       ]
     },
@@ -3961,7 +3970,6 @@
     "TASK-738",
     "TASK-741",
     "TASK-801",
-    "TASK-806",
     "TASK-807",
     "TASK-819",
     "TASK-820",
@@ -3969,29 +3977,17 @@
     "TASK-805",
     "TASK-905",
     "TASK-731",
-    "TASK-1101",
     "TASK-906",
-    "TASK-907",
-    "TASK-1102",
-    "TASK-1009",
-    "TASK-1004",
     "TASK-908",
     "TASK-909",
-    "TASK-910",
     "TASK-902",
     "TASK-903",
     "TASK-904",
     "TASK-901",
     "TASK-1001",
-    "TASK-1002",
-    "TASK-1003",
-    "TASK-1005",
     "TASK-1006",
     "TASK-1007",
-    "TASK-1008",
-    "TASK-1010",
     "TASK-1011",
-    "TASK-1012",
     "TASK-1103",
     "TASK-1104",
     "TASK-1105",

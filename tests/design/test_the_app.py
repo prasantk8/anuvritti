@@ -1,0 +1,148 @@
+"""TASK-714: the app's colour and language boundaries, read from shipped source."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+APP = ROOT / "apps" / "anuvritti"
+SAID = APP / "src" / "said.ts"
+SCREENS = tuple((APP / "app").glob("*.tsx")) + tuple((APP / "src" / "components").glob("*.tsx"))
+VOICE_COLOUR_HOMES = {
+    Path("src/components/HoldToTalk.tsx"),
+    Path("src/components/VoiceNote.tsx"),
+}
+ASSUMED_PEOPLE = re.compile(
+    r"\b(?:he|him|his|she|her|hers|mum|mom|mama|dad|papa|father|mother|son|daughter)\b",
+    re.I,
+)
+
+
+def _code(source: str) -> str:
+    """Remove comments: design rationale may name the failure it prevents."""
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
+    return re.sub(r"//.*", "", source)
+
+
+def _saffron_offenders(sources: dict[Path, str]) -> set[Path]:
+    return {
+        path
+        for path, source in sources.items()
+        if re.search(r"world\.color(?:\[.[\"']saffron(?:-wash)?[\"'].\]|\.saffron)", _code(source))
+        and path not in VOICE_COLOUR_HOMES
+    }
+
+
+def _elapsed_copy(source: str) -> list[str]:
+    return re.findall(r"\b\d+\s+days?\b", _code(source), flags=re.I)
+
+
+def _assumptions(source: str) -> list[str]:
+    return ASSUMED_PEOPLE.findall(_code(source))
+
+
+_LABEL_PROP = re.compile(r"(?:accessibilityHint|accessibilityLabel|label|placeholder)=\{")
+
+
+def _prop_expressions(code: str) -> list[str]:
+    """The body of every label prop written as a JSX expression.
+
+    Brace-matched rather than pattern-matched: a template literal's own `${...}` makes
+    the closing brace ambiguous to any regex, and getting that wrong means the rule
+    silently reads an empty string and passes.
+    """
+    found: list[str] = []
+    for opener in _LABEL_PROP.finditer(code):
+        depth, index = 1, opener.end()
+        while index < len(code) and depth:
+            depth += (code[index] == "{") - (code[index] == "}")
+            index += 1
+        found.append(code[opener.end() : index - 1])
+    return found
+
+
+def _literal_screen_copy(source: str) -> list[str]:
+    code = _code(source)
+    between_tags = re.findall(r"<Text\b[^>]*>\s*([^\s<{][^<]*?)\s*</Text>", code, flags=re.S)
+    literal_props = re.findall(
+        r"(?:accessibilityHint|accessibilityLabel|label|placeholder)=[\"']([^\"']+)[\"']",
+        code,
+    )
+    # And the same props written as an expression. `accessibilityLabel={`Why you saved
+    # ${title}`}` is a sentence a screen reader says out loud, and the quoted-prop pattern
+    # above cannot see it - which is how two English announcements sat inside Spark.tsx
+    # while every visible word in the app had been translated into three languages.
+    # Interpolation alone is fine: `${child}, ${year}` is data, not copy. Three or more
+    # consecutive letters outside a placeholder is copy.
+    expression_props = [
+        fragment
+        for expression in _prop_expressions(code)
+        for fragment in re.findall(r"`([^`]*)`", expression)
+        if re.search(r"[A-Za-z]{3}", re.sub(r"\$\{[^}]*\}", "", fragment))
+    ]
+    return [
+        value.strip()
+        for value in (*between_tags, *literal_props, *expression_props)
+        if value.strip()
+    ]
+
+
+def test_saffron_is_only_a_persons_voice_on_the_waveform_and_player():
+    sources = {path.relative_to(APP): path.read_text() for path in APP.rglob("*.tsx")}
+    assert not _saffron_offenders(sources)
+    assert {
+        path for path, source in sources.items() if "world.color.saffron" in _code(source)
+    } == VOICE_COLOUR_HOMES
+
+
+def test_no_screen_can_say_an_exact_number_of_days():
+    offenders = {
+        path.relative_to(APP): _elapsed_copy(path.read_text())
+        for path in (*SCREENS, SAID)
+        if _elapsed_copy(path.read_text())
+    }
+    assert not offenders
+
+
+def test_app_copy_assumes_no_pronoun_or_family_relationship():
+    assert not _assumptions(SAID.read_text())
+
+
+def test_every_screen_gets_its_words_from_said():
+    offenders = {
+        path.relative_to(APP): _literal_screen_copy(path.read_text())
+        for path in SCREENS
+        if _literal_screen_copy(path.read_text())
+    }
+    assert not offenders
+    word_bearing = {
+        APP / "app" / "index.tsx",
+        APP / "app" / "pair.tsx",
+        APP / "app" / "vault.tsx",
+        APP / "src" / "components" / "HoldToTalk.tsx",
+        APP / "src" / "components" / "VoiceNote.tsx",
+        APP / "src" / "components" / "Spark.tsx",
+    }
+    # Two named sources, not one. `said.ts` was the whole vocabulary when this test was
+    # written; the translator and its catalogue (TASK-714) now carry every sentence a
+    # parent reads, in three languages, and the components still hold their own words in
+    # `said.ts`. What the rule has always been about is that the string is *named
+    # somewhere* rather than typed into a screen, and either source satisfies that.
+    named_elsewhere = ('said.ts"', "useTranslator.ts", "a11y/index.ts")
+    for path in word_bearing:
+        source = path.read_text()
+        assert any(marker in source for marker in named_elsewhere), (
+            f"{path.relative_to(APP)} carries words and imports neither said.ts nor the "
+            "translator, so its copy is written into the screen"
+        )
+
+
+def test_each_scanner_catches_the_line_it_exists_to_forbid():
+    assert _saffron_offenders({Path("app/index.tsx"): "world.color.saffron"})
+    assert _elapsed_copy('const status = "12 days ago"') == ["12 days"]
+    assert _assumptions('const prompt = "What did his dad say?"') == ["his", "dad"]
+    assert _literal_screen_copy('<Text accessibilityLabel="A label">Hardcoded</Text>') == [
+        "Hardcoded",
+        "A label",
+    ]

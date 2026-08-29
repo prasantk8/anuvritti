@@ -57,7 +57,7 @@ function fileBackedTokens(initial: string | null): TokenStore & { current: strin
 }
 
 /**
- * A few hundred bytes standing in for a voice memo.
+ * A deterministic 4.2-second PCM voice memo.
  *
  * Deterministic, so phase two can assert the bytes came back *unchanged* - which is the
  * only way to prove nothing trimmed, normalised or re-encoded them on the way through
@@ -67,10 +67,32 @@ function fileBackedTokens(initial: string | null): TokenStore & { current: strin
 // `Uint8Array<ArrayBufferLike>`, which could be backed by a SharedArrayBuffer and so is
 // not accepted as a request body. These bytes are a plain allocation, and saying so is
 // what lets them be one.
+//
+// A real WAV header, not a stub: the server measures a voice note's length from its
+// bytes now (TASK-717), so a clip that cannot be parsed would prove nothing.
 function clip(): Uint8Array<ArrayBuffer> {
-  const header = [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20];
-  const body = Array.from({ length: 512 }, (_, index) => (index * 37) % 256);
-  return new Uint8Array([...header, ...body]);
+  const sampleRate = 48_000;
+  const samples = Math.round(sampleRate * 4.2);
+  const bytes = new Uint8Array(44 + samples * 2);
+  const view = new DataView(bytes.buffer);
+  const ascii = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) {
+      view.setUint8(offset + index, value.charCodeAt(index));
+    }
+  };
+  ascii(0, "RIFF");
+  view.setUint32(4, bytes.length - 8, true);
+  ascii(8, "WAVEfmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  ascii(36, "data");
+  view.setUint32(40, samples * 2, true);
+  return bytes;
 }
 
 function say(line: string): void {
@@ -177,7 +199,7 @@ async function january(): Promise<void> {
   // are, and the transcript the handset heard arrives with them - carrying machine
   // provenance whatever the phone believes about itself (PRD §8.7).
   const audio = new FormData();
-  audio.append("file", new Blob([clip()], { type: "audio/mp4" }), "why.m4a");
+  audio.append("file", new Blob([clip()], { type: "audio/wav" }), "why.wav");
   const media = unwrap(await api.uploadMedia(audio), "uploadMedia");
 
   const kept = unwrap(

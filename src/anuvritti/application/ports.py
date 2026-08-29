@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from types import TracebackType
 from typing import Protocol, runtime_checkable
 
@@ -17,6 +18,7 @@ from anuvritti.domain.access import Device, PairingRequest
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import Family
 from anuvritti.domain.film import CompiledFilm, ConnectiveLine, FilmSpec
+from anuvritti.domain.inbox import FutureMessage, PresentedArtifact, SealLedger
 from anuvritti.domain.lexicon import FamilyLexicon
 from anuvritti.domain.media import MediaObject
 from anuvritti.domain.moment import Moment
@@ -29,6 +31,7 @@ from anuvritti.shared.identity import (
     ChildId,
     DeviceId,
     FamilyId,
+    FutureMessageId,
     MediaId,
     MomentId,
     SparkId,
@@ -134,6 +137,41 @@ class MediaStore(Protocol):
 
 
 @runtime_checkable
+class AudioDurationMeasurer(Protocol):
+    """Measure a recording from its bytes; a handset's timer is never authority."""
+
+    def measure(self, content: bytes, *, mime_type: str) -> Result[float, DomainError]: ...
+
+
+@runtime_checkable
+class FutureInboxStore(Protocol):
+    """The one persistence boundary allowed to make a seal durable.
+
+    Artifact bytes and provenance are arguments to the same operation on purpose. Two
+    independent ``save`` calls would let an application use case create a ledger with no
+    message, or private bytes with no account of what they are.
+    """
+
+    def save(
+        self, message: FutureMessage, artifact: PresentedArtifact
+    ) -> Result[FutureMessage, DomainError]: ...
+
+    def get(self, message_id: FutureMessageId) -> Result[FutureMessage, DomainError]: ...
+
+    def get_artifact(
+        self, message_id: FutureMessageId
+    ) -> Result[PresentedArtifact, DomainError]: ...
+
+    def ledger(self, message_id: FutureMessageId) -> Result[SealLedger, DomainError]: ...
+
+    def list_for_family(
+        self, family_id: FamilyId
+    ) -> Result[Sequence[FutureMessage], DomainError]: ...
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
+
+
+@runtime_checkable
 class IntentEngine(Protocol):
     """PRD 13. A port, not a dependency (ADR-0004).
 
@@ -226,6 +264,36 @@ class FilmCompiler(Protocol):
     """
 
     def compile(self, spec: FilmSpec) -> Result[CompiledFilm, DomainError]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class RenderedFrame:
+    """One held scene made visible, with the source scene still attached."""
+
+    scene_id: str
+    path: Path
+    document_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class RenderedFilm:
+    """The inspectable result of drawing an exported film."""
+
+    path: Path
+    manifest_path: Path
+    frames: tuple[RenderedFrame, ...]
+    duration_seconds: float
+
+
+@runtime_checkable
+class FilmRenderer(Protocol):
+    """Draws a provenance-verified FilmExport folder on an offline render machine.
+
+    The port names folders and pixels, but no browser or codec. Those belong to the
+    replaceable adapter, and therefore never become a dependency of the family server.
+    """
+
+    def render(self, archive: Path, *, destination: Path) -> Result[RenderedFilm, DomainError]: ...
 
 
 @dataclass(frozen=True, slots=True)

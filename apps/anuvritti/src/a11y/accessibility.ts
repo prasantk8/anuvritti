@@ -44,6 +44,33 @@ export const a11yLabels = {
     };
   },
 
+  /** The back of a flipped Spark: the same object, now showing why it was kept. */
+  sparkReverse(params: { title: string }): AccessibilityProps {
+    return {
+      accessible: true,
+      accessibilityLabel: `Why you saved ${params.title}`,
+      accessibilityRole: "summary",
+    };
+  },
+
+  /**
+   * The intent chip, which is a guess and has to sound like one.
+   *
+   * PRD 8.7: a guess the machine is unsure of is phrased as a question, never as a
+   * label. That distinction is carried by a question mark on the screen, and a screen
+   * reader user gets it from nowhere else - so it is built here rather than inline in
+   * the component, where it was, and where nothing named it.
+   */
+  intentChip(params: { intent: string; uncertain: boolean }): AccessibilityProps {
+    return {
+      accessible: true,
+      accessibilityLabel: params.uncertain
+        ? `Something to ${params.intent}? Tap to change.`
+        : `To ${params.intent}. Tap to change.`,
+      accessibilityRole: "button",
+    };
+  },
+
   holdToTalk(params: { isRecording: boolean; elapsedSeconds: number }): AccessibilityProps {
     if (params.isRecording) {
       return {
