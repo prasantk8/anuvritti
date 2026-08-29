@@ -28,7 +28,9 @@ becomes work instead of a note.
 ## Set up
 
 1. Read your task: `python3 scripts/tracker.py brief TASK-ID`. Then read whatever the
-   work needs. Query `tracker.json` (`brief`, `show`, `status`); don't open it whole.
+   work needs. Query `tracker.json` (`brief`, `show`, `status`); don't open it whole — it
+   is 185 KB, and `brief` is 1 KB and tells you more. [CONTEXT.md](CONTEXT.md) is the
+   rest of that discipline, and it is short.
 2. Enter a worktree named after the task (the EnterWorktree tool, name `task-NNN`),
    unless the prompt says to work in the main tree. In the worktree:
    - `ln -s /Users/prashantsingh/Projects/dadaa/.venv .venv` — tests import from `src/`

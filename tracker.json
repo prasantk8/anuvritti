@@ -3849,6 +3849,97 @@
           "changed_files": []
         }
       ]
+    },
+    {
+      "name": "Phase 15: In Public - a site, a laptop that serves it, and two phones",
+      "owner": "Design Lead / Senior Staff Engineer",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "TASK-1501",
+          "role": "Senior Staff Backend Engineer",
+          "description": "The laptop is the server and it has a real name: the existing image behind the existing Caddyfile, a Cloudflare Tunnel (or Tailscale Funnel) to family.memtara.com, real TLS that satisfies iOS ATS, and that URL replacing https://family.anuvritti.internal in all three eas.json profiles. `curl https://family.memtara.com/ready` answered from outside the house, observed and dated in docs/RUNBOOK.md.",
+          "module_path": "deploy",
+          "verification_command": "make check",
+          "dependencies": [
+            "TASK-906"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "runs_on": "the founder's own domain, with DNS pointed at a tunnel",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1502",
+          "role": "Design Lead",
+          "description": "The site exists and it is honest: a static page at memtara.com built from packages/world's emitted tokens rather than a second design system, the product's refusals as its manifesto, and scripts/check-site.ts - a constitution test for the website that fails when the page claims a capability the app does not ship.",
+          "module_path": "site",
+          "verification_command": "npm --prefix site test",
+          "dependencies": [
+            "TASK-712"
+          ],
+          "prd_refs": [
+            "PRD 8",
+            "PRD 47"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1503",
+          "role": "Design Lead",
+          "description": "The experience is embedded and it runs the real code: the flip, hold-to-talk over MediaRecorder driving the app's own src/voice modules, and a rendered film playing. Only seven files in the app import react-native, so the page runs the product's modules rather than a browser imitation of them.",
+          "module_path": "site/experience",
+          "verification_command": "npm --prefix site test",
+          "dependencies": [
+            "TASK-1502"
+          ],
+          "prd_refs": [
+            "PRD 11",
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1504",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "Android on real hardware, free, and downloadable: `expo run:android` on a real phone against the real server, a signed release APK whose keystore is never committed, the APK offered from the site with its sha256, and the Android column of docs/DEVICE.md executed and dated. Half of TASK-907, closed without an account.",
+          "module_path": "apps/anuvritti/android",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-1003",
+            "TASK-1501"
+          ],
+          "prd_refs": [
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "runs_on": "a real Android phone, in a hand",
+          "changed_files": []
+        },
+        {
+          "id": "TASK-1505",
+          "role": "Senior Staff Mobile Engineer",
+          "description": "iOS on the founder's own phone under free provisioning, and the share sheet without an entitlement: document types on the app itself rather than a share extension, the seven-day re-sign written down as a procedure rather than discovered, and items 1 and 3 of docs/DEVICE.md closed on a free account. The other half of TASK-907.",
+          "module_path": "apps/anuvritti/ios",
+          "verification_command": "npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-1003",
+            "TASK-1501"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 8.2"
+          ],
+          "status": "pending",
+          "runs_on": "the founder's own iPhone, re-signed every seven days",
+          "changed_files": []
+        }
+      ]
     }
   ],
   "completed_tasks": [

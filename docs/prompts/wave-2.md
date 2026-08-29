@@ -38,14 +38,17 @@ there**, write down what you observed and the date, and tick the DEVICE.md line 
 Where it cannot, say so plainly. A measurement nobody took, written down as though somebody
 took it, is the exact failure this repository has already made once and now gates against.
 
-One thing to establish early and report loudly, because it decides what a device demo can
-contain: `apps/anuvritti/src/vault/device-vault.ts` asks the keychain for
-`accessGroup: "group.com.anuvritti.app"`, and iOS App Groups are **not available under free
-personal provisioning** — they need a paid Apple Developer Program membership. The
-`expo-sharing` share extension in `app.json` needs the same entitlement. On a free account
-the app installs and runs and the camera works, and the App-Group-scoped keychain and the
-share sheet do not. Find out which account this is before anyone promises a demo, and put
-the answer in your report.
+**Assume a free Apple account.** It is enough, and an earlier draft of this page said it
+was not. Free personal-team provisioning signs and installs on a device the founder owns;
+the profile expires every seven days and you re-run `expo run:ios`. What it will not sign
+is the App Group — `device-vault.ts` asks for `accessGroup: "group.com.anuvritti.app"` in
+three places, `token-store.ts` in one — and dropping that option costs nothing but sharing
+the keychain with an extension: the key stays in the Secure Enclave under
+`WHEN_UNLOCKED_THIS_DEVICE_ONLY`. The storage layer already degrades this way on its own
+(`spool-store.ts` and `queue-store.ts` fall back to the app's own directory in a
+try/catch). So the App Group is **conditional, not absent**, and a paid membership buys
+TestFlight — someone else's iPhone — not testing on the founder's. Do not report the
+account type as a blocker; report which path you exercised.
 
 ## Order
 

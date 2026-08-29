@@ -9,10 +9,12 @@
 ## 2. Dynamic Context & Memory
 - Use `Grep`/`Glob` to target specific modules; never scan whole repo.
 - Always run modular tests before and after code changes.
+- `docs/prompts/CONTEXT.md` is how a chat spends its context: one task per chat, read a
+  dependency's *report* rather than its code, and write the state down instead of compacting it.
 
 ## 3. Tracker Protocol
 - One task per chat. Start with `python3 scripts/tracker.py brief TASK-ID` (the task, its deps' files, what
-  it unlocks), then read whatever the work needs. Update with `tracker.py set`; `tracker.json` is 130 KB, so
+  it unlocks), then read whatever the work needs. Update with `tracker.py set`; `tracker.json` is 185 KB, so
   query it (`brief`, `next`, `status`) rather than opening it whole.
 - States: "pending" → "in_progress" → "completed" | "blocked".
 - On completion, run `make check` (all gates, not just the task's own `verification_command`), record
