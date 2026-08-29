@@ -141,13 +141,15 @@ still need that exact key.
 make family-key-rotate VERSION=2 PASSPHRASE=/offline/recovery.passphrase \
   KEY=/offline/family-v2.key BUNDLE=/second-location/family-v2.recovery.json
 make family-key-inventory \
+  PASSPHRASE=/offline/recovery.passphrase \
   BUNDLES='/second-location/family-v1.recovery.json /second-location/family-v2.recovery.json' \
   ANCHORS='/archive/age-4.anchor.json /archive/leaving-home.anchor.json'
 ```
 
 New film and Future Inbox anchors include a content-free key identifier. Inventory reads
-only those anchors and encrypted bundles; it never needs a manifest, ledger, family key or
-passphrase. An `uncovered` line means the corresponding old key bundle is missing and must
+only those anchors and encrypted bundles; it uses the recovery passphrase to authenticate
+each bundle but never needs a manifest, ledger or separate plaintext family key. An
+`uncovered` line means the corresponding old key bundle is missing and must
 be found before rotation can be considered complete. Version-1 anchors created before
 TASK-823 remain cryptographically verifiable, but cannot be inventoried without their
 content-bearing receipt and should be re-anchored during the ceremony.

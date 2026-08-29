@@ -122,17 +122,7 @@ class FamilyAuthenticityKeyCeremony:
             _validate_passphrase(passphrase)
             payload, version = _recovery_bundle(bundle)
             public = _public_fields(payload)
-            kdf = _object(payload.get("kdf"), "kdf")
-            cipher = _object(payload.get("cipher"), "cipher")
-            salt = _decode(kdf.get("salt"), "kdf.salt", 16)
-            nonce = _decode(cipher.get("nonce"), "cipher.nonce", 12)
-            ciphertext = _decode(payload.get("ciphertext"), "ciphertext")
-            key = AESGCM(_derive(passphrase, salt)).decrypt(
-                nonce, ciphertext, _associated_data(public)
-            )
-            validate_family_key(key)
-            if family_key_id(key) != public["key_id"]:
-                raise InvalidTag
+            key = _decrypt_bundle(payload, passphrase)
             _atomic_write(destination, key, mode=0o600)
             return Ok(FamilyKeyVersion(version, public["key_id"], _instant(public["created_at"])))
         except (InvalidTag, OSError, TypeError, ValueError):
@@ -174,14 +164,16 @@ class FamilyAuthenticityKeyCeremony:
             )
 
     def inventory(
-        self, *, bundles: Sequence[Path], anchors: Sequence[Path]
+        self, *, bundles: Sequence[Path], anchors: Sequence[Path], passphrase: bytes
     ) -> Result[AuthenticityInventory, DomainError]:
         try:
+            _validate_passphrase(passphrase)
             versions: dict[str, tuple[int, list[Path], list[Path]]] = {}
             seen_versions: set[int] = set()
             for bundle in bundles:
                 payload, version = _recovery_bundle(bundle)
                 key_id = cast(str, payload["key_id"])
+                _decrypt_bundle(payload, passphrase)
                 if version in seen_versions or key_id in versions:
                     raise ValueError("key versions and identifiers must be unique")
                 seen_versions.add(version)
@@ -208,7 +200,7 @@ class FamilyAuthenticityKeyCeremony:
                 )
             )
             return Ok(AuthenticityInventory(coverage, tuple(sorted(uncovered))))
-        except (KeyError, OSError, TypeError, ValueError) as exc:
+        except (InvalidTag, KeyError, OSError, TypeError, ValueError) as exc:
             return Err(
                 _error(ErrorCode.VALIDATION_FAILED, "the key inventory could not be built", exc)
             )
@@ -233,6 +225,20 @@ def _public_fields(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _associated_data(public: dict[str, Any]) -> bytes:
     return _AAD_CONTEXT + json.dumps(public, sort_keys=True, separators=(",", ":")).encode()
+
+
+def _decrypt_bundle(payload: dict[str, Any], passphrase: bytes) -> bytes:
+    public = _public_fields(payload)
+    kdf = _object(payload.get("kdf"), "kdf")
+    cipher = _object(payload.get("cipher"), "cipher")
+    salt = _decode(kdf.get("salt"), "kdf.salt", 16)
+    nonce = _decode(cipher.get("nonce"), "cipher.nonce", 12)
+    ciphertext = _decode(payload.get("ciphertext"), "ciphertext")
+    key = AESGCM(_derive(passphrase, salt)).decrypt(nonce, ciphertext, _associated_data(public))
+    validate_family_key(key)
+    if family_key_id(key) != public["key_id"]:
+        raise InvalidTag
+    return key
 
 
 def _derive(passphrase: bytes, salt: bytes) -> bytes:
@@ -328,10 +334,15 @@ def main() -> int:
     inventory = commands.add_parser("inventory")
     inventory.add_argument("--bundle", action="append", required=True, type=Path)
     inventory.add_argument("--anchor", action="append", default=[], type=Path)
+    inventory.add_argument("--passphrase", required=True, type=Path)
     arguments = parser.parse_args()
     ceremony = FamilyAuthenticityKeyCeremony()
     if arguments.command == "inventory":
-        inventory_result = ceremony.inventory(bundles=arguments.bundle, anchors=arguments.anchor)
+        inventory_result = ceremony.inventory(
+            bundles=arguments.bundle,
+            anchors=arguments.anchor,
+            passphrase=arguments.passphrase.read_bytes(),
+        )
         if isinstance(inventory_result, Err):
             print(inventory_result.error.message)
             return 1

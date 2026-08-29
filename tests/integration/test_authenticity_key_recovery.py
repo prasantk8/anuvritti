@@ -162,7 +162,9 @@ def test_content_free_inventory_maps_each_anchor_to_its_key_version(tmp_path):
         )
     )
 
-    inventory = ceremony.inventory(bundles=bundles, anchors=[film, inbox, unknown]).unwrap()
+    inventory = ceremony.inventory(
+        bundles=bundles, anchors=[film, inbox, unknown], passphrase=PASSPHRASE
+    ).unwrap()
 
     assert inventory.coverage[0].version == 1
     assert inventory.coverage[0].film_anchors == (film,)
@@ -189,8 +191,31 @@ def test_inventory_rejects_duplicate_versions_and_malformed_documents(tmp_path):
     malformed_anchor = tmp_path / "bad.anchor.json"
     malformed_anchor.write_text('{"schema":"anuvritti.render-anchor.v2"}')
 
-    duplicate_result = ceremony.inventory(bundles=[first, duplicate], anchors=[])
-    malformed_result = ceremony.inventory(bundles=[first], anchors=[malformed_anchor])
+    duplicate_result = ceremony.inventory(
+        bundles=[first, duplicate], anchors=[], passphrase=PASSPHRASE
+    )
+    malformed_result = ceremony.inventory(
+        bundles=[first], anchors=[malformed_anchor], passphrase=PASSPHRASE
+    )
 
     assert duplicate_result.unwrap_err().code is ErrorCode.VALIDATION_FAILED
     assert malformed_result.unwrap_err().code is ErrorCode.VALIDATION_FAILED
+
+
+def test_inventory_authenticates_bundle_metadata_before_claiming_coverage(tmp_path):
+    ceremony = FamilyAuthenticityKeyCeremony()
+    bundle = tmp_path / "v1.recovery.json"
+    ceremony.backup(
+        key=KEY,
+        version=1,
+        passphrase=PASSPHRASE,
+        destination=bundle,
+        created_at=NOW,
+    ).unwrap()
+    payload = json.loads(bundle.read_text())
+    payload["key_id"] = "f" * 64
+    bundle.write_text(json.dumps(payload))
+
+    result = ceremony.inventory(bundles=[bundle], anchors=[], passphrase=PASSPHRASE)
+
+    assert result.unwrap_err().code is ErrorCode.VALIDATION_FAILED

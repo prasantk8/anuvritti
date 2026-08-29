@@ -89,8 +89,9 @@ family-key-rotate:
 		--passphrase "$(PASSPHRASE)" --key "$(KEY)" --bundle "$(BUNDLE)"
 
 family-key-inventory:
-	@test -n "$(BUNDLES)" || (echo "usage: make family-key-inventory BUNDLES='/path/v1.recovery.json /path/v2.recovery.json' ANCHORS='/path/film.anchor.json /path/inbox.anchor.json'" && exit 2)
+	@test -n "$(BUNDLES)" -a -n "$(PASSPHRASE)" || (echo "usage: make family-key-inventory PASSPHRASE=/offline/recovery.passphrase BUNDLES='/path/v1.recovery.json /path/v2.recovery.json' ANCHORS='/path/film.anchor.json /path/inbox.anchor.json'" && exit 2)
 	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery inventory \
+		--passphrase "$(PASSPHRASE)" \
 		$(foreach bundle,$(BUNDLES),--bundle "$(bundle)") \
 		$(foreach anchor,$(ANCHORS),--anchor "$(anchor)")
 
