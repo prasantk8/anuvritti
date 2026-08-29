@@ -1,49 +1,34 @@
 /**
- * Where a launch goes, and what a revoked token means (TASK-513).
+ * The first run, and what a revoked token means.
  *
- * The app had a pairing screen that nothing pointed at. Every launch opened Today, and on a
- * phone that had never paired, Today made two calls that came back 401 and rendered "Nothing
- * today. That's normal." — which is a sentence about a family's week, shown to someone who
- * does not yet have a family on this server. There was no route to the one screen that
- * would have fixed it. The screen existed; the graph did not.
+ * Where a launch goes used to be decided here too, by `whereToStart`. It is decided in
+ * `src/session/gate.ts` now, which names a state this file could not: a phone that is
+ * paired but has not yet reached its founding child and first share. The two answers were
+ * written independently for TASK-513 and TASK-713 and said the same thing about two of the
+ * three states; the gate says it about all four, so it is the one that survived.
  *
- * So the decision lives here rather than in a `useEffect` inside a component: it is a
- * decision, it is three lines, and `test/threshold.test.ts` can walk the whole route graph
- * without a simulator. The rule that catches the next one is not this function — it is the
- * reachability test beside it, which fails when any route under `app/` has nothing pointing
- * at it.
+ * What stays here is the shape of the first run, and the single HTTP status that means this
+ * device is not in the family any more.
  */
 
 import type { Failure } from "@anuvritti/client";
 
-/**
- * What this device knows about itself.
- *
- * `unknown` is a real state and not a loading spinner in disguise: reading the keychain is
- * asynchronous, and the frame before it answers must not be Today (a flash of an empty
- * archive) or pairing (a flash of "Start our family" at someone who did, two years ago).
- */
-export type Standing = "unknown" | "paired" | "unpaired";
+/** Pure decisions for the first run: family, child, then one real share. */
 
-/** The whole route graph above the screens: wait, pair, or the app. */
-export type Start =
-  | { readonly kind: "wait" }
-  | { readonly kind: "pair" }
-  | { readonly kind: "home" };
+export interface ThresholdMarker {
+  readonly familyId: string;
+  readonly childName?: string;
+}
 
-export function whereToStart(standing: Standing): Start {
-  switch (standing) {
-    case "unknown":
-      return { kind: "wait" };
-    case "unpaired":
-      return { kind: "pair" };
-    case "paired":
-      return { kind: "home" };
-    default: {
-      const exhaustive: never = standing;
-      return exhaustive;
-    }
-  }
+export type ThresholdStage = "child" | "share";
+
+export function thresholdStage(marker: ThresholdMarker): ThresholdStage {
+  return marker.childName ? "share" : "child";
+}
+
+/** The server issues eight Crockford characters; spacing is presentation, not identity. */
+export function visiblePairingCode(value: string): string {
+  return value.replace(/[^A-Z0-9]/gi, "").toUpperCase().slice(0, 8);
 }
 
 /**
@@ -85,4 +70,3 @@ export function noticingRevocation(
     return response;
   };
 }
-

@@ -6,7 +6,6 @@
     "version": "0.3.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.anuvritti.app",
       "supportsTablet": true,
@@ -15,12 +14,12 @@
       }
     },
     "android": {
-      "package": "com.anuvritti.app",
-      "edgeToEdgeEnabled": true
+      "package": "com.anuvritti.app"
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-asset",
       [
         "expo-audio",
         {

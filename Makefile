@@ -6,7 +6,7 @@ PY := .venv/bin/python
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
 	$(PY) -m playwright install chromium
-	npm --prefix packages/world install --no-package-lock --silent
+	npm ci --silent
 
 # packages/world emits the design language. tests/design refuses to run against a
 # stale dist, so the gate builds it first rather than testing yesterday's interface.

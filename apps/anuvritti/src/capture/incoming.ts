@@ -26,10 +26,19 @@
 export interface SharedPayload {
   readonly value: string;
   readonly shareType: "text" | "url" | "audio" | "image" | "video" | "file";
+  /** The type of `value`. For a shared file this is often `text/plain`, unhelpfully. */
   readonly mimeType?: string;
   /** Present on a resolved payload: the page title, a filename, whatever was learned. */
   readonly originalName?: string | null;
   readonly contentUri?: string | null;
+  /**
+   * The type of the bytes at `contentUri`, which is a different question from `mimeType`
+   * and the one that matters here. Read off expo-sharing@57's installed typings rather than
+   * remembered: `BaseResolvedSharePayload.contentMimeType`.
+   */
+  readonly contentMimeType?: string | null;
+  /** `'image' | 'website' | 'text' | …` on a resolved payload. */
+  readonly contentType?: string | null;
 }
 
 /** What `POST /v1/sparks` wants. The subset a share can fill in. */
@@ -40,6 +49,8 @@ export interface CaptureFromShare {
     readonly text?: string;
     readonly title?: string;
     readonly creator?: string;
+    /** Set once the bytes are in the archive and the Spark can point at them. */
+    readonly media_id?: string;
   };
 }
 
@@ -48,6 +59,8 @@ export interface MediaFromShare {
   readonly uri: string;
   readonly mimeType: string;
   readonly kind: "SCREENSHOT" | "PHOTO";
+  /** What the share sheet called it. Kept as the Spark's title when there is one. */
+  readonly name?: string;
 }
 
 export type Incoming =
@@ -104,17 +117,21 @@ function titleFrom(payload: SharedPayload, url: string | undefined): string | un
 export function readShare(payload: SharedPayload): Incoming {
   const value = payload.value?.trim() ?? "";
 
-  if (payload.shareType === "image" || payload.mimeType?.startsWith("image/")) {
+  if (isImage(payload)) {
     const uri = payload.contentUri ?? value;
     if (!uri) return { ready: false, media: null, reason: "that image had nothing to read" };
     return {
       ready: false,
       media: {
         uri,
-        mimeType: payload.mimeType ?? "image/jpeg",
+        // `contentMimeType` describes the bytes; `mimeType` describes `value`, which for a
+        // resolved file share is frequently `text/plain`. Sending the second is how a
+        // photograph of a child becomes a 415.
+        mimeType: imageTypeOf(payload),
         // A shared screenshot is nearly always of a post, a recipe, a message - something
         // that was on the screen. A photo from the library is nearly always of the child.
         kind: looksLikeAScreenshot(payload) ? "SCREENSHOT" : "PHOTO",
+        name: payload.originalName?.trim() || undefined,
       },
     };
   }
@@ -140,6 +157,41 @@ export function readShare(payload: SharedPayload): Incoming {
   if (value) return { ready: true, capture: { source: { kind: "TEXT", text: value } } };
 
   return { ready: false, media: null, reason: "there was nothing in that share to keep" };
+}
+
+function isImage(payload: SharedPayload): boolean {
+  return (
+    payload.shareType === "image" ||
+    payload.contentType === "image" ||
+    payload.mimeType?.startsWith("image/") === true ||
+    payload.contentMimeType?.startsWith("image/") === true
+  );
+}
+
+function imageTypeOf(payload: SharedPayload): string {
+  const content = payload.contentMimeType?.trim();
+  if (content?.startsWith("image/")) return content;
+  const declared = payload.mimeType?.trim();
+  if (declared?.startsWith("image/")) return declared;
+  return "image/jpeg";
+}
+
+/**
+ * The Spark a shared image becomes, once its bytes are in the archive (TASK-713).
+ *
+ * There is no url, no text and nothing invented. A photograph is the thing itself (PRD
+ * §11); the only words attached are the ones the share sheet already had, which is a
+ * filename and is at least true. The upload happens first and this happens after, which is
+ * why the media id is an argument rather than something this file could know.
+ */
+export function captureForMedia(media: MediaFromShare, mediaId: string): CaptureFromShare {
+  return {
+    source: {
+      kind: media.kind,
+      media_id: mediaId,
+      title: media.name,
+    },
+  };
 }
 
 /**

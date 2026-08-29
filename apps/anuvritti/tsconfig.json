@@ -5,6 +5,11 @@
     "noUncheckedIndexedAccess": true,
     "erasableSyntaxOnly": true,
     "allowImportingTsExtensions": true,
+    // `test/` runs under `node --test`, so the tests import `node:test`, `node:assert` and
+    // `node:fs`. Named rather than left to the automatic scan: under `moduleResolution:
+    // bundler` with expo's `react-native` custom condition, @types/node is on disk and not
+    // otherwise loaded, and every test file then fails to compile.
+    "types": ["node", "react"],
     "paths": {
       "@anuvritti/client": [
         "../../packages/client/src/index.ts"

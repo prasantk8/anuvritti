@@ -226,6 +226,20 @@ export interface VoiceNote {
 export interface Vault {
   readonly recordings: readonly VoiceNote[];
 }
+/** One real source for the annual film; exactly one payload is present. */
+export interface FilmMaterial {
+  readonly kind: "RECORDING" | "SPARK";
+  readonly captured_at: Instant;
+  readonly recording?: VoiceNote;
+  readonly spark?: Spark;
+}
+/** The phone's truthful view of this year's film. Deliberately no scene count, duration, completion, percentage or target. */
+export interface FilmCompilation {
+  readonly child_name: string;
+  readonly year: number;
+  readonly materials: readonly FilmMaterial[];
+  readonly rendered_media_id?: string | null;
+}
 export interface KeepVoiceNote {
   readonly family_id?: string | null;
   readonly author_id?: string | null;
@@ -293,6 +307,7 @@ export const OPERATIONS = {
   listVoiceNotes: { method: "GET", path: "/voice", pathParams: [], queryParams: [], hasBody: false, idempotent: false, open: false },
   getVoiceNote: { method: "GET", path: "/voice/{media_id}", pathParams: ["media_id"], queryParams: [], hasBody: false, idempotent: false, open: false },
   correctTranscript: { method: "POST", path: "/voice/{media_id}/transcript", pathParams: ["media_id"], queryParams: [], hasBody: true, idempotent: false, open: false },
+  compileFilm: { method: "POST", path: "/film/compile", pathParams: [], queryParams: [], hasBody: false, idempotent: false, open: false },
   uploadMedia: { method: "POST", path: "/media", pathParams: [], queryParams: [], hasBody: true, idempotent: false, open: false },
   downloadMedia: { method: "GET", path: "/media/{media_id}", pathParams: ["media_id"], queryParams: [], hasBody: false, idempotent: false, open: false },
   exportFamily: { method: "GET", path: "/families/{family_id}/export", pathParams: ["family_id"], queryParams: [], hasBody: false, idempotent: false, open: false },
@@ -339,6 +354,8 @@ export interface Contract {
   getVoiceNote(mediaId: string, options?: CallOptions): Promise<Result<VoiceNote>>;
   /** The only way to produce a `HUMAN` transcript. Permanent — no later run of a better model overrides it — and it never touches the audio. */
   correctTranscript(mediaId: string, body: CorrectTranscript, options?: CallOptions): Promise<Result<VoiceNote>>;
+  /** Returns the evidence in capture order. `rendered_media_id` is null until the provenance-verified renderer has deposited an MP4 in the family archive; null is an honest not-yet, never a progress state. */
+  compileFilm(options?: CallOptions): Promise<Result<FilmCompilation>>;
   uploadMedia(body: FormData, options?: CallOptions): Promise<Result<Media>>;
   /** Decrypted on the way out and never cached (`Cache-Control: private, no-store`). Media belonging to another family answers `MEDIA_NOT_FOUND` — the same answer an id that never existed gets, so the response cannot be used to discover a stranger's photograph is there. */
   downloadMedia(mediaId: string, options?: CallOptions): Promise<Result<Uint8Array>>;

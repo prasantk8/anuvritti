@@ -30,7 +30,7 @@ export default function Today() {
   const t = useTranslator();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
-  const { anuvritti, justSaved, acknowledge, baseUrl } = useAnuvritti();
+  const { anuvritti, justSaved, acknowledge, media } = useAnuvritti();
 
   const [suggestions, setSuggestions] = useState<readonly Suggestion[]>([]);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
@@ -125,7 +125,7 @@ export default function Today() {
                   : bringingBack.suggestion.spark.id
               )
             }
-            baseUrl={baseUrl}
+            media={media}
           />
 
           <View style={styles.answers}>
@@ -156,6 +156,18 @@ export default function Today() {
         </Pressable>
       </Link>
 
+      <Link href="/pairing-code" asChild>
+        <Pressable accessibilityRole="link" style={styles.toVault}>
+          <Text style={styles.pairPhone}>Pair another phone</Text>
+        </Pressable>
+      </Link>
+
+      <Link href="/film" asChild>
+        <Pressable accessibilityRole="link" style={styles.toVault}>
+          <Text style={styles.toVaultText}>This year's film →</Text>
+        </Pressable>
+      </Link>
+
       <View style={styles.vault}>
         {sparks.map((spark) => (
           <View key={spark.id} style={styles.slot}>
@@ -166,7 +178,7 @@ export default function Today() {
               onFlip={() => setFlipped((current) => (current === spark.id ? null : spark.id))}
               onCorrect={() => correct(spark)}
               sayingIntent={corrections[spark.id] ?? undefined}
-              baseUrl={baseUrl}
+              media={media}
             />
           </View>
         ))}
@@ -206,6 +218,11 @@ function sheet(world: World) {
       fontFamily: world.font.body,
       fontSize: world.type.body,
       color: world.color.indigo,
+    },
+    pairPhone: {
+      fontFamily: world.font.body,
+      fontSize: world.type.fine,
+      color: world.color["ink-faint"],
     },
     bringingBack: { gap: world.space[4] },
     reason: {

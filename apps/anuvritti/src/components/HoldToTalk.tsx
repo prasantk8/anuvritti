@@ -43,7 +43,15 @@ import {
 
 import { a11yLabels } from "../a11y/index.ts";
 import type { World } from "../world.ts";
-import { RESTING, type Recording, announce, elapsed, isLive, step } from "../voice/recording.ts";
+import {
+  RESTING,
+  type Recording,
+  type Signal,
+  announce,
+  elapsed,
+  isLive,
+  step,
+} from "../voice/recording.ts";
 import { WINDOW, clock, push, resting } from "../voice/waveform.ts";
 
 /** Fast enough that the shape moves with the voice. See the note above about the default. */
@@ -96,11 +104,28 @@ export function HoldToTalk({ world, onKept, saying }: HoldToTalkProps) {
   const armingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const styles = sheet(world);
 
+  /**
+   * The machine's current state, readable without waiting for a render.
+   *
+   * `signal` used to close over `state`, which meant two signals raised inside one handler
+   * both saw the state as it was when the component last rendered — the second one
+   * advancing the machine from a position it had already left. That is survivable while
+   * every signal comes from a separate gesture and fatal the moment two of them straddle an
+   * `await`, which is exactly what asking for the microphone does (TASK-713).
+   */
+  const current = useRef<Recording>(RESTING);
+
   // One place that advances the machine, so the effect it asks for is always performed.
   const signal = useCallback(
-    async (kind: "press" | "tick" | "release" | "interrupted" | "settled") => {
+    async (kind: Signal["kind"]) => {
       const at = performance.now();
-      const next = step(state, kind === "settled" ? { kind } : { kind, at });
+      const next = step(
+        current.current,
+        kind === "settled" || kind === "refused"
+          ? ({ kind } as Signal)
+          : ({ kind, at } as Signal)
+      );
+      current.current = next.state;
       setState(next.state);
 
       if (next.effect === "start") {
@@ -118,17 +143,33 @@ export function HoldToTalk({ world, onKept, saying }: HoldToTalkProps) {
         void signal("settled");
       }
     },
-    [onKept, recorder, state]
+    [onKept, recorder]
   );
 
   const press = useCallback(async () => {
     if (allowed === false) return;
+
     if (allowed === null) {
+      // The first press does not start a recording: it puts up the OS microphone dialog,
+      // over the app, and the button the finger was on is now under a system alert. The
+      // machine is told *before* the await, so that the release almost everyone makes
+      // while the sheet is up lands on a machine that knows a press is outstanding and
+      // cancels it. Signalling after the await left first-time users recording (TASK-713).
+      void signal("ask");
       const granted = (await requestRecordingPermissionsAsync()).granted;
       setAllowed(granted);
-      if (!granted) return;
+      if (!granted) {
+        void signal("refused");
+        return;
+      }
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      void recorder.prepareToRecordAsync();
+      // If the finger has lifted, the machine is at rest and this starts nothing.
+      void signal("granted");
+      armingTimer.current = setTimeout(() => void signal("tick"), 0);
+      return;
     }
+
     // Preparation is the slow part, so it overlaps the arming threshold rather than
     // following it. By the time the 200ms elapses the recorder is ready and audio starts
     // on time, which is what makes the gesture feel like a microphone rather than a form.
@@ -147,7 +188,7 @@ export function HoldToTalk({ world, onKept, saying }: HoldToTalkProps) {
 
   useEffect(() => {
     if (!isLive(state)) return;
-    setBars((current) => push(current, meter.metering, WINDOW));
+    setBars((shape) => push(shape, meter.metering, WINDOW));
   }, [meter.metering, state]);
 
   useEffect(() => {

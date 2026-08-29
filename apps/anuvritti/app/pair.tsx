@@ -10,10 +10,12 @@
  */
 
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAnuvritti } from "../src/provider.tsx";
+import { HOME, THRESHOLD } from "../src/session/gate.ts";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
 import { useTranslator } from "../src/useTranslator.ts";
@@ -26,28 +28,44 @@ export default function Pair() {
   const t = useTranslator();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
-  const { anuvritti, paired } = useAnuvritti();
+  const router = useRouter();
+  const { anuvritti, refreshPairing, beginThreshold } = useAnuvritti();
 
   const [mode, setMode] = useState<Mode>("choose");
   const [familyName, setFamilyName] = useState("");
-  const [yourName, setYourName] = useState("");
   const [code, setCode] = useState("");
   const [working, setWorking] = useState(false);
   const [trouble, setTrouble] = useState<string | null>(null);
+
+  /**
+   * The last thing pairing does (TASK-713).
+   *
+   * The token is in the keychain by the time `bootstrap` or `pair` resolves — the session
+   * writes it there and nowhere else — but the app has not read it since launch, so the
+   * gate still believes this phone is unpaired. Asking again *before* navigating is the
+   * whole of it: navigate first and the guard finds an unpaired phone on a home route and
+   * takes it straight back here.
+   */
+  async function arrive() {
+    await refreshPairing();
+    router.replace(HOME);
+  }
 
   async function begin() {
     setWorking(true);
     setTrouble(null);
     const result = await anuvritti.session.bootstrap({
       name: familyName.trim(),
-      owner_display_name: yourName.trim(),
+      owner_display_name: familyName.trim(),
     });
     setWorking(false);
-    if (!result.ok) return setTrouble(explain(result.error, t));
-    // The token is in the keychain, so this device is in the family. Saying so is what
-    // takes this screen off the stack — there is nothing to navigate to, because the
-    // pairing route stops existing (see `app/_layout.tsx`).
-    paired();
+    if (!result.ok) {
+      setTrouble(explain(result.error, t));
+      return;
+    }
+    await beginThreshold(result.value.id);
+    await refreshPairing();
+    router.replace(THRESHOLD);
   }
 
   async function join() {
@@ -55,8 +73,11 @@ export default function Pair() {
     setTrouble(null);
     const result = await anuvritti.session.pair(code, "This phone");
     setWorking(false);
-    if (!result.ok) return setTrouble(explain(result.error, t));
-    paired();
+    if (!result.ok) {
+      setTrouble(explain(result.error, t));
+      return;
+    }
+    await arrive();
   }
 
   return (
@@ -84,16 +105,9 @@ export default function Pair() {
             onChange={setFamilyName}
             placeholder="Our family"
           />
-          <Field
-            world={world}
-            label={t.catalog.pairing.yourNameLabel}
-            value={yourName}
-            onChange={setYourName}
-            placeholder="Papa"
-          />
           <Pressable
             style={[styles.primary, !familyName.trim() && styles.disabled]}
-            disabled={!familyName.trim() || !yourName.trim() || working}
+            disabled={!familyName.trim() || working}
             onPress={begin}
           >
             {working ? (

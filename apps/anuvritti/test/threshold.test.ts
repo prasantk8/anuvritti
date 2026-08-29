@@ -9,8 +9,11 @@
  *
  * So the last suite here is not about a decision at all. It walks `app/` and asserts that
  * every route is reachable, and it is the one that would have failed. It stays useful as
- * the app grows: TASK-715 and TASK-716 each add a screen, and an unreferenced one fails
- * here rather than shipping as a file nobody can get to.
+ * the app grows: threshold and pairing-code are two more screens, and an unreferenced one
+ * fails here rather than shipping as a file nobody can get to.
+ *
+ * Where a launch goes is no longer asked here. `src/session/gate.ts` answers it across all
+ * four states, and `test/boot.test.ts` is where that is proved.
  */
 
 import assert from "node:assert/strict";
@@ -20,26 +23,19 @@ import { describe, it } from "node:test";
 
 import type { Failure } from "@anuvritti/client";
 
-import { noLongerPaired, noticingRevocation, whereToStart } from "../src/model/threshold.ts";
+import {
+  noLongerPaired,
+  noticingRevocation,
+  thresholdStage,
+  visiblePairingCode,
+} from "../src/model/threshold.ts";
 
 const APP = join(import.meta.dirname, "../app");
 const SRC = join(import.meta.dirname, "../src");
-
-describe("where a launch goes", () => {
-  it("waits while the keychain is still being read", () => {
-    // Not Today and not pairing. Both guesses are visible to a parent, and one of them
-    // shows an empty archive to somebody who has years of one.
-    assert.deepEqual(whereToStart("unknown"), { kind: "wait" });
-  });
-
-  it("sends a phone with no token to pairing", () => {
-    assert.deepEqual(whereToStart("unpaired"), { kind: "pair" });
-  });
-
-  it("sends a phone with a token home", () => {
-    assert.deepEqual(whereToStart("paired"), { kind: "home" });
-  });
-});
+const pair = readFileSync(join(APP, "pair.tsx"), "utf8");
+const threshold = readFileSync(join(APP, "threshold.tsx"), "utf8");
+const pairingCode = readFileSync(join(APP, "pairing-code.tsx"), "utf8");
+const layout = readFileSync(join(APP, "_layout.tsx"), "utf8");
 
 describe("a token that stopped working", () => {
   const api = (status: number): Failure => ({
@@ -97,10 +93,10 @@ describe("a token that stopped working", () => {
     const revoked = provider.slice(provider.indexOf("const revoked ="));
     const body = revoked.slice(0, revoked.indexOf("\n  }, ["));
 
-    assert.match(body, /forget\(\)/, "the token goes");
+    assert.match(body, /tokens\.clear\(\)/, "the token goes");
     assert.doesNotMatch(
       body,
-      /queue|clear\(\)|drain\(\)/,
+      /queue|drain\(\)/,
       "the queue is not the credential and must survive being signed out"
     );
   });
@@ -165,7 +161,11 @@ describe("every screen can be got to", () => {
       m[1]?.trim()
     );
 
-    assert.deepEqual(guards, ['start.kind === "home"', 'start.kind === "pair"']);
+    assert.deepEqual(guards, [
+      "showsPairing(gate)",
+      "showsHome(gate)",
+      "showsThreshold(gate)",
+    ]);
   });
 
   it("loads every face it names, mono included", () => {
@@ -184,5 +184,57 @@ describe("every screen can be got to", () => {
     for (const face of new Set(named)) {
       assert.match(loaded, new RegExp(`\\b${face}\\b`), `${face} is named but never loaded`);
     }
+  });
+});
+
+describe("the threshold", () => {
+  it("asks for the child before it asks for a share", () => {
+    assert.equal(thresholdStage({ familyId: "fam-1" }), "child");
+    assert.equal(thresholdStage({ familyId: "fam-1", childName: "Aarav" }), "share");
+  });
+
+  it("creates the child through the documented family route", () => {
+    assert.match(threshold, /api\.addChild\(threshold\.familyId/);
+    assert.match(threshold, /display_name/);
+    assert.match(threshold, /date_of_birth/);
+  });
+
+  it("finishes only after an incoming share has really been saved", () => {
+    assert.match(threshold, /justSaved/);
+    assert.match(threshold, /finishThreshold/);
+  });
+
+  it("is resumed by the root instead of flashing the empty home", () => {
+    assert.match(layout, /showsThreshold/);
+    assert.match(layout, /name="threshold"/);
+  });
+
+  it("has no tour, step count, progress, or rendered age", () => {
+    const code = threshold.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    assert.doesNotMatch(code, /\bstep\b|progress|age_years|\d+\s+of\s+\d+/i);
+  });
+
+  it("family creation proceeds directly to the child", () => {
+    assert.doesNotMatch(pair, /yourName|label="And you\?"/);
+    assert.match(pair, /beginThreshold\(result\.value\.id\)/);
+  });
+});
+
+describe("the pairing sheet", () => {
+  it("shows exactly the eight issued characters", () => {
+    assert.equal(visiblePairingCode("abcd-1234"), "ABCD1234");
+    assert.equal(visiblePairingCode("too-long-code"), "TOOLONGC");
+  });
+
+  it("uses the mono face at year size and expires itself", () => {
+    assert.match(pairingCode, /world\.font\.mono/);
+    assert.match(pairingCode, /world\.type\.year/);
+    assert.match(pairingCode, /expires_in_seconds/);
+    assert.match(pairingCode, /setTimeout/);
+  });
+
+  it("renders no explanatory copy beside a live code", () => {
+    assert.match(pairingCode, /<Text style=\{styles\.code\}>\{code\}<\/Text>/);
+    assert.equal((pairingCode.match(/<Text\b/g) ?? []).length, 1);
   });
 });

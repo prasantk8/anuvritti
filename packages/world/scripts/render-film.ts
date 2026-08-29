@@ -2,8 +2,8 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { join } from "node:path";
 import { emitSceneCss } from "../scenes/css.ts";
 import { renderScene, type SceneInput } from "../scenes/scene.ts";
 import { assertFilmTextSupported, FILM_FONTS, FILM_SCRIPTS } from "../scenes/fonts.ts";
@@ -13,7 +13,11 @@ interface RenderBatch {
   readonly scenes: readonly SceneInput[];
 }
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+// Resolved through Node rather than by path. One root lockfile owns every JavaScript
+// package (TASK-723), so npm hoists @fontsource to the workspace root and
+// `packages/world/node_modules/@fontsource` does not exist - the renderer that assumed it
+// did could not draw a frame after the workspace was locked.
+const require = createRequire(import.meta.url);
 
 function font(family: string, weight: number, bytes: Buffer): string {
   return `@font-face {
@@ -35,7 +39,7 @@ assertFilmTextSupported(
 );
 
 const faces = FILM_FONTS.map((face) => {
-  const bytes = readFileSync(join(root, "node_modules", "@fontsource", face.file));
+  const bytes = readFileSync(require.resolve(`@fontsource/${face.file}`));
   return {
     ...face,
     bytes: bytes.byteLength,

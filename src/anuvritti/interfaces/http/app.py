@@ -745,6 +745,73 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
             return error_response(result.unwrap_err())
         return JSONResponse(content=render_voice(result.unwrap()))
 
+    # -------------------------------------------------------------------- film
+    @app.post("/v1/film/compile")
+    def compile_film(identity: DeviceIdentity = me, box: Container = box_dep) -> Response:
+        """The evidence shelf behind this year's film, in the order it was captured.
+
+        Rendering remains an offline adapter: the family server deliberately does not grow
+        Chromium. This boundary is nevertheless the one place the phone asks for the film,
+        and `rendered_media_id` is where an archived render appears when one exists.
+        """
+        found_family = box.families.get(identity.family_id)
+        if found_family.is_err():
+            return error_response(found_family.unwrap_err())
+        family = found_family.unwrap()
+        if not family.children:
+            return error_response(DomainError(ErrorCode.CHILD_NOT_FOUND, "no child in this family"))
+        child = family.children[0]
+        year = box.clock.today().year
+
+        found_sparks = box.sparks.list_for_family(identity.family_id)
+        if found_sparks.is_err():  # pragma: no cover - SQLite list has no domain failure
+            return error_response(found_sparks.unwrap_err())
+        found_notes = box.voice_notes.list_for_family(identity.family_id)
+        if found_notes.is_err():  # pragma: no cover - SQLite list has no domain failure
+            return error_response(found_notes.unwrap_err())
+
+        materials: list[tuple[Any, dict[str, Any]]] = []
+        for note in found_notes.unwrap():
+            if note.recorded_at.year == year:
+                materials.append(
+                    (
+                        note.recorded_at,
+                        {
+                            "kind": "RECORDING",
+                            "captured_at": note.recorded_at.isoformat(),
+                            "recording": render_voice(note),
+                            "spark": None,
+                        },
+                    )
+                )
+        for spark in found_sparks.unwrap():
+            belongs_to_child = spark.subject_child_id in (None, child.id)
+            if spark.why is not None and belongs_to_child and spark.created_at.year == year:
+                materials.append(
+                    (
+                        spark.created_at,
+                        {
+                            "kind": "SPARK",
+                            "captured_at": spark.created_at.isoformat(),
+                            "recording": None,
+                            "spark": render_spark(
+                                spark,
+                                now=box.clock.now(),
+                                voice=_voice_behind(box, spark.why.voice_media_id),
+                            ),
+                        },
+                    )
+                )
+        materials.sort(key=lambda item: item[0])
+        return JSONResponse(
+            content={
+                "child_name": child.display_name,
+                "year": year,
+                "materials": [material for _, material in materials],
+                "rendered_media_id": None,
+            }
+        )
+
     # ------------------------------------------------------------------- media
     @app.post("/v1/media", status_code=201)
     async def upload_media(
