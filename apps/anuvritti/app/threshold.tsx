@@ -8,10 +8,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { thresholdStage } from "../src/model/threshold.ts";
 import { useAnuvritti } from "../src/provider.tsx";
 import { HOME } from "../src/session/gate.ts";
+import { useTranslator } from "../src/useTranslator.ts";
 import { useWorld } from "../src/useWorld.ts";
 import type { World } from "../src/world.ts";
 
 export default function Threshold() {
+  const t = useTranslator();
   const world = useWorld();
   const styles = sheet(world);
   const insets = useSafeAreaInsets();
@@ -66,11 +68,11 @@ export default function Threshold() {
     >
       {stage === "child" ? (
         <View style={styles.form}>
-          <Text style={styles.question}>And who is this for?</Text>
+          <Text style={styles.question}>{t.catalog.threshold.whoIsThisFor}</Text>
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="Their name"
+            placeholder={t.catalog.threshold.theirNameLabel}
             placeholderTextColor={world.color["ink-faint"]}
             autoCapitalize="words"
             style={styles.input}
@@ -78,7 +80,7 @@ export default function Threshold() {
           <TextInput
             value={birthday}
             onChangeText={setBirthday}
-            placeholder="Birthday · YYYY-MM-DD"
+            placeholder={t.catalog.threshold.birthdayLabel}
             placeholderTextColor={world.color["ink-faint"]}
             keyboardType="numbers-and-punctuation"
             style={[styles.input, styles.date]}
@@ -92,7 +94,7 @@ export default function Threshold() {
             {working ? (
               <ActivityIndicator color={world.color.surface} />
             ) : (
-              <Text style={styles.keepText}>This is who it's for</Text>
+              <Text style={styles.keepText}>{t.catalog.threshold.thisIsWhoItsFor}</Text>
             )}
           </Pressable>
           {trouble ? <Text style={styles.trouble}>{trouble}</Text> : null}
@@ -100,7 +102,7 @@ export default function Threshold() {
       ) : (
         <View style={styles.firstShare}>
           <Text style={styles.name}>{threshold.childName}</Text>
-          <Text style={styles.invitation}>Share the first thing you want to keep.</Text>
+          <Text style={styles.invitation}>{t.catalog.threshold.shareTheFirstThing}</Text>
         </View>
       )}
     </View>

@@ -158,13 +158,13 @@ export default function Today() {
 
       <Link href="/pairing-code" asChild>
         <Pressable accessibilityRole="link" style={styles.toVault}>
-          <Text style={styles.pairPhone}>Pair another phone</Text>
+          <Text style={styles.pairPhone}>{t.catalog.today.pairAnotherPhone}</Text>
         </Pressable>
       </Link>
 
       <Link href="/film" asChild>
         <Pressable accessibilityRole="link" style={styles.toVault}>
-          <Text style={styles.toVaultText}>This year's film →</Text>
+          <Text style={styles.toVaultText}>{t.catalog.today.thisYearsFilm}</Text>
         </Pressable>
       </Link>
 
@@ -198,7 +198,10 @@ function sheet(world: World) {
     screen: { flex: 1, backgroundColor: world.color.ground },
     content: { paddingHorizontal: world.space[4], paddingBottom: world.space[9], gap: world.space[6] },
     saved: {
-      backgroundColor: world.color["saffron-wash"],
+      // Indigo, not saffron. `packages/world/src/color.ts` rations saffron to one meaning
+      // in the entire product - a person's voice - and a capture confirmation is the
+      // application speaking, which is exactly what indigo is for.
+      backgroundColor: world.color["indigo-wash"],
       borderRadius: world.radius.cut,
       padding: world.space[4],
       gap: world.space[1],
@@ -206,7 +209,7 @@ function sheet(world: World) {
     savedWord: {
       fontFamily: world.font.display,
       fontSize: world.type.chapter,
-      color: world.color.saffron,
+      color: world.color.indigo,
     },
     savedWhat: {
       fontFamily: world.font.body,

@@ -32,6 +32,7 @@ import { INTENT_SAID, intentOf, isUncertain, savedSentence } from "@anuvritti/cl
 
 import { a11yLabels } from "../a11y/index.ts";
 import type { MediaSource } from "../media.ts";
+import { SAID } from "../said.ts";
 import { whyFrom } from "../voice/playback.ts";
 import type { World } from "../world.ts";
 import { VoiceNote } from "./VoiceNote.tsx";
@@ -75,7 +76,7 @@ export function Spark({
       // Reanimated turns the object over; a screen reader needs to be told, because a
       // rotation is not an event it can observe.
       AccessibilityInfo.announceForAccessibility(
-        nowFlipped ? "Turned over. Why you saved this." : "Turned back. What you saved."
+        nowFlipped ? SAID.spark.turnedOver : SAID.spark.turnedBack
       );
     },
     []
@@ -185,7 +186,7 @@ export function Spark({
         ) : (
           // Not an error and not a prompt to complete anything. PRD §12 says the why is
           // always skippable, so its absence is a fact stated plainly and left alone.
-          <Text style={styles.noWhy}>You didn't say why. That's fine.</Text>
+          <Text style={styles.noWhy}>{SAID.spark.noWhy}</Text>
         )}
       </Animated.View>
     </Pressable>

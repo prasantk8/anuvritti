@@ -14,6 +14,15 @@ export interface StringCatalog {
     sayOutLoud: string;
     nothingHereYet: string;
     saved: string;
+    pairAnotherPhone: string;
+    thisYearsFilm: string;
+  };
+  threshold: {
+    whoIsThisFor: string;
+    theirNameLabel: string;
+    birthdayLabel: string;
+    thisIsWhoItsFor: string;
+    shareTheFirstThing: string;
   };
   voice: {
     holdToRecord: string;
@@ -40,6 +49,8 @@ export interface StringCatalog {
     startFamily: string;
     joinWithCode: string;
     familyNameLabel: string;
+    familyNamePlaceholder: string;
+    codePlaceholder: string;
     yourNameLabel: string;
     begin: string;
     codeLabel: string;
@@ -73,6 +84,15 @@ export const EN_CATALOG: StringCatalog = {
     sayOutLoud: "Say something out loud →",
     nothingHereYet: "Nothing here yet. Share something to this app and it will be.",
     saved: "Saved.",
+    pairAnotherPhone: "Pair another phone",
+    thisYearsFilm: "This year's film \u2192",
+  },
+  threshold: {
+    whoIsThisFor: "And who is this for?",
+    theirNameLabel: "Their name",
+    birthdayLabel: "Birthday \u00b7 YYYY-MM-DD",
+    thisIsWhoItsFor: "This is who it's for",
+    shareTheFirstThing: "Share the first thing you want to keep.",
   },
   voice: {
     holdToRecord: "Hold to speak",
@@ -99,6 +119,8 @@ export const EN_CATALOG: StringCatalog = {
     startFamily: "Start our family",
     joinWithCode: "Join with a code",
     familyNameLabel: "What shall we call your family?",
+    familyNamePlaceholder: "Our family",
+    codePlaceholder: "ABCD-1234",
     yourNameLabel: "And you?",
     begin: "Begin",
     codeLabel: "The code on the other phone",
@@ -130,6 +152,15 @@ export const HI_CATALOG: StringCatalog = {
     sayOutLoud: "कुछ बोलकर दर्ज करें →",
     nothingHereYet: "यहाँ अभी कुछ नहीं है। कुछ साझा करें और यह यहाँ दिखाई देगा।",
     saved: "सहेजा गया।",
+    pairAnotherPhone: "\u0926\u0942\u0938\u0930\u093e \u092b\u093c\u094b\u0928 \u091c\u094b\u0921\u093c\u0947\u0902",
+    thisYearsFilm: "\u0907\u0938 \u0938\u093e\u0932 \u0915\u0940 \u092b\u093c\u093f\u0932\u094d\u092e \u2192",
+  },
+  threshold: {
+    whoIsThisFor: "\u0914\u0930 \u092f\u0939 \u0915\u093f\u0938\u0915\u0947 \u0932\u093f\u090f \u0939\u0948?",
+    theirNameLabel: "\u0909\u0928\u0915\u093e \u0928\u093e\u092e",
+    birthdayLabel: "\u091c\u0928\u094d\u092e\u0926\u093f\u0928 \u00b7 YYYY-MM-DD",
+    thisIsWhoItsFor: "\u092f\u0939 \u0909\u0928\u094d\u0939\u0940\u0902 \u0915\u0947 \u0932\u093f\u090f \u0939\u0948",
+    shareTheFirstThing: "\u092a\u0939\u0932\u0940 \u0935\u0939 \u091a\u0940\u095b \u0938\u093e\u091d\u093e \u0915\u0930\u0947\u0902 \u091c\u094b \u0906\u092a \u0938\u0902\u092d\u093e\u0932\u0928\u093e \u091a\u093e\u0939\u0924\u0947 \u0939\u0948\u0902\u0964",
   },
   voice: {
     holdToRecord: "बोलने के लिए दबाकर रखें",
@@ -156,6 +187,8 @@ export const HI_CATALOG: StringCatalog = {
     startFamily: "हमारा परिवार शुरू करें",
     joinWithCode: "कोड के साथ जुड़ें",
     familyNameLabel: "हम आपके परिवार को क्या नाम दें?",
+    familyNamePlaceholder: "\u0939\u092e\u093e\u0930\u093e \u092a\u0930\u093f\u0935\u093e\u0930",
+    codePlaceholder: "ABCD-1234",
     yourNameLabel: "और आपका नाम?",
     begin: "शुरू करें",
     codeLabel: "दूसरे फ़ोन पर दिख रहा कोड",
@@ -187,6 +220,15 @@ export const ES_CATALOG: StringCatalog = {
     sayOutLoud: "Di algo en voz alta →",
     nothingHereYet: "Nada por aquí todavía. Comparte algo y aparecerá aquí.",
     saved: "Guardado.",
+    pairAnotherPhone: "Vincular otro tel\u00e9fono",
+    thisYearsFilm: "La pel\u00edcula de este a\u00f1o \u2192",
+  },
+  threshold: {
+    whoIsThisFor: "\u00bfY para qui\u00e9n es esto?",
+    theirNameLabel: "Su nombre",
+    birthdayLabel: "Cumplea\u00f1os \u00b7 AAAA-MM-DD",
+    thisIsWhoItsFor: "Es para esta persona",
+    shareTheFirstThing: "Comparte lo primero que quieras guardar.",
   },
   voice: {
     holdToRecord: "Mantén presionado para hablar",
@@ -213,6 +255,8 @@ export const ES_CATALOG: StringCatalog = {
     startFamily: "Comenzar nuestra familia",
     joinWithCode: "Unirse con un código",
     familyNameLabel: "¿Cómo llamaremos a tu familia?",
+    familyNamePlaceholder: "Nuestra familia",
+    codePlaceholder: "ABCD-1234",
     yourNameLabel: "¿Y tú?",
     begin: "Comenzar",
     codeLabel: "El código en el otro teléfono",

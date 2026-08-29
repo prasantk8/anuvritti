@@ -103,7 +103,7 @@ export default function Pair() {
             label={t.catalog.pairing.familyNameLabel}
             value={familyName}
             onChange={setFamilyName}
-            placeholder="Our family"
+            placeholder={t.catalog.pairing.familyNamePlaceholder}
           />
           <Pressable
             style={[styles.primary, !familyName.trim() && styles.disabled]}
@@ -126,7 +126,7 @@ export default function Pair() {
             label={t.catalog.pairing.codeLabel}
             value={code}
             onChange={setCode}
-            placeholder="ABCD-1234"
+            placeholder={t.catalog.pairing.codePlaceholder}
             mono
           />
           <Pressable

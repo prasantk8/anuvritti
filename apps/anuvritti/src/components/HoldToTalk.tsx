@@ -216,7 +216,10 @@ export function HoldToTalk({ world, onKept, saying }: HoldToTalkProps) {
               styles.bar,
               {
                 height: `${height * 100}%`,
-                backgroundColor: live ? world.color["indigo"] : world.color["thread"],
+                // Saffron while it is live. The token's own stated meaning names this exact
+                // bar - "a person's voice: a recorded why, a Little Thing, a waveform" - and
+                // indigo is the colour of marks the application made, not of someone speaking.
+                backgroundColor: live ? world.color.saffron : world.color["thread"],
               },
             ]}
           />

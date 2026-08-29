@@ -29,6 +29,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import type { VoiceNote as Note } from "@anuvritti/client";
 
 import type { MediaSource } from "../media.ts";
+import { SAID } from "../said.ts";
 import { describe, lengthOf, whatToShow } from "../voice/playback.ts";
 import { FLOOR_HEIGHT, summarise } from "../voice/waveform.ts";
 import type { World } from "../world.ts";
@@ -71,7 +72,7 @@ export function VoiceNote({ note, world, source, shape }: VoiceNoteProps) {
         onPress={toggle}
         accessibilityRole="button"
         accessibilityLabel={describe(shown)}
-        accessibilityHint={status.playing ? "Pause" : "Play"}
+        accessibilityHint={status.playing ? SAID.voice.pause : SAID.voice.play}
         style={styles.player}
       >
         <View style={styles.glyph}>
@@ -89,7 +90,7 @@ export function VoiceNote({ note, world, source, shape }: VoiceNoteProps) {
                   // Played bars are inked; the rest are thread. A progress *bar* under a
                   // waveform would be two things saying the same thing.
                   backgroundColor:
-                    index / BARS <= played ? world.color["indigo"] : world.color["thread"],
+                    index / BARS <= played ? world.color.saffron : world.color["thread"],
                 },
               ]}
             />
@@ -134,9 +135,9 @@ function sheet(world: World) {
       borderRadius: world.radius.round,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: world.color["indigo-wash"],
+      backgroundColor: world.color["saffron-wash"],
     },
-    glyphText: { fontSize: world.type.fine, color: world.color["indigo"] },
+    glyphText: { fontSize: world.type.fine, color: world.color.saffron },
     wave: { flex: 1, flexDirection: "row", alignItems: "center", gap: 2, height: 32 },
     bar: { flex: 1, borderRadius: world.radius.round, minHeight: 3 },
     length: {
