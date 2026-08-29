@@ -38,11 +38,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from anuvritti.application.ports import (
     FamilyRepository,
     FilmCompiler,
+    LittleThingRepository,
     MediaStore,
     MomentRepository,
     Narrator,
@@ -69,6 +70,7 @@ from anuvritti.domain.film import (
     SceneVoice,
 )
 from anuvritti.domain.moment import Moment
+from anuvritti.domain.presence import LittleThing
 from anuvritti.domain.spark import Spark
 from anuvritti.domain.voice import VoiceNote
 from anuvritti.shared.errors import DomainError, ErrorCode
@@ -86,7 +88,14 @@ CLOSING_SECONDS = 4.0
 
 #: `CLOSING_LINE` is re-exported from the domain, where it sits next to the types that make it
 #: true. It is not a slogan: `FilmScene` refuses to hold a scene that would make it false.
-__all__ = ["CLOSING_LINE", "CompileFilmUseCase", "ComposeFilmCommand", "ComposeFilmUseCase"]
+__all__ = [
+    "CLOSING_LINE",
+    "CompileFilmUseCase",
+    "ComposeFilmCommand",
+    "ComposeFilmUseCase",
+    "TheYearCommand",
+    "TheYearUseCase",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +114,8 @@ class ComposeFilmCommand:
     until: date | None = None
     target_seconds: float = DEFAULT_TARGET_SECONDS
     tolerance_seconds: float = DEFAULT_TOLERANCE_SECONDS
+    include_little_things: bool = False
+    film_id: str | None = None
 
 
 class ComposeFilmUseCase:
@@ -120,6 +131,7 @@ class ComposeFilmUseCase:
         media: MediaStore,
         ids: IdGenerator,
         narrator: Narrator | None = None,
+        little_things: LittleThingRepository | None = None,
     ) -> None:
         self._families = families
         self._sparks = sparks
@@ -128,6 +140,7 @@ class ComposeFilmUseCase:
         self._media = media
         self._ids = ids
         self._narrator = narrator
+        self._little_things = little_things
 
     def execute(self, command: ComposeFilmCommand) -> Result[FilmDraft, DomainError]:
         family_result = self._families.get(command.family_id)
@@ -150,7 +163,11 @@ class ComposeFilmUseCase:
         if material.is_err():
             return Err(material.unwrap_err())
         pairs = material.unwrap()
-        if not pairs:
+        little_things = self._little_things_in(command)
+        if little_things.is_err():
+            return Err(little_things.unwrap_err())
+        small = little_things.unwrap()
+        if not pairs and not small:
             return Err(
                 DomainError(
                     ErrorCode.FILM_NOT_COMPILABLE,
@@ -167,14 +184,28 @@ class ComposeFilmUseCase:
                 return Err(built.unwrap_err())
             scenes.append(built.unwrap())
 
-        title = command.title or _title(family, child, pairs)
+        for little_thing in small:
+            built = self._little_thing_scene(little_thing, command.family_id)
+            if built.is_err():
+                return Err(built.unwrap_err())
+            scenes.append(built.unwrap())
+
+        scenes.sort(key=lambda scene: _scene_day(scene, pairs, small))
+
+        evidence_days = [moment.happened_on for moment, _ in pairs]
+        evidence_days.extend(item.created_at.date() for item in small)
+        title = command.title or _title(family, child, evidence_days)
         spec = FilmSpec(
-            id=f"film-{self._ids.new_id()}",
+            id=command.film_id or f"film-{self._ids.new_id()}",
             family_id=command.family_id,
             child_id=command.child_id,
             title=title,
             scenes=(
-                _opening(title, pairs, self._connective(ConnectiveLine.OPENING, command.family_id)),
+                _opening(
+                    title,
+                    evidence_days,
+                    self._connective(ConnectiveLine.OPENING, command.family_id),
+                ),
                 *scenes,
                 _closing(len(scenes), self._connective(ConnectiveLine.CLOSING, command.family_id)),
             ),
@@ -215,6 +246,23 @@ class ComposeFilmUseCase:
 
         pairs.sort(key=lambda pair: (pair[0].happened_on, pair[0].created_at, str(pair[0].id)))
         return Ok(pairs)
+
+    def _little_things_in(
+        self, command: ComposeFilmCommand
+    ) -> Result[list[LittleThing], DomainError]:
+        if not command.include_little_things or self._little_things is None:
+            return Ok([])
+        listed = self._little_things.list_for_family(command.family_id)
+        if listed.is_err():
+            return Err(listed.unwrap_err())
+        things = [
+            item
+            for item in listed.unwrap()
+            if _within(item.created_at.date(), command.since, command.until)
+            and (command.child_id is None or item.subject_child_id == command.child_id)
+        ]
+        things.sort(key=lambda item: (item.created_at, str(item.id)))
+        return Ok(things)
 
     # --------------------------------------------------------------------- scenes
     def _scene(
@@ -279,6 +327,41 @@ class ComposeFilmUseCase:
             # `KeepVoiceNoteUseCase`: a distinct one confirms the recording exists.
             return Err(unmeasured)
         return Ok(note)
+
+    def _little_thing_scene(
+        self, item: LittleThing, family_id: FamilyId
+    ) -> Result[FilmScene, DomainError]:
+        cites = [Citation(CitationKind.LITTLE_THING, str(item.id))]
+        voice = SceneVoice.silent(0.0)
+        if item.audio_media_id is not None:
+            # A Little Thing's recording obeys the same rule as a Moment's: it is used only
+            # when the bytes have a measured VoiceNote beside them.
+            found = self._voice_notes.get(MediaId(item.audio_media_id))
+            if found.is_err() or found.unwrap().family_id != family_id:
+                return Err(
+                    DomainError(
+                        ErrorCode.FILM_NOT_COMPILABLE,
+                        "this little thing has audio that nobody measured, and the film will "
+                        "not guess how long a person spoke",
+                        {"little_thing_id": str(item.id), "media_id": item.audio_media_id},
+                    )
+                )
+            note = found.unwrap()
+            voice = SceneVoice.recorded(
+                media_id=note.media_id, seconds=note.duration_seconds, text=_caption(note)
+            )
+            cites.append(Citation(CitationKind.VOICE_NOTE, str(note.media_id)))
+        return Ok(
+            FilmScene(
+                id=f"little-thing-{item.id}",
+                kind=SceneKind.LITTLE_THING,
+                heading="A little thing",
+                body=item.text or "",
+                voice=voice,
+                cites=tuple(cites),
+                min_seconds=SILENT_HOLD_SECONDS,
+            )
+        )
 
     # ---------------------------------------------------------------- connective
     def _connective(self, line: ConnectiveLine, family_id: FamilyId) -> SceneVoice:
@@ -370,6 +453,52 @@ class CompileFilmUseCase:
         return Ok(FilmPackage(draft=draft, film=compiled.unwrap(), provenance=provenance))
 
 
+@dataclass(frozen=True, slots=True)
+class TheYearCommand:
+    """The one birthday-to-birthday edition belonging to a child."""
+
+    family_id: FamilyId
+    actor_id: MemberId
+    child_id: ChildId
+    birthday_year: int
+
+
+class TheYearUseCase:
+    """Compile one stable annual film from the child's real birthday boundary."""
+
+    def __init__(self, *, families: FamilyRepository, compile_film: CompileFilmUseCase) -> None:
+        self._families = families
+        self._compile_film = compile_film
+
+    def execute(self, command: TheYearCommand) -> Result[FilmPackage, DomainError]:
+        found = self._families.get(command.family_id)
+        if found.is_err():
+            return Err(found.unwrap_err())
+        family = found.unwrap()
+        actor = family.member(command.actor_id)
+        if actor.is_err():
+            return Err(actor.unwrap_err())
+        child = family.child(command.child_id)
+        if child.is_err():
+            return Err(child.unwrap_err())
+        profile = child.unwrap()
+        since = _birthday_in(profile, command.birthday_year)
+        until = _birthday_in(profile, command.birthday_year + 1) - timedelta(days=1)
+        edition = f"{command.birthday_year}-{command.birthday_year + 1}"
+        return self._compile_film.execute(
+            ComposeFilmCommand(
+                family_id=command.family_id,
+                actor_id=command.actor_id,
+                child_id=command.child_id,
+                title=f"{profile.display_name}, {edition}",
+                since=since,
+                until=until,
+                include_little_things=True,
+                film_id=f"the-year-{command.child_id}-{command.birthday_year}",
+            )
+        )
+
+
 # ------------------------------------------------------------------------ helpers
 def _within(day: date, since: date | None, until: date | None) -> bool:
     if since is not None and day < since:
@@ -417,23 +546,21 @@ def _no_such_file(spec: FilmSpec, media_id: str) -> DomainError:
     )
 
 
-def _title(
-    family: Family, child: ChildProfile | None, pairs: Sequence[tuple[Moment, Spark]]
-) -> str:
+def _title(family: Family, child: ChildProfile | None, days: Sequence[date]) -> str:
     """Named after what is actually in it, not after the window that was asked for.
 
     A parent who asks for 2026 in March gets "Aarav, 2026" and not a film that claims to be
     a year when it is eleven weeks.
     """
     who = child.display_name if child is not None else family.name
-    years = sorted({moment.happened_on.year for moment, _ in pairs})
+    years = sorted({day.year for day in days})
     span = str(years[0]) if years[0] == years[-1] else f"{years[0]}-{years[-1]}"
     return f"{who}, {span}"
 
 
-def _opening(title: str, pairs: Sequence[tuple[Moment, Spark]], voice: SceneVoice) -> FilmScene:
-    first = min(moment.happened_on for moment, _ in pairs)
-    last = max(moment.happened_on for moment, _ in pairs)
+def _opening(title: str, days: Sequence[date], voice: SceneVoice) -> FilmScene:
+    first = min(days)
+    last = max(days)
     return FilmScene(
         id="opening",
         kind=SceneKind.OPENING,
@@ -454,3 +581,23 @@ def _closing(scene_count: int, voice: SceneVoice) -> FilmScene:
         voice=voice,
         min_seconds=CLOSING_SECONDS,
     )
+
+
+def _birthday_in(child: ChildProfile, year: int) -> date:
+    """The anniversary used by `age_years`, including its March-1 leap-day rule."""
+    try:
+        return child.date_of_birth.replace(year=year)
+    except ValueError:
+        return date(year, 3, 1)
+
+
+def _scene_day(
+    scene: FilmScene,
+    moments: Sequence[tuple[Moment, Spark]],
+    little_things: Sequence[LittleThing],
+) -> tuple[date, str]:
+    if scene.kind is SceneKind.LITTLE_THING:
+        item = next(item for item in little_things if scene.id == f"little-thing-{item.id}")
+        return item.created_at.date(), scene.id
+    moment = next(moment for moment, _ in moments if scene.id == f"moment-{moment.id}")
+    return moment.happened_on, scene.id
