@@ -42,6 +42,12 @@ PY_SCRIPT_IMPORTS = (
     # argparse parser and a __main__ guard, not an orphan - the walk simply cannot see
     # a Makefile. The font policy it imports comes with it.
     "anuvritti.adapters.film.render",
+    # The same, for the offline verification and key-custody commands: `make film-anchor`,
+    # `make film-verify`, `make inbox-anchor`, `make inbox-verify` and the four
+    # `make family-key-*` targets. `adapters.authenticity` arrives through all three.
+    "anuvritti.adapters.film.verify",
+    "anuvritti.adapters.inbox.authenticity",
+    "anuvritti.adapters.key_recovery",
 )
 
 #: Reached by nothing that runs. Each line is a debt with an owner, not an exemption.
@@ -54,6 +60,9 @@ NOT_IN_SERVICE: dict[str, str] = {
     ),
     "anuvritti.adapters.film.export": "TASK-706 - reachable only through application.film",
     "anuvritti.application.import_": "TASK-1102 - importer has no CLI and no route",
+    "anuvritti.adapters.persistence.inbox": (
+        "TASK-806 - the Future Inbox store is built and the container does not hold it"
+    ),
     "anuvritti.application.retention": "TASK-1108 reopened - crashes on GuardedConnection",
     "anuvritti.adapters.persistence.migrations": "TASK-1101 - container calls schema.migrate()",
     "anuvritti.interfaces.http.limits": "TASK-1105 reopened - install_rate_limiter has no caller",

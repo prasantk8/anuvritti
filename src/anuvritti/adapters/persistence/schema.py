@@ -16,8 +16,6 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Final
 
-SCHEMA_VERSION: Final = 4
-
 _MIGRATIONS: Final[tuple[str, ...]] = (
     """
     CREATE TABLE IF NOT EXISTS family (
@@ -255,7 +253,37 @@ _MIGRATIONS: Final[tuple[str, ...]] = (
         PRIMARY KEY (family_id, field, term, means)
     );
     """,
+    # TASK-819. A separate migration, not an addition to the one above: an archive that has
+    # already run the lexicon migration is at that version and would never be offered a
+    # table appended to it. Every new table is a new version, or it reaches new databases
+    # only - which is the worst kind of migration bug, because a fresh install passes.
+    """
+    -- The ledger is searchable and exportable; the family's words or voice are encrypted
+    -- in the file named by storage_key. The adapter publishes that file before committing
+    -- this row and reconciles both sides on startup, so no half-seal is readable.
+    CREATE TABLE IF NOT EXISTS future_inbox (
+        id           TEXT PRIMARY KEY,
+        family_id    TEXT NOT NULL REFERENCES family(id) ON DELETE CASCADE,
+        child_id     TEXT NOT NULL,
+        sealed_by    TEXT NOT NULL,
+        opening_key  TEXT NOT NULL,
+        care         TEXT NOT NULL,
+        sealed_at    TEXT NOT NULL,
+        ledger_json  TEXT NOT NULL,
+        storage_key  TEXT NOT NULL UNIQUE,
+        encrypted    INTEGER NOT NULL CHECK (encrypted = 1)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_future_inbox_family
+        ON future_inbox(family_id, sealed_at);
+    """,
 )
+
+#: Derived, not declared. `migrate` stamps `user_version` with the index of the last
+#: migration it ran, so a hand-maintained constant that disagrees with the tuple would
+#: report an archive as older or newer than it is. Two branches adding a table each is
+#: exactly how that constant goes stale.
+SCHEMA_VERSION: Final = len(_MIGRATIONS)
 
 
 @dataclass(frozen=True, slots=True)

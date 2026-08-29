@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types types-ts test cov cov-core check run tracker clean world client app design filmkit specimen film film-prepare film-font-review teaser
+.PHONY: install lint format types types-ts test cov cov-core check run tracker clean world client app design filmkit specimen film film-prepare film-font-review teaser film-anchor film-verify inbox-anchor inbox-verify family-key-backup family-key-recover family-key-rotate family-key-inventory
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -64,6 +64,49 @@ film:
 	@test -n "$(ARCHIVE)" || (echo "usage: make film ARCHIVE=/path/to/FilmExport" && exit 2)
 	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.render --archive "$(ARCHIVE)" \
 		--output "$(FILM_OUTPUT)" --still "$(FILM_STILL)" --workspace var/film/work
+
+film-anchor:
+	@test -n "$(MANIFEST)" -a -n "$(KEY)" -a -n "$(ANCHOR)" || (echo "usage: make film-anchor MANIFEST=/path/to/film.manifest.json KEY=/offline/family.key ANCHOR=/path/to/film.anchor.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.verify --manifest "$(MANIFEST)" \
+		--key "$(KEY)" --write-anchor "$(ANCHOR)"
+
+film-verify:
+	@test -n "$(MANIFEST)" || (echo "usage: make film-verify MANIFEST=/path/to/film.manifest.json [FRAMES=/path/to/frames] [ANCHOR=/path/to/film.anchor.json KEY=/offline/family.key]" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.verify --manifest "$(MANIFEST)" \
+		$(if $(FILM),--film "$(FILM)") $(if $(FRAMES),--frames "$(FRAMES)") \
+		$(if $(ANCHOR),--anchor "$(ANCHOR)" --key "$(KEY)")
+
+inbox-anchor:
+	@test -n "$(LEDGER)" -a -n "$(KEY)" -a -n "$(ANCHOR)" || (echo "usage: make inbox-anchor LEDGER=/path/to/message.ledger.json KEY=/offline/family.key ANCHOR=/path/to/message.anchor.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.inbox.authenticity --ledger "$(LEDGER)" \
+		--key "$(KEY)" --write-anchor "$(ANCHOR)"
+
+inbox-verify:
+	@test -n "$(LEDGER)" -a -n "$(KEY)" -a -n "$(ANCHOR)" || (echo "usage: make inbox-verify LEDGER=/path/to/message.ledger.json KEY=/offline/family.key ANCHOR=/path/to/message.anchor.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.inbox.authenticity --ledger "$(LEDGER)" \
+		--key "$(KEY)" --anchor "$(ANCHOR)"
+
+family-key-backup:
+	@test -n "$(KEY)" -a -n "$(VERSION)" -a -n "$(PASSPHRASE)" -a -n "$(BUNDLE)" || (echo "usage: make family-key-backup KEY=/offline/family.key VERSION=1 PASSPHRASE=/offline/recovery.passphrase BUNDLE=/second-location/family-v1.recovery.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery backup --key "$(KEY)" \
+		--version "$(VERSION)" --passphrase "$(PASSPHRASE)" --bundle "$(BUNDLE)"
+
+family-key-recover:
+	@test -n "$(KEY)" -a -n "$(PASSPHRASE)" -a -n "$(BUNDLE)" || (echo "usage: make family-key-recover BUNDLE=/second-location/family-v1.recovery.json PASSPHRASE=/offline/recovery.passphrase KEY=/offline/rehearsal.key" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery recover --bundle "$(BUNDLE)" \
+		--passphrase "$(PASSPHRASE)" --key "$(KEY)"
+
+family-key-rotate:
+	@test -n "$(KEY)" -a -n "$(VERSION)" -a -n "$(PASSPHRASE)" -a -n "$(BUNDLE)" || (echo "usage: make family-key-rotate VERSION=2 PASSPHRASE=/offline/recovery.passphrase KEY=/offline/family-v2.key BUNDLE=/second-location/family-v2.recovery.json" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery rotate --version "$(VERSION)" \
+		--passphrase "$(PASSPHRASE)" --key "$(KEY)" --bundle "$(BUNDLE)"
+
+family-key-inventory:
+	@test -n "$(BUNDLES)" -a -n "$(PASSPHRASE)" || (echo "usage: make family-key-inventory PASSPHRASE=/offline/recovery.passphrase BUNDLES='/path/v1.recovery.json /path/v2.recovery.json' ANCHORS='/path/film.anchor.json /path/inbox.anchor.json'" && exit 2)
+	PYTHONPATH=src $(PY) -m anuvritti.adapters.key_recovery inventory \
+		--passphrase "$(PASSPHRASE)" \
+		$(foreach bundle,$(BUNDLES),--bundle "$(bundle)") \
+		$(foreach anchor,$(ANCHORS),--anchor "$(anchor)")
 
 # The seed is intentionally generated under ignored var/: it demonstrates the destination
 # without putting either demo media or a family's media in source control.

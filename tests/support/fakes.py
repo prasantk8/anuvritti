@@ -15,6 +15,7 @@ from types import TracebackType
 from anuvritti.application.ports import RenderedFilm, RenderedFrame
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import ChildProfile, Family, Member
+from anuvritti.domain.inbox import FutureMessage, PresentedArtifact, SealLedger
 from anuvritti.domain.lexicon import FamilyLexicon
 from anuvritti.domain.media import MediaKind, MediaObject
 from anuvritti.domain.moment import Moment
@@ -26,6 +27,7 @@ from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import (
     ChildId,
     FamilyId,
+    FutureMessageId,
     MediaId,
     MemberId,
     MomentId,
@@ -47,6 +49,63 @@ def build_family(dob: datetime | None = None) -> Family:
         children=(ChildProfile(CHILD, MemberId("mem-son"), "Aarav", born),),
         created_at=datetime(2025, 1, 1, tzinfo=UTC),
     )
+
+
+class InMemoryFutureInboxStore:
+    """A fake with the real port's indivisible save shape."""
+
+    def __init__(self) -> None:
+        self._messages: dict[str, FutureMessage] = {}
+        self._artifacts: dict[str, PresentedArtifact] = {}
+
+    def save(
+        self, message: FutureMessage, artifact: PresentedArtifact
+    ) -> Result[FutureMessage, DomainError]:
+        key = str(message.id)
+        if key in self._messages:
+            return Err(DomainError(ErrorCode.CONFLICT, "a Future Inbox seal is immutable"))
+        verified = message.ledger.entry.verify(artifact)
+        if isinstance(verified, Err):
+            return verified
+        self._messages[key] = message
+        self._artifacts[key] = artifact
+        return Ok(message)
+
+    def get(self, message_id: FutureMessageId) -> Result[FutureMessage, DomainError]:
+        found = self._messages.get(str(message_id))
+        return Ok(found) if found else self._missing(message_id)
+
+    def get_artifact(self, message_id: FutureMessageId) -> Result[PresentedArtifact, DomainError]:
+        found = self._artifacts.get(str(message_id))
+        return Ok(found) if found else self._missing(message_id)
+
+    def ledger(self, message_id: FutureMessageId) -> Result[SealLedger, DomainError]:
+        found = self.get(message_id)
+        if isinstance(found, Err):
+            return found
+        return Ok(found.value.ledger)
+
+    def list_for_family(self, family_id: FamilyId) -> Result[Sequence[FutureMessage], DomainError]:
+        return Ok(
+            [message for message in self._messages.values() if message.family_id == family_id]
+        )
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        doomed = [key for key, message in self._messages.items() if message.family_id == family_id]
+        for key in doomed:
+            del self._messages[key]
+            del self._artifacts[key]
+        return Ok(len(doomed))
+
+    @staticmethod
+    def _missing(message_id: FutureMessageId) -> Err[DomainError]:
+        return Err(
+            DomainError(
+                ErrorCode.MEDIA_NOT_FOUND,
+                "the Future Inbox seal does not exist",
+                {"message_id": str(message_id)},
+            )
+        )
 
 
 class InMemoryFamilyRepository:

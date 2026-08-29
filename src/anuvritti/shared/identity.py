@@ -58,6 +58,10 @@ class RightNowId(_Identifier): ...
 
 
 @dataclass(frozen=True, slots=True)
+class FutureMessageId(_Identifier): ...
+
+
+@dataclass(frozen=True, slots=True)
 class EventId(_Identifier): ...
 
 

@@ -25,6 +25,14 @@ from anuvritti.shared.result import Err, Ok, Result
 
 # Rehearsed rollback scripts for each schema version
 _ROLLBACKS: Final[dict[int, str]] = {
+    # TASK-819. The index goes with the table; a sealed message's ciphertext lives in the
+    # file named by storage_key, and dropping this row makes it unreadable rather than
+    # deleted. That is the correct outcome for a rollback: a schema step that could erase a
+    # parent's sealed words would be a data-loss bug wearing a rehearsal's clothes.
+    5: """
+    DROP INDEX IF EXISTS idx_future_inbox_family;
+    DROP TABLE IF EXISTS future_inbox;
+    """,
     4: """
     DROP TABLE IF EXISTS lexicon_term;
     """,

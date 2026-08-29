@@ -104,6 +104,107 @@ The film lands at `var/film/film.mp4`; `var/film/still.png` is the first frame f
 inspection. The renderer rechecks every media hash and every provenance entry before it
 draws, and the export remains plaintext family material: delete it after the render.
 
+Later, verify the film without restoring that plaintext export or using a network:
+
+```bash
+make film-verify MANIFEST=/path/to/film.manifest.json
+# If the render workspace's frames were retained:
+make film-verify MANIFEST=/path/to/film.manifest.json FRAMES=/path/to/frames
+```
+
+The sibling MP4 is found from the manifest by default; `FILM=/path/to/renamed.mp4` can name
+a copy stored elsewhere. Verification checks its hash and byte count, then independently
+checks the video/audio streams, frame size, and duration with `ffprobe`. When `FRAMES` is
+given, every frame receipt must resolve and match too. A failure names each missing or
+changed artifact; success says explicitly when frame bytes were not available to check.
+
+To distinguish the original receipt from a coordinated replacement of both the MP4 and
+manifest, create a 32-byte family-held key on separate offline storage and anchor the
+manifest after rendering:
+
+```bash
+openssl rand 32 > /offline/family-render.key
+chmod 600 /offline/family-render.key
+make film-anchor MANIFEST=/path/to/film.manifest.json \
+  KEY=/offline/family-render.key ANCHOR=/path/to/film.anchor.json
+make film-verify MANIFEST=/path/to/film.manifest.json \
+  ANCHOR=/path/to/film.anchor.json KEY=/offline/family-render.key
+```
+
+The anchor may travel beside the film; the key must not. The anchor authenticates the exact
+manifest bytes with domain-separated HMAC-SHA-256. Losing the key does not damage the film,
+but it makes authenticity unverifiable; exposing it lets an attacker mint replacement
+anchors, so keep a second encrypted offline copy with the family's backup key custody.
+
+### Authenticate a Future Inbox ledger offline
+
+Export a message's portable provenance ledger as JSON without changing its bytes, then
+authenticate that exact file with the family-held key. The same key may anchor films and
+Future Inbox ledgers: distinct HMAC contexts prevent a film receipt from being substituted
+for an inbox ledger.
+
+```bash
+make inbox-anchor LEDGER=/path/to/message.ledger.json \
+  KEY=/offline/family-render.key ANCHOR=/path/to/message.anchor.json
+```
+
+Keep the ledger and its small anchor together, but keep the key offline and separate. The
+anchor contains the message identifier, ledger digest, and authentication tag—never the
+message, recording, or key. Years later, verification needs neither the application archive
+nor a network:
+
+```bash
+make inbox-verify LEDGER=/path/to/message.ledger.json \
+  KEY=/offline/family-render.key ANCHOR=/path/to/message.anchor.json
+```
+
+Verification deliberately covers the ledger's exact bytes. Reformatting the JSON or
+renaming the ledger therefore requires a new anchor; replacement of both artifact evidence
+and its ordinary digest still cannot reproduce the family-key authentication tag.
+
+### Rehearse family authenticity-key recovery and rotation
+
+The authenticity key is not the archive-encryption key. Keep one working copy offline and
+an encrypted recovery bundle in a genuinely separate place. The passphrase file must not
+travel with either copy. Back up the current key, then immediately rehearse recovery to a
+temporary destination and compare the printed key identifier:
+
+```bash
+make family-key-backup KEY=/offline/family-v1.key VERSION=1 \
+  PASSPHRASE=/offline/recovery.passphrase \
+  BUNDLE=/second-location/family-v1.recovery.json
+make family-key-recover BUNDLE=/second-location/family-v1.recovery.json \
+  PASSPHRASE=/offline/recovery.passphrase KEY=/offline/rehearsal-v1.key
+cmp /offline/family-v1.key /offline/rehearsal-v1.key
+rm /offline/rehearsal-v1.key
+```
+
+The bundle uses scrypt and AES-256-GCM, is written atomically with mode `0600`, and exposes
+only its schema, key version, key identifier and creation time. It contains neither the
+plaintext key nor the passphrase. A successful rehearsal is the evidence that the second
+copy is usable; merely possessing the file is not.
+
+Rotate only by adding a new numbered key and recovery bundle. Never overwrite or discard
+an older key while any anchor names its identifier: old films and Future Inbox ledgers
+still need that exact key.
+
+```bash
+make family-key-rotate VERSION=2 PASSPHRASE=/offline/recovery.passphrase \
+  KEY=/offline/family-v2.key BUNDLE=/second-location/family-v2.recovery.json
+make family-key-inventory \
+  PASSPHRASE=/offline/recovery.passphrase \
+  BUNDLES='/second-location/family-v1.recovery.json /second-location/family-v2.recovery.json' \
+  ANCHORS='/archive/age-4.anchor.json /archive/leaving-home.anchor.json'
+```
+
+New film and Future Inbox anchors include a content-free key identifier. Inventory reads
+only those anchors and encrypted bundles; it uses the recovery passphrase to authenticate
+each bundle but never needs a manifest, ledger or separate plaintext family key. An
+`uncovered` line means the corresponding old key bundle is missing and must
+be found before rotation can be considered complete. Version-1 anchors created before
+TASK-823 remain cryptographically verifiable, but cannot be inventoried without their
+content-bearing receipt and should be re-anchored during the ceremony.
+
 The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse to start**
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.
