@@ -23,9 +23,11 @@ import { ACKNOWLEDGEMENT, ANSWERS, NOTHING_TODAY, whatToBringBack } from "../src
 import { useAnuvritti } from "../src/provider.tsx";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
+import { useTranslator } from "../src/useTranslator.ts";
 
 export default function Today() {
   const world = useWorld();
+  const t = useTranslator();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
   const { anuvritti, justSaved, acknowledge, baseUrl } = useAnuvritti();
@@ -101,7 +103,7 @@ export default function Today() {
       {justSaved ? (
         <Pressable onPress={acknowledge} style={styles.saved} accessibilityRole="button">
           {/* The whole of the capture confirmation. One word, because it is one fact. */}
-          <Text style={styles.savedWord}>Saved.</Text>
+          <Text style={styles.savedWord}>{t.catalog.today.saved}</Text>
           <Text style={styles.savedWhat} numberOfLines={1}>
             {justSaved}
           </Text>
@@ -150,7 +152,7 @@ export default function Today() {
       */}
       <Link href="/vault" asChild>
         <Pressable accessibilityRole="link" style={styles.toVault}>
-          <Text style={styles.toVaultText}>Say something out loud →</Text>
+          <Text style={styles.toVaultText}>{t.catalog.today.sayOutLoud}</Text>
         </Pressable>
       </Link>
 
@@ -171,7 +173,7 @@ export default function Today() {
 
         {sparks.length === 0 ? (
           <Text style={styles.nothing}>
-            Nothing here yet. Share something to this app and it will be.
+            {t.catalog.today.nothingHereYet}
           </Text>
         ) : null}
       </View>

@@ -16,14 +16,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAnuvritti } from "../src/provider.tsx";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
+import { useTranslator } from "../src/useTranslator.ts";
+import type { FamilyTranslator } from "@anuvritti/world";
 
 type Mode = "choose" | "first" | "join";
 
 export default function Pair() {
   const world = useWorld();
+  const t = useTranslator();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
-  const { anuvritti } = useAnuvritti();
+  const { anuvritti, paired } = useAnuvritti();
 
   const [mode, setMode] = useState<Mode>("choose");
   const [familyName, setFamilyName] = useState("");
@@ -40,7 +43,11 @@ export default function Pair() {
       owner_display_name: yourName.trim(),
     });
     setWorking(false);
-    if (!result.ok) setTrouble(explain(result.error));
+    if (!result.ok) return setTrouble(explain(result.error, t));
+    // The token is in the keychain, so this device is in the family. Saying so is what
+    // takes this screen off the stack — there is nothing to navigate to, because the
+    // pairing route stops existing (see `app/_layout.tsx`).
+    paired();
   }
 
   async function join() {
@@ -48,21 +55,22 @@ export default function Pair() {
     setTrouble(null);
     const result = await anuvritti.session.pair(code, "This phone");
     setWorking(false);
-    if (!result.ok) setTrouble(explain(result.error));
+    if (!result.ok) return setTrouble(explain(result.error, t));
+    paired();
   }
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + world.space[8] }]}>
-      <Text style={styles.title}>Anuvritti</Text>
-      <Text style={styles.subtitle}>For the little things you don't want life to erase.</Text>
+      <Text style={styles.title}>{t.catalog.pairing.title}</Text>
+      <Text style={styles.subtitle}>{t.catalog.pairing.tagline}</Text>
 
       {mode === "choose" ? (
         <View style={styles.choices}>
           <Pressable style={styles.primary} onPress={() => setMode("first")}>
-            <Text style={styles.primaryText}>Start our family</Text>
+            <Text style={styles.primaryText}>{t.catalog.pairing.startFamily}</Text>
           </Pressable>
           <Pressable style={styles.secondary} onPress={() => setMode("join")}>
-            <Text style={styles.secondaryText}>Join with a code</Text>
+            <Text style={styles.secondaryText}>{t.catalog.pairing.joinWithCode}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -71,14 +79,14 @@ export default function Pair() {
         <View style={styles.form}>
           <Field
             world={world}
-            label="What shall we call your family?"
+            label={t.catalog.pairing.familyNameLabel}
             value={familyName}
             onChange={setFamilyName}
             placeholder="Our family"
           />
           <Field
             world={world}
-            label="And you?"
+            label={t.catalog.pairing.yourNameLabel}
             value={yourName}
             onChange={setYourName}
             placeholder="Papa"
@@ -91,7 +99,7 @@ export default function Pair() {
             {working ? (
               <ActivityIndicator color={world.color.surface} />
             ) : (
-              <Text style={styles.primaryText}>Begin</Text>
+              <Text style={styles.primaryText}>{t.catalog.pairing.begin}</Text>
             )}
           </Pressable>
         </View>
@@ -101,7 +109,7 @@ export default function Pair() {
         <View style={styles.form}>
           <Field
             world={world}
-            label="The code on the other phone"
+            label={t.catalog.pairing.codeLabel}
             value={code}
             onChange={setCode}
             placeholder="ABCD-1234"
@@ -115,7 +123,7 @@ export default function Pair() {
             {working ? (
               <ActivityIndicator color={world.color.surface} />
             ) : (
-              <Text style={styles.primaryText}>Join</Text>
+              <Text style={styles.primaryText}>{t.catalog.pairing.join}</Text>
             )}
           </Pressable>
         </View>
@@ -133,12 +141,12 @@ export default function Pair() {
  * cannot say which — and should not try. "Ask for a fresh one" is the correct advice for
  * every one of those cases anyway.
  */
-function explain(failure: { kind: string; code?: string }): string {
-  if (failure.kind === "offline") return "Can't reach home right now. Try again in a moment.";
-  if (failure.kind === "timeout") return "That took too long. Try again?";
-  if (failure.code === "PAIRING_FAILED") return "That code didn't work. Ask for a fresh one.";
-  if (failure.code === "CONFLICT") return "This server already belongs to a family.";
-  return "Something went wrong at our end.";
+function explain(failure: { kind: string; code?: string }, t: FamilyTranslator): string {
+  if (failure.kind === "offline") return t.catalog.pairing.offline;
+  if (failure.kind === "timeout") return t.catalog.pairing.timeout;
+  if (failure.code === "PAIRING_FAILED") return t.catalog.pairing.pairingFailed;
+  if (failure.code === "CONFLICT") return t.catalog.pairing.conflict;
+  return t.catalog.pairing.generalError;
 }
 
 function Field({

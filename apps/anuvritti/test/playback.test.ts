@@ -8,6 +8,7 @@
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import type { Transcript, VoiceNote } from "@anuvritti/client";
@@ -48,7 +49,7 @@ describe("the player is not optional", () => {
   it("has no shape that renders words without it", () => {
     // The rule as a type rather than a habit. `player` is non-nullable and `words` is not,
     // so building the wrong screen means editing playback.ts — which is the point.
-    const source = readFileSync(new URL("../src/voice/playback.ts", import.meta.url), "utf8");
+    const source = readFileSync(join(import.meta.dirname, "../src/voice/playback.ts"), "utf8");
     assert.match(source, /readonly player: Player;/);
     assert.match(source, /readonly words: Words \| null;/);
   });

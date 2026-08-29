@@ -27,6 +27,7 @@ from anuvritti.adapters.persistence.schema import GuardedConnection
 from anuvritti.domain.access import Device, PairingRequest
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import Family
+from anuvritti.domain.lexicon import Evidence, FamilyLexicon, LexiconField
 from anuvritti.domain.media import MediaObject
 from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
@@ -240,6 +241,10 @@ class SqliteSparkRepository:
         ).fetchall()
         return Ok([row_to_spark(r) for r in rows])
 
+    def delete(self, spark_id: SparkId) -> Result[int, DomainError]:
+        cursor = self._db.execute("DELETE FROM spark WHERE id = ?", (str(spark_id),))
+        return Ok(cursor.rowcount)
+
     def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
         cursor = self._db.execute("DELETE FROM spark WHERE family_id = ?", (str(family_id),))
         return Ok(cursor.rowcount)
@@ -269,8 +274,8 @@ class SqliteMomentRepository:
                     str(moment.spark_id),
                     moment.happened_on.isoformat(),
                     moment.reflection,
-                    moment.photo_media_id,
-                    moment.audio_media_id,
+                    str(moment.photo_media_id) if moment.photo_media_id else None,
+                    str(moment.audio_media_id) if moment.audio_media_id else None,
                     str(moment.created_by),
                     moment.created_at.isoformat(),
                 ),
@@ -285,9 +290,18 @@ class SqliteMomentRepository:
             )
         return Ok(moment)
 
+    def get_by_spark(self, spark_id: SparkId) -> Result[Moment, DomainError]:
+        row = self._db.execute(
+            "SELECT * FROM moment WHERE spark_id = ?", (str(spark_id),)
+        ).fetchone()
+        if row is None:
+            return Err(DomainError(ErrorCode.MOMENT_NOT_FOUND, f"no moment for spark {spark_id}"))
+        return Ok(row_to_moment(row))
+
     def list_for_family(self, family_id: FamilyId) -> Result[Sequence[Moment], DomainError]:
         rows = self._db.execute(
-            "SELECT * FROM moment WHERE family_id = ? ORDER BY happened_on DESC", (str(family_id),)
+            "SELECT * FROM moment WHERE family_id = ? ORDER BY happened_on DESC, created_at DESC",
+            (str(family_id),),
         ).fetchall()
         return Ok([row_to_moment(r) for r in rows])
 
@@ -296,6 +310,10 @@ class SqliteMomentRepository:
             "SELECT * FROM moment WHERE spark_id = ?", (str(spark_id),)
         ).fetchone()
         return Ok(row_to_moment(row) if row else None)
+
+    def delete(self, moment_id: MomentId) -> Result[int, DomainError]:
+        cursor = self._db.execute("DELETE FROM moment WHERE id = ?", (str(moment_id),))
+        return Ok(cursor.rowcount)
 
     def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
         cursor = self._db.execute("DELETE FROM moment WHERE family_id = ?", (str(family_id),))
@@ -317,7 +335,7 @@ class SqliteLittleThingRepository:
                 str(little_thing.author_id),
                 str(little_thing.subject_child_id) if little_thing.subject_child_id else None,
                 little_thing.text,
-                little_thing.audio_media_id,
+                str(little_thing.audio_media_id) if little_thing.audio_media_id else None,
                 little_thing.created_at.isoformat(),
             ),
         )
@@ -400,6 +418,50 @@ class SqliteVoiceNoteRepository:
 
     def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
         cursor = self._db.execute("DELETE FROM voice_note WHERE family_id = ?", (str(family_id),))
+        return Ok(cursor.rowcount)
+
+
+class SqliteLexiconRepository:
+    """The family's lexicon, in the family's file (TASK-801; PRD 44).
+
+    `save` is a full replacement of the family's rows inside one statement pair, because
+    the aggregate is the whole lexicon: forgetting a word means rows have to *go*, and an
+    upsert-only writer would leave a family unable to delete anything they had taught it.
+    """
+
+    def __init__(self, connection: GuardedConnection) -> None:
+        self._db = connection
+
+    def load(self, family_id: FamilyId) -> Result[FamilyLexicon, DomainError]:
+        rows = self._db.execute(
+            "SELECT field, term, means, times, last_at FROM lexicon_term WHERE family_id = ?",
+            (str(family_id),),
+        ).fetchall()
+        return Ok(
+            FamilyLexicon(
+                family_id,
+                {
+                    (LexiconField(r["field"]), r["term"], r["means"]): Evidence(
+                        times=r["times"], last_at=datetime.fromisoformat(r["last_at"])
+                    )
+                    for r in rows
+                },
+            )
+        )
+
+    def save(self, lexicon: FamilyLexicon) -> Result[FamilyLexicon, DomainError]:
+        family_id = str(lexicon.family_id)
+        self._db.execute("DELETE FROM lexicon_term WHERE family_id = ?", (family_id,))
+        for (field, term, means), evidence in lexicon.entries.items():
+            self._db.execute(
+                "INSERT INTO lexicon_term (family_id, field, term, means, times, last_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (family_id, field.value, term, means, evidence.times, evidence.last_at.isoformat()),
+            )
+        return Ok(lexicon)
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        cursor = self._db.execute("DELETE FROM lexicon_term WHERE family_id = ?", (str(family_id),))
         return Ok(cursor.rowcount)
 
 

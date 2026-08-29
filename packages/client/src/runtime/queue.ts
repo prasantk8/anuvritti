@@ -127,7 +127,10 @@ export function createQueue(config: QueueConfig): CaptureQueue {
 
   async function drain(): Promise<DrainReport> {
     const now = clock.now();
-    const abandoned: DrainReport["abandoned"] = [];
+    // Mutable while it is being built, readonly once it is the report. Declaring the
+    // accumulator with the report's own readonly type made `.push` a type error that
+    // nothing was running a compiler to see.
+    const abandoned: { readonly entry: QueuedCapture; readonly failure: Failure }[] = [];
     let sent = 0;
     let waiting = 0;
 

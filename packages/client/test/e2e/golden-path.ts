@@ -63,7 +63,11 @@ function fileBackedTokens(initial: string | null): TokenStore & { current: strin
  * only way to prove nothing trimmed, normalised or re-encoded them on the way through
  * (PRD §24). A random blob would prove only that something of the right length came back.
  */
-function clip(): Uint8Array {
+// Uint8Array<ArrayBuffer>, not the bare `Uint8Array`: since TypeScript 5.7 that is
+// `Uint8Array<ArrayBufferLike>`, which could be backed by a SharedArrayBuffer and so is
+// not accepted as a request body. These bytes are a plain allocation, and saying so is
+// what lets them be one.
+function clip(): Uint8Array<ArrayBuffer> {
   const header = [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20];
   const body = Array.from({ length: 512 }, (_, index) => (index * 37) % 256);
   return new Uint8Array([...header, ...body]);

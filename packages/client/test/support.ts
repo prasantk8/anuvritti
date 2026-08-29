@@ -20,7 +20,11 @@ export interface Reply {
   readonly status?: number;
   readonly json?: unknown;
   readonly text?: string;
-  readonly bytes?: Uint8Array;
+  // Uint8Array<ArrayBuffer>, not the bare `Uint8Array`: since TypeScript 5.7 that is
+// `Uint8Array<ArrayBufferLike>`, which could be backed by a SharedArrayBuffer and so is
+// not accepted as a request body. These bytes are a plain allocation, and saying so is
+// what lets them be one.
+  readonly bytes?: Uint8Array<ArrayBuffer>;
   /** Throw instead of answering, the way a dead network does. */
   readonly networkError?: string;
   /** Never answer, so the transport's own timeout has to fire. */

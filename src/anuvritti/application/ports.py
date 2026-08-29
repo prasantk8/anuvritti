@@ -17,6 +17,7 @@ from anuvritti.domain.access import Device, PairingRequest
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import Family
 from anuvritti.domain.film import CompiledFilm, ConnectiveLine, FilmSpec
+from anuvritti.domain.lexicon import FamilyLexicon
 from anuvritti.domain.media import MediaObject
 from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
@@ -68,6 +69,11 @@ class SparkRepository(Protocol):
 
     def list_returnable(self, family_id: FamilyId) -> Result[Sequence[Spark], DomainError]: ...
 
+    #: One Spark, erased. PRD 44 gives a family the right to remove a single memory
+    #: without surrendering the archive, so this belongs on the port, not only on the
+    #: adapter that happens to implement it.
+    def delete(self, spark_id: SparkId) -> Result[int, DomainError]: ...
+
     def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
 
 
@@ -80,6 +86,8 @@ class MomentRepository(Protocol):
     def list_for_family(self, family_id: FamilyId) -> Result[Sequence[Moment], DomainError]: ...
 
     def find_by_spark(self, spark_id: SparkId) -> Result[Moment | None, DomainError]: ...
+
+    def delete(self, moment_id: MomentId) -> Result[int, DomainError]: ...
 
     def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
 
@@ -133,7 +141,29 @@ class IntentEngine(Protocol):
     domain or the application layer changing a line.
     """
 
-    def infer(self, source: SourceRef, *, note: str | None = None) -> Inference: ...
+    def infer(
+        self,
+        source: SourceRef,
+        *,
+        note: str | None = None,
+        lexicon: FamilyLexicon | None = None,
+    ) -> Inference: ...
+
+
+@runtime_checkable
+class LexiconRepository(Protocol):
+    """The family's own lexicon, in the family's own archive (TASK-801; PRD 44).
+
+    Keyed by family and only by family. There is no `load_all`, no `list_families` and no
+    call that returns more than one family's words - so there is no seam through which a
+    shared model could be assembled later without someone adding a method here on purpose.
+    """
+
+    def load(self, family_id: FamilyId) -> Result[FamilyLexicon, DomainError]: ...
+
+    def save(self, lexicon: FamilyLexicon) -> Result[FamilyLexicon, DomainError]: ...
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
 
 
 @runtime_checkable

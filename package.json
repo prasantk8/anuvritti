@@ -9,9 +9,14 @@
   "scripts": {
     "world": "npm --prefix packages/world run build",
     "client": "python3 packages/client/codegen/generate.py",
-    "test": "npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test"
+    "test": "npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test",
+    "typecheck": "tsc -p packages/client/tsconfig.json --noEmit && tsc -p packages/world/tsconfig.json --noEmit && tsc -p apps/anuvritti/tsconfig.json --noEmit && tsc -p apps/anuvritti/tsconfig.test.json --noEmit"
   },
   "engines": {
     "node": ">=22.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "typescript": "~5.9.2"
   }
 }

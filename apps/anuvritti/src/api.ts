@@ -12,6 +12,7 @@ import * as Crypto from "expo-crypto";
 import type { CaptureQueue, Clock, QueuedCapture, Random, Result } from "@anuvritti/client";
 import { createClient, createQueue } from "@anuvritti/client";
 
+import { noticingRevocation } from "./model/threshold.ts";
 import { sqliteQueueStore } from "./storage/queue-store.ts";
 import { secureTokenStore } from "./storage/token-store.ts";
 
@@ -41,6 +42,16 @@ export interface Wired {
   readonly queue: CaptureQueue;
 }
 
+export interface Wiring {
+  /**
+   * Called when the server answers 401 — this device's token is no longer good.
+   *
+   * Passed in rather than handled here because the response is a routing decision, and this
+   * file's whole job is to know about `expo-*` so that nothing else has to.
+   */
+  readonly onRevoked?: () => void;
+}
+
 /**
  * Build the client and the queue.
  *
@@ -48,9 +59,18 @@ export interface Wired {
  * exactly the call it would have been — with its own id as the idempotency key, so the
  * replay is safe whatever happened to the first attempt.
  */
-export async function wire(baseUrl: string): Promise<Wired> {
+export async function wire(baseUrl: string, wiring: Wiring = {}): Promise<Wired> {
   const tokens = secureTokenStore();
-  const anuvritti = createClient({ baseUrl, tokens, clock });
+  const anuvritti = createClient({
+    baseUrl,
+    tokens,
+    clock,
+    // The transport is the only place in the app where an HTTP status exists, so it is the
+    // only honest place to notice a revoked token. One wrapper, not an interceptor chain.
+    fetch: wiring.onRevoked
+      ? noticingRevocation(globalThis.fetch, wiring.onRevoked)
+      : undefined,
+  });
   const store = await sqliteQueueStore();
 
   const send = (entry: QueuedCapture): Promise<Result<unknown>> => {

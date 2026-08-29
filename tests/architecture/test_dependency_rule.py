@@ -24,6 +24,8 @@ ALLOWED: dict[str, frozenset[str]] = {
     "adapters": frozenset({"shared", "domain", "application", "config"}),
     "interfaces": frozenset({"shared", "domain", "application", "adapters", "config"}),
     "config": frozenset({"shared"}),
+    "observability": frozenset({"shared", "domain"}),
+    "infrastructure": frozenset({"shared", "domain", "config"}),
 }
 
 #: third-party distributions the domain may never touch

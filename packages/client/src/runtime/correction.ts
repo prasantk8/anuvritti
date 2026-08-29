@@ -30,7 +30,7 @@ import { intentOf } from "./attributed.ts";
  * Every list is a permutation of the full set, so the cycle always terminates back where it
  * started and a parent can never reach a state they cannot leave. The test asserts that.
  */
-export const NEXT_INTENT: Readonly<Record<IntentType, readonly IntentType[]>> = {
+export const NEXT_INTENT: Readonly<Record<IntentType, readonly [IntentType, ...IntentType[]]>> = {
   // A video of something to try is the archetypal capture, and "watch it" is the archetypal
   // near-miss for it.
   DO: ["WATCH", "TEACH", "BUY", "READ", "REMEMBER"],
@@ -55,8 +55,11 @@ export const INTENT_SAID: Readonly<Record<IntentType, string>> = {
 
 /** The next intent one tap away. Wraps, so the cycle is closed. */
 export function nextIntent(current: IntentType): IntentType {
-  const alternatives = NEXT_INTENT[current];
-  return alternatives[0] ?? INTENT_TYPE_VALUES[0];
+  // No fallback, because `NEXT_INTENT` is typed as a non-empty list per intent and the
+  // compiler now knows it. The `?? INTENT_TYPE_VALUES[0]` that used to sit here was
+  // unreachable, and unreachable code on this path would have silently changed a parent's
+  // correction into `DO`.
+  return NEXT_INTENT[current][0];
 }
 
 /**

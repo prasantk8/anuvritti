@@ -112,3 +112,20 @@ class TestQuietPeriodSetting:
     def test_it_may_be_disabled_but_never_negative(self):
         assert load_settings(_env(ANUVRITTI_MIN_DAYS_BEFORE_RETURN="0")).is_ok()
         assert load_settings(_env(ANUVRITTI_MIN_DAYS_BEFORE_RETURN="-1")).is_err()
+
+
+class TestDeploymentSettings:
+    def test_public_url_and_trusted_proxies_default_cleanly(self):
+        settings = load_settings(_env()).unwrap()
+        assert settings.public_url is None
+        assert settings.trusted_proxies == ("127.0.0.1", "::1")
+
+    def test_public_url_and_trusted_proxies_can_be_configured(self):
+        settings = load_settings(
+            _env(
+                ANUVRITTI_PUBLIC_URL="https://family.example.com",
+                ANUVRITTI_TRUSTED_PROXIES="10.0.0.1, 10.0.0.2, 127.0.0.1",
+            )
+        ).unwrap()
+        assert settings.public_url == "https://family.example.com"
+        assert settings.trusted_proxies == ("10.0.0.1", "10.0.0.2", "127.0.0.1")

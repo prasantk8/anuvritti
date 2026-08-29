@@ -65,6 +65,7 @@ from tests.support.fakes import (
     FAMILY,
     PAPA,
     InMemoryFamilyRepository,
+    InMemoryLexiconRepository,
     InMemoryLittleThingRepository,
     InMemoryMediaStore,
     InMemoryMomentRepository,
@@ -429,6 +430,7 @@ class TestPrivacyFailures:
             "right_now": InMemoryRightNowRepository(),
             "voice_notes": InMemoryVoiceNoteRepository(),
             "media": InMemoryMediaStore(),
+            "lexicon": InMemoryLexiconRepository(),
         }
         parts.update(overrides)
         return ExportFamilyDataUseCase(
@@ -444,6 +446,7 @@ class TestPrivacyFailures:
             ("right_now", InMemoryRightNowRepository, "list_for_family"),
             ("voice_notes", InMemoryVoiceNoteRepository, "list_for_family"),
             ("media", InMemoryMediaStore, "list_for_family"),
+            ("lexicon", InMemoryLexiconRepository, "load"),
         ],
     )
     def test_a_partial_export_is_refused_rather_than_shipped(self, part, factory, method):
@@ -459,6 +462,7 @@ class TestPrivacyFailures:
             "right_now": InMemoryRightNowRepository(),
             "voice_notes": InMemoryVoiceNoteRepository(),
             "media": InMemoryMediaStore(),
+            "lexicon": InMemoryLexiconRepository(),
         }
         parts.update(overrides)
         return DeleteFamilyDataUseCase(
@@ -480,6 +484,7 @@ class TestPrivacyFailures:
             ("little_things", InMemoryLittleThingRepository),
             ("right_now", InMemoryRightNowRepository),
             ("voice_notes", InMemoryVoiceNoteRepository),
+            ("lexicon", InMemoryLexiconRepository),
         ],
     )
     def test_a_failed_deletion_rolls_back(self, part, factory):

@@ -1,0 +1,12 @@
+{
+  // The tests run in Node and the app runs in Hermes, so they get separate configs. The one
+  // that claimed to describe both is why `test/` had never typechecked: `types` did not
+  // include Node, and the DOM `URL` it did supply is not the `URL` that `node:fs` accepts.
+  // The test files reach a file by `import.meta.dirname` rather than by URL for the same
+  // reason — a path is a string, and a string has one meaning in both worlds.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["test"]
+}

@@ -28,6 +28,7 @@ Wire shape (always exactly this shape):
 | `MEDIA_KIND_UNSUPPORTED` | 415 | MIME type not on the allow-list |
 | `FILM_NOT_COMPILABLE` | 422 | The film does not add up: no scenes, a scene id used twice, or a scene that would have to be cut off to fit its cap |
 | `CONFLICT` | 409 | Uniqueness or concurrency conflict |
+| `BACKUP_INCOMPLETE` | — | Operational only, never on the wire: a backup or restore is missing a file its manifest promises (`adapters/backup.py`) |
 
 The Return Engine returning **nothing** is a normal, silent, guilt-free outcome (PRD §8.5).
 It is never an error and never produces a message.

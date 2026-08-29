@@ -1,0 +1,97 @@
+name: Device Matrix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  # ---------------------------------------------------------------------- iOS
+  ios-e2e:
+    name: iOS Build & Subsystem Matrix (PRD 48)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          npm --prefix packages/world install
+          npm --prefix packages/client install
+          npm --prefix apps/anuvritti install
+
+      - name: Build design language & client
+        run: |
+          npm --prefix packages/world run build
+          npm --prefix packages/client run build
+
+      - name: Validate Expo iOS configuration
+        run: |
+          cd apps/anuvritti
+          npx expo config --type public
+
+      - name: Run mobile end-to-end subsystem integration suite
+        run: |
+          npm --prefix apps/anuvritti test
+
+  # ------------------------------------------------------------------ Android
+  android-e2e:
+    name: Android Build & Subsystem Matrix (PRD 48)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install dependencies
+        run: |
+          npm --prefix packages/world install
+          npm --prefix packages/client install
+          npm --prefix apps/anuvritti install
+
+      - name: Build design language & client
+        run: |
+          npm --prefix packages/world run build
+          npm --prefix packages/client run build
+
+      - name: Validate Expo Android configuration
+        run: |
+          cd apps/anuvritti
+          npx expo config --type public
+
+      - name: Run mobile end-to-end subsystem integration suite
+        run: |
+          npm --prefix apps/anuvritti test
+
+  # --------------------------------------------------------------------- Gate
+  device-matrix-gate:
+    name: Device Matrix Sign-off
+    runs-on: ubuntu-latest
+    needs: [ios-e2e, android-e2e]
+    if: always()
+    steps:
+      - name: Require both mobile platforms to pass
+        run: |
+          if echo '${{ toJSON(needs) }}' | grep -q '"result": *"\(failure\|cancelled\)"'; then
+            echo "::error::Mobile validation failed on at least one platform"
+            exit 1
+          fi
+          echo "Both iOS and Android mobile pipeline checks passed successfully."

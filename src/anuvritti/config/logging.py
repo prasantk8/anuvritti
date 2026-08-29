@@ -31,10 +31,21 @@ REDACTED_FIELDS: Final[frozenset[str]] = frozenset(
         "title",
         "child_name",
         "display_name",
+        "owner_display_name",
+        "family_name",
+        "author_name",
         "source_url",
         "media_bytes",
         "media_key",
         "authorization",
+        "transcript",
+        "transcript_text",
+        "heard_text",
+        "prompt",
+        "filename",
+        "file_name",
+        "token",
+        "pairing_code",
     }
 )
 

@@ -1,11 +1,11 @@
-"""The Safe Vault (PRD 48 F5).
+"""The Safe Vault (PRD 48 F5, PRD 21, PRD 50).
 
     "Everything captured should remain searchable ... No complex folder management."
 
-So there is no folder tree, no tagging chore and no filing system. Retrieval works off
-what the thing is, who it is for, and what the parent meant to do with it - the three
-things the capture already knows. Visibility is applied before results are returned, so a
-search can never become a way around the permission model (PRD 44, 45).
+Retrieval works off what the thing is, who it is for, and what the parent meant to do with it.
+Search utilizes text queries expanded by the family's private FamilyLexicon synonyms.
+Visibility is applied before results are returned, so a search can never bypass the
+permission model (PRD 44, 45).
 """
 
 from __future__ import annotations
@@ -14,7 +14,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final
 
-from anuvritti.application.ports import FamilyRepository, SparkRepository
+from anuvritti.application.ports import FamilyRepository, LexiconRepository, SparkRepository
+from anuvritti.domain.lexicon import LexiconField
 from anuvritti.domain.spark import Spark
 from anuvritti.domain.values import IntentType, SparkStatus
 from anuvritti.shared.clock import Clock
@@ -44,11 +45,17 @@ class SearchVaultUseCase:
     MAX_LIMIT: Final = 100
 
     def __init__(
-        self, *, families: FamilyRepository, sparks: SparkRepository, clock: Clock
+        self,
+        *,
+        families: FamilyRepository,
+        sparks: SparkRepository,
+        clock: Clock,
+        lexicons: LexiconRepository | None = None,
     ) -> None:
         self._families = families
         self._sparks = sparks
         self._clock = clock
+        self._lexicons = lexicons
 
     def execute(self, query: SearchVaultQuery) -> Result[Sequence[Spark], DomainError]:
         if query.limit < 1:
@@ -66,16 +73,35 @@ class SearchVaultUseCase:
 
         age_years = query.age_years
         if query.use_child_age and query.child_id is not None:
-            # "things for him right now" - resolve the age rather than making the caller do it.
             child_result = family.child(query.child_id)
             if child_result.is_err():
                 return Err(child_result.unwrap_err())
             age_years = child_result.unwrap().age_years(self._clock.today())
 
+        search_intent = query.intent
+        search_text = query.text
+
+        # If text is provided and lexicon repository is available, expand with family synonyms
+        if search_text and self._lexicons and search_intent is None:
+            lex_res = self._lexicons.load(query.family_id)
+            if lex_res.is_ok():
+                lex = lex_res.unwrap()
+                words = search_text.lower().split()
+                for word in words:
+                    val = lex._unambiguous(LexiconField.INTENT, word)
+                    if val:
+                        try:
+                            search_intent = IntentType(val)
+                            if len(words) == 1:
+                                search_text = None
+                            break
+                        except ValueError:
+                            pass
+
         found = self._sparks.search(
             query.family_id,
-            text=query.text,
-            intent=query.intent,
+            text=search_text,
+            intent=search_intent,
             child_id=query.child_id,
             age_years=age_years,
             status=query.status,

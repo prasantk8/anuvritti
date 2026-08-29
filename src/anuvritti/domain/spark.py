@@ -211,6 +211,9 @@ class Spark:
             return Err(DomainError(ErrorCode.VALIDATION_FAILED, "category cannot be blank"))
         return Ok(self._overridden("category", category=self.category.override(cleaned)))
 
+    def change_visibility(self, visibility: Visibility) -> Result[Spark, DomainError]:
+        return Ok(self._evolve(visibility=visibility, at=self.updated_at))
+
     def _overridden(self, field: str, **changes: Any) -> Spark:
         return self._evolve(
             at=self.updated_at,

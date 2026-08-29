@@ -1,0 +1,22 @@
+# Caddy reverse-proxy configuration for Anuvritti single-family server (PRD 44, TASK-906)
+# Automatically provisions TLS via Let's Encrypt / ZeroSSL or internal Tailscale certs.
+
+{$ANUVRITTI_DOMAIN:localhost} {
+    encode zstd gzip
+
+    # Proxy headers for containerized FastAPI
+    reverse_proxy 127.0.0.1:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Strict security headers
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+}

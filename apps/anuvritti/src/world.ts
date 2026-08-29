@@ -101,7 +101,14 @@ export {
 export interface World {
   readonly theme: Theme;
   readonly color: Palette;
-  readonly shadow: (typeof SHADOW)["light"];
+  /**
+   * The elevations for this theme.
+   *
+   * Both themes, not `SHADOW["light"]` — the dark set casts from `#000000` and the light
+   * one from the ink, so naming one of them as the type made the other one not assignable.
+   * The app had never been typechecked, so nothing said so.
+   */
+  readonly shadow: (typeof SHADOW)[Theme];
   readonly space: typeof SPACE;
   readonly type: typeof TYPE_SIZE;
   readonly radius: typeof RADIUS;

@@ -16,6 +16,7 @@ import type { CaptureQueue } from "@anuvritti/client";
 import type { Wired } from "./api.ts";
 import { wire } from "./api.ts";
 import { readShares } from "./capture/incoming.ts";
+import type { Standing } from "./model/threshold.ts";
 
 /** Where the family's server is. One family, one box, configured once at pairing. */
 const DEFAULT_BASE_URL = process.env.EXPO_PUBLIC_ANUVRITTI_URL ?? "http://localhost:8000";
@@ -35,8 +36,18 @@ interface Anuvritti extends Wired {
    * own life is the one number this product must never render. A single date cannot.
    */
   readonly today: string;
+  /**
+   * Whether this device holds a token, once the keychain has answered (TASK-513).
+   *
+   * `unknown` until it has. The root layout waits on it rather than guessing, because both
+   * guesses are wrong in a way a parent sees: Today flashes an empty archive at someone who
+   * has one, and pairing flashes "Start our family" at someone who did it two years ago.
+   */
+  readonly standing: Standing;
   acknowledge(): void;
   drain(): Promise<void>;
+  /** The pairing screen, having obtained a token, saying so. */
+  paired(): void;
 }
 
 const AnuvrittiContext = createContext<Anuvritti | null>(null);
@@ -47,22 +58,48 @@ export function useAnuvritti(): Anuvritti {
   return value;
 }
 
-export function AnuvrittiProvider({ children }: { children: React.ReactNode }) {
+export function AnuvrittiProvider({
+  children,
+  holding = null,
+}: {
+  children: React.ReactNode;
+  /** What is on screen while the client is being built. The ground, not a spinner. */
+  holding?: React.ReactNode;
+}) {
   const [wired, setWired] = useState<Wired | null>(null);
   const [justSaved, setJustSaved] = useState<string | null>(null);
+  const [standing, setStanding] = useState<Standing>("unknown");
   const queueRef = useRef<CaptureQueue | null>(null);
+  const sessionRef = useRef<Wired["anuvritti"]["session"] | null>(null);
+
+  /**
+   * The token stopped working, so this device is not paired any more.
+   *
+   * The keychain entry goes; **the queue stays**. A parent who captured five things on a
+   * plane and lands to a revoked token has five things worth keeping and one credential
+   * worth throwing away, and losing the first to tidy up the second would be the worst bug
+   * in the product. `forget()` clears the token store and nothing else.
+   */
+  const revoked = useCallback(() => {
+    setStanding("unpaired");
+    void sessionRef.current?.forget();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    wire(DEFAULT_BASE_URL).then((ready) => {
+    wire(DEFAULT_BASE_URL, { onRevoked: () => revoked() }).then(async (ready) => {
       if (cancelled) return;
       queueRef.current = ready.queue;
+      sessionRef.current = ready.anuvritti.session;
+      const held = await ready.anuvritti.session.isPaired();
+      if (cancelled) return;
       setWired(ready);
+      setStanding(held ? "paired" : "unpaired");
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [revoked]);
 
   const drain = useCallback(async () => {
     await queueRef.current?.drain();
@@ -122,13 +159,15 @@ export function AnuvrittiProvider({ children }: { children: React.ReactNode }) {
             justSaved,
             baseUrl: DEFAULT_BASE_URL,
             today: new Date().toISOString().slice(0, 10),
+            standing,
             acknowledge: () => setJustSaved(null),
             drain,
+            paired: () => setStanding("paired"),
           }
         : null,
-    [drain, justSaved, wired]
+    [drain, justSaved, standing, wired]
   );
 
-  if (!value) return null;
+  if (!value) return <>{holding}</>;
   return <AnuvrittiContext.Provider value={value}>{children}</AnuvrittiContext.Provider>;
 }

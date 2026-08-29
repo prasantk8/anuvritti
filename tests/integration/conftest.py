@@ -11,6 +11,7 @@ from anuvritti.adapters.persistence.schema import GuardedConnection, connect, mi
 from anuvritti.adapters.persistence.sqlite import (
     SqliteEventPublisher,
     SqliteFamilyRepository,
+    SqliteLexiconRepository,
     SqliteLittleThingRepository,
     SqliteMediaCatalogue,
     SqliteMomentRepository,
@@ -47,6 +48,7 @@ def repos(db: GuardedConnection):
             self.little_things = SqliteLittleThingRepository(db)
             self.right_now = SqliteRightNowRepository(db)
             self.voice_notes = SqliteVoiceNoteRepository(db)
+            self.lexicon = SqliteLexiconRepository(db)
             self.media_catalogue = SqliteMediaCatalogue(db)
             self.events = SqliteEventPublisher(db)
             self.uow = SqliteUnitOfWork(db)

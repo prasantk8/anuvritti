@@ -30,6 +30,10 @@ class ErrorCode(StrEnum):
     MEDIA_KIND_UNSUPPORTED = "MEDIA_KIND_UNSUPPORTED"
     FILM_NOT_COMPILABLE = "FILM_NOT_COMPILABLE"
     CONFLICT = "CONFLICT"
+    #: Operational only. A backup or restore could not find a file the manifest
+    #: promised. It never crosses the HTTP wire - `scripts/backup.sh` and
+    #: `scripts/restore.sh` are the only readers (TASK-905).
+    BACKUP_INCOMPLETE = "BACKUP_INCOMPLETE"
 
 
 _EMPTY: MappingProxyType[str, Any] = MappingProxyType({})

@@ -128,3 +128,23 @@ class Family:
                 )
             )
         return Ok(None)
+
+    def can_administer(self, member_id: MemberId) -> Result[None, DomainError]:
+        """Equal standing check for parents and co-parents (PRD 26, PRD 51)."""
+        member_result = self.member(member_id)
+        if member_result.is_err():
+            return Err(member_result.unwrap_err())
+        if not member_result.unwrap().role.can_administer:
+            return Err(
+                DomainError(
+                    ErrorCode.PERMISSION_DENIED,
+                    f"role {member_result.unwrap().role} does not have parental "
+                    "administrative standing",
+                    {"member_id": str(member_id)},
+                )
+            )
+        return Ok(None)
+
+    def can_compile_film(self, member_id: MemberId) -> Result[None, DomainError]:
+        """Parents and co-parents hold equal authority to compile commemorative films."""
+        return self.can_administer(member_id)

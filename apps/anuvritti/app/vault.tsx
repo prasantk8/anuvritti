@@ -26,9 +26,11 @@ import { useAnuvritti } from "../src/provider.tsx";
 import { keepRecording } from "../src/voice/keep.ts";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
+import { useTranslator } from "../src/useTranslator.ts";
 
 export default function Vault() {
   const world = useWorld();
+  const t = useTranslator();
   const insets = useSafeAreaInsets();
   const styles = sheet(world);
   const { anuvritti, queue, drain, baseUrl, today } = useAnuvritti();
@@ -51,14 +53,14 @@ export default function Vault() {
       if (!result.ok) {
         // The one honest failure on this path: the bytes never left the phone, so saying
         // "saved" would be a lie. The recording is still in the app's own directory.
-        setSaid("Still on your phone. It will go up when there's signal.");
+        setSaid(t.catalog.voice.stillOnPhone);
         return;
       }
-      setSaid(KEPT);
+      setSaid(t.catalog.voice.keptInFilm);
       void drain();
       void load();
     },
-    [anuvritti, drain, load, queue]
+    [anuvritti, drain, load, queue, t]
   );
 
   const shelf = shelve(recordings);
@@ -74,7 +76,7 @@ export default function Vault() {
       <HoldToTalk world={world} onKept={kept} saying={said ?? worthSayingOn(today)} />
 
       {shelf.length === 0 ? (
-        <Text style={styles.empty}>{NOTHING_YET}</Text>
+        <Text style={styles.empty}>{t.catalog.voice.emptyVault}</Text>
       ) : (
         shelf.map((period) => (
           <View key={period.named} style={styles.period}>

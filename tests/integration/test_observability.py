@@ -60,6 +60,11 @@ class TestHealthAndReadiness:
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
+    def test_health_ping_responds_with_pong_for_cron_and_probes(self, client):
+        response = client.get("/health/ping")
+        assert response.status_code == 200
+        assert response.text == "pong\n"
+
     def test_readiness_checks_the_archive_is_reachable(self, client):
         body = client.get("/ready").json()
         assert body["status"] == "ready"

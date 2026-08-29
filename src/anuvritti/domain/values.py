@@ -80,6 +80,7 @@ class SourceKind(StrEnum):
     SCREENSHOT = "SCREENSHOT"
     PHOTO = "PHOTO"
     VOICE = "VOICE"
+    IMPORTED = "IMPORTED"
 
     @property
     def is_media(self) -> bool:
@@ -93,8 +94,16 @@ class MemberRole(StrEnum):
     GRANDPARENT = "GRANDPARENT"
 
     @property
-    def can_capture_for_child(self) -> bool:
+    def is_parent(self) -> bool:
         return self in {MemberRole.PARENT, MemberRole.CO_PARENT}
+
+    @property
+    def can_capture_for_child(self) -> bool:
+        return self.is_parent
+
+    @property
+    def can_administer(self) -> bool:
+        return self.is_parent
 
 
 class Visibility(StrEnum):
@@ -286,6 +295,25 @@ class SourceRef:
         if not media_id.strip():
             raise ValueError("a media source requires a media_id")
         return cls(kind, media_id=media_id, text=text)
+
+    @classmethod
+    def from_imported(
+        cls,
+        *,
+        title: str | None = None,
+        text: str | None = None,
+        creator: str | None = None,
+        media_id: str | None = None,
+        url: str | None = None,
+    ) -> Self:
+        return cls(
+            SourceKind.IMPORTED,
+            title=title,
+            text=text,
+            creator=creator,
+            media_id=media_id,
+            url=url,
+        )
 
     @property
     def retains_meaning_without_network(self) -> bool:

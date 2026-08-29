@@ -190,6 +190,8 @@ class TestSparkRepository:
             if kind is SourceKind.URL
             else SourceRef.from_text("t")
             if kind is SourceKind.TEXT
+            else SourceRef.from_imported(title="t", text="imported")
+            if kind is SourceKind.IMPORTED
             else SourceRef.from_media(kind, media_id="med-1")
         )
         spark = Spark.capture(

@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import type { QueuedCapture } from "../src/index.ts";
+import type { QueueConfig } from "../src/index.ts";
 import {
   BASE_BACKOFF_MS,
   MAX_BACKOFF_MS,
@@ -23,7 +23,11 @@ import { fixedRandom, frozenClock } from "./support.ts";
 
 const REEL = { source: { kind: "URL", url: "https://instagram.com/reel/balloon" } };
 
-function queueWith(send: (entry: QueuedCapture) => Promise<ReturnType<typeof ok>>) {
+// The queue's own port, not `ReturnType<typeof ok>` — which resolves to
+// `Result<unknown, never>` and so contextually typed every `err({ kind: "offline" })`
+// in this file as an error that could not exist. Nothing said so until the repository
+// grew a typechecker.
+function queueWith(send: QueueConfig["send"]) {
   const clock = frozenClock();
   const random = fixedRandom(0.5);
   const store = memoryQueueStore();

@@ -7,6 +7,7 @@
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import type { Suggestion } from "@anuvritti/client";
@@ -100,7 +101,7 @@ describe("the words on the screen", () => {
   it("carries no guilt or urgency anywhere in this module", () => {
     // The same boundary tests/constitution/test_no_guilt.py holds on the server, held here
     // on the strings the phone actually renders.
-    const source = readFileSync(new URL("../src/model/worth.ts", import.meta.url), "utf8");
+    const source = readFileSync(join(import.meta.dirname, "../src/model/worth.ts"), "utf8");
     const strings = [...source.matchAll(/"([^"\\]{4,})"/g)].map((match) => match[1]!);
     const forbidden =
       /\b(overdue|behind|missed|forgot to|streak|don't forget|reminder|still haven't|you should)\b/i;

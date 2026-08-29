@@ -17,9 +17,11 @@ from anuvritti.application.ports import (
     EventPublisher,
     FamilyRepository,
     IntentEngine,
+    LexiconRepository,
     SparkRepository,
     UnitOfWork,
 )
+from anuvritti.domain.lexicon import Correction, FamilyLexicon, LexiconField
 from anuvritti.domain.spark import Spark
 from anuvritti.domain.values import AgeRange, IntentType, SourceRef, Visibility
 from anuvritti.shared.clock import Clock
@@ -51,10 +53,12 @@ class CaptureSparkUseCase:
         clock: Clock,
         ids: IdGenerator,
         uow: UnitOfWork,
+        lexicon: LexiconRepository | None = None,
     ) -> None:
         self._families = families
         self._sparks = sparks
         self._intent_engine = intent_engine
+        self._lexicon = lexicon
         self._events = events
         self._clock = clock
         self._ids = ids
@@ -85,7 +89,13 @@ class CaptureSparkUseCase:
 
         # PRD 48 F2 - lightweight understanding, applied immediately so the Spark is
         # searchable and returnable from the second it exists.
-        spark = spark.apply_inference(self._intent_engine.infer(command.source, note=command.note))
+        spark = spark.apply_inference(
+            self._intent_engine.infer(
+                command.source,
+                note=command.note,
+                lexicon=self._family_lexicon(command.family_id),
+            )
+        )
 
         with self._uow:
             saved = self._sparks.save(spark)
@@ -95,6 +105,18 @@ class CaptureSparkUseCase:
             self._events.publish(spark.pending_events, family_id=command.family_id)
             self._uow.commit()
         return Ok(spark)
+
+    def _family_lexicon(self, family_id: FamilyId) -> FamilyLexicon | None:
+        """This family's words, or nothing at all.
+
+        A lexicon that cannot be read must never stop a capture. PRD 11 gives capture ten
+        seconds and PRD 8.1 puts the person first: an engine guessing in general English is
+        a smaller loss than a share that failed, and the parent can correct it either way.
+        """
+        if self._lexicon is None:
+            return None
+        loaded = self._lexicon.load(family_id)
+        return loaded.unwrap() if loaded.is_ok() else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,6 +172,13 @@ class RecordWhyUseCase:
         return Ok(spark)
 
 
+#: Which corrections are about a word a family chooses. `age_range` is not one of them.
+_LEXICON_FIELDS: dict[str, LexiconField] = {
+    "intent": LexiconField.INTENT,
+    "category": LexiconField.CATEGORY,
+}
+
+
 @dataclass(frozen=True, slots=True)
 class OverrideFieldCommand:
     spark_id: SparkId
@@ -162,10 +191,20 @@ class OverrideFieldUseCase:
 
     OVERRIDABLE = ("intent", "age_range", "category")
 
-    def __init__(self, *, sparks: SparkRepository, events: EventPublisher, uow: UnitOfWork) -> None:
+    def __init__(
+        self,
+        *,
+        sparks: SparkRepository,
+        events: EventPublisher,
+        uow: UnitOfWork,
+        clock: Clock | None = None,
+        lexicon: LexiconRepository | None = None,
+    ) -> None:
         self._sparks = sparks
         self._events = events
         self._uow = uow
+        self._clock = clock
+        self._lexicon = lexicon
 
     def execute(self, command: OverrideFieldCommand) -> Result[Spark, DomainError]:
         found = self._sparks.get(command.spark_id)
@@ -204,9 +243,46 @@ class OverrideFieldUseCase:
             if saved.is_err():
                 self._uow.rollback()
                 return Err(saved.unwrap_err())
+            self._learn_from(spark, command)
             self._events.publish(spark.pending_events, family_id=spark.family_id)
             self._uow.commit()
         return Ok(spark)
+
+    def _learn_from(self, spark: Spark, command: OverrideFieldCommand) -> None:
+        """Count this correction against the family's own words (TASK-801).
+
+        Inside the same transaction as the save, because the two are one fact: the parent
+        said this is a TEACH. A lexicon that could be updated for a correction that then
+        rolled back would be a record of things nobody said.
+
+        Failures here are swallowed on purpose, and this is the one place in the module
+        where that is right. A parent tapping a chip is telling the product it was wrong;
+        answering with an error because the *learning* failed would make the correction
+        itself look rejected. The words are lost, the correction is not.
+        """
+        if self._lexicon is None or self._clock is None:
+            return
+        field = _LEXICON_FIELDS.get(command.field)
+        if field is None:
+            # `age_range` is a number, and a family does not have private numbers.
+            return
+
+        loaded = self._lexicon.load(spark.family_id)
+        if loaded.is_err():
+            return
+        taught = loaded.unwrap().learn(
+            Correction.from_override(
+                family_id=spark.family_id,
+                field=field,
+                corrected_to=str(command.value),
+                at=self._clock.now(),
+                title=spark.title,
+                text=spark.source.text,
+                note=spark.note,
+            )
+        )
+        if taught.is_ok():
+            self._lexicon.save(taught.unwrap())
 
     def _bad_value(self, field: str, expected: str) -> Err[DomainError]:
         return Err(

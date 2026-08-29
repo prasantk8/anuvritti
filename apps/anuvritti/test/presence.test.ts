@@ -8,6 +8,7 @@
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import type { VoiceNote } from "@anuvritti/client";
@@ -74,7 +75,7 @@ describe("the shelf", () => {
   it("cannot describe how far behind anyone is", () => {
     // A badge needs an unread state, a total, or a since-you-last-looked. None of the three
     // exists on this type, so building one means editing vault.ts.
-    const source = readFileSync(new URL("../src/model/vault.ts", import.meta.url), "utf8");
+    const source = readFileSync(join(import.meta.dirname, "../src/model/vault.ts"), "utf8");
     for (const forbidden of ["unread", "unheard", "total", "count", "since", "streak"]) {
       assert.ok(
         !new RegExp(`readonly ${forbidden}`, "i").test(source),
@@ -94,7 +95,7 @@ describe("the shelf", () => {
     // Comments are stripped first. The rule is about what the code does, and a file that
     // explains why it avoids `Date.parse` must not fail for having said the words.
     const source = withoutComments(
-      readFileSync(new URL("../src/model/vault.ts", import.meta.url), "utf8")
+      readFileSync(join(import.meta.dirname, "../src/model/vault.ts"), "utf8")
     );
     for (const forbidden of ["new Date", "Date.parse", "Date.now", "getTime()", "valueOf()"]) {
       assert.ok(!source.includes(forbidden), `vault.ts uses ${forbidden}`);
@@ -169,7 +170,7 @@ describe("what is worth saying", () => {
 describe("nothing here nags", () => {
   it("carries no guilt or urgency anywhere in this module", () => {
     // The same boundary tests/constitution/test_no_guilt.py holds on the server.
-    const source = readFileSync(new URL("../src/model/vault.ts", import.meta.url), "utf8");
+    const source = readFileSync(join(import.meta.dirname, "../src/model/vault.ts"), "utf8");
     const strings = [...source.matchAll(/"([^"\\]{4,})"/g)].map((match) => match[1]!);
     const forbidden =
       /\b(overdue|behind|missed|forgot to|streak|don't forget|reminder|still haven't|you should|keep it up)\b/i;

@@ -1,5 +1,7 @@
 # On a real phone
 
+**Status: NOT RUN. Hardware execution checklist.**
+
 `tests/e2e/test_the_app_against_the_server.py` runs the whole golden path through the real
 generated client against the real server over a real socket. It covers pairing, capture,
 the offline queue, idempotent replay, the Return Engine, and export.
@@ -31,6 +33,11 @@ npx expo prebuild --clean       # writes ios/ and android/ from app.json
 make run                        # the family's server, on this machine
 ```
 
+Every dependency is pinned to Expo SDK 57's own `bundledNativeModules.json`, which is what
+`expo install` would have chosen. Four of them used to be pinned to versions that do not
+exist — `expo-router@~7.0.0` among them — so the install above failed outright and this
+checklist had never been started by anybody.
+
 The app reads `EXPO_PUBLIC_ANUVRITTI_URL`. On a simulator `http://localhost:8000` works; on a
 physical device use the machine's LAN address, and note that iOS will refuse plain HTTP to
 anything but localhost unless the dev build allows it.
@@ -43,7 +50,28 @@ npx expo run:ios
 npx expo run:android
 ```
 
-## The four
+## What stopped being on this list
+
+Three items were here because nobody had written the test, not because they needed hardware.
+They are now `apps/anuvritti/test/threshold.test.ts`:
+
+- **First launch reaches pairing at all.** It did not. `app/pair.tsx` existed and no route,
+  link or redirect pointed at it, so a phone with no token opened Today, got two 401s and
+  said "Nothing today. That's normal." to a stranger. The test now walks `app/` and fails on
+  any route nothing points at — which is the check that generalises, since every screen
+  added after this one gets it for free.
+- **A revoked device signs out on its next call, and a 403 does not sign it out.** Both are
+  pure functions over a `Failure` now.
+- **Being signed out does not empty the capture queue.** Asserted against `provider.tsx`
+  directly, because it is the worst thing this product could do and it would be invisible.
+
+And one that was never on the list and should have been: **a named typeface is a loaded
+one**. `world.font.mono` named a face `useFonts` was never given, so the eight characters of
+a pairing code — the one place mono is used at size — rendered in the proportional system
+fallback, where `O`/`0` and `I`/`1` are exactly the confusions the Crockford alphabet exists
+to prevent.
+
+## The five
 
 ### 1. Capture, in the share sheet
 
@@ -73,7 +101,9 @@ The whole reason the queue exists, and the one test a simulator cannot honestly 
 
 ### 3. Pairing, and the keychain
 
-- [ ] First launch → **Start our family** → the app is usable immediately.
+The route graph is a test now (above). What is left is the keychain itself, which is the
+part no assertion on this machine can reach.
+
 - [ ] Force-quit and reopen: still paired, no code asked for.
 - [ ] Second device → **Join with a code**, using the code from the first.
 - [ ] Both devices see the same archive.
@@ -81,7 +111,9 @@ The whole reason the queue exists, and the one test a simulator cannot honestly 
       All three work.
 - [ ] Type a wrong code five times. The sixth attempt fails **even with the right code**,
       until ten minutes pass.
-- [ ] Revoke the second device from the first. The second is signed out on its next call.
+- [ ] Revoke the second device from the first. The second is signed out on its next call
+      **and its pending captures are still pending** — the sign-out clears a credential, not
+      an archive.
 - [ ] Share something from the second device *after* revoking. It must not save.
 
 ### 4. The object, and the ten seconds
@@ -161,6 +193,15 @@ test, not just the pixel:
 
 ## When something fails
 
-Write it down as a test first. Every one of the four above is a manual step because it needs
+Write it down as a test first. Every one of the five above is a manual step because it needs
 hardware, not because it is unimportant — and a manual step nobody can automate is at least a
 manual step someone can read.
+
+## Execution Requirements
+
+This checklist requires physical hardware execution on a real device:
+- Internal distribution build profile provisioned via `apps/anuvritti/eas.json`.
+- Dedicated family server deployed with valid TLS (`deploy/Caddyfile`, `EXPO_PUBLIC_ANUVRITTI_URL`).
+- When physically executed by a founder/tester on an actual iPhone and Android device, record the date and stopwatch measurements above and sign with a date in the past.
+
+

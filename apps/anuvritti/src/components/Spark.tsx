@@ -30,6 +30,7 @@ import Animated, {
 import type { Spark as SparkData } from "@anuvritti/client";
 import { INTENT_SAID, intentOf, isUncertain, savedSentence } from "@anuvritti/client";
 
+import { a11yLabels } from "../a11y/index.ts";
 import { whyFrom } from "../voice/playback.ts";
 import type { World } from "../world.ts";
 import { VoiceNote } from "./VoiceNote.tsx";
@@ -97,13 +98,20 @@ export function Spark({
   const chipSays = sayingIntent ?? (guess ? INTENT_SAID[guess.value] : null);
   const uncertain = guess ? isUncertain(spark.intent) : false;
 
+  const sparkA11y = a11yLabels.spark({
+    title: spark.title,
+    whyText: said.text,
+    hasVoiceNote: Boolean(said.voice),
+  });
+
   return (
     <Pressable
       onPress={flip}
-      accessibilityRole="button"
+      accessible={sparkA11y.accessible}
+      accessibilityRole={sparkA11y.accessibilityRole ?? "button"}
       accessibilityState={{ selected: flipped }}
       accessibilityLabel={
-        flipped ? `Why you saved ${spark.title}` : `${spark.title}. Tap to see why you saved it.`
+        flipped ? `Why you saved ${spark.title}` : sparkA11y.accessibilityLabel
       }
       style={styles.object}
     >

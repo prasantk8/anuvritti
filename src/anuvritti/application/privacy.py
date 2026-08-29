@@ -19,6 +19,7 @@ from typing import Any
 from anuvritti.application.ports import (
     EventPublisher,
     FamilyRepository,
+    LexiconRepository,
     LittleThingRepository,
     MediaStore,
     MomentRepository,
@@ -29,9 +30,10 @@ from anuvritti.application.ports import (
 )
 from anuvritti.domain.events import FamilyDataDeleted, FamilyDataExported
 from anuvritti.domain.spark import Spark
+from anuvritti.domain.values import MemberRole, Visibility
 from anuvritti.shared.clock import Clock
-from anuvritti.shared.errors import DomainError
-from anuvritti.shared.identity import FamilyId
+from anuvritti.shared.errors import DomainError, ErrorCode
+from anuvritti.shared.identity import ChildId, FamilyId, MemberId, SparkId
 from anuvritti.shared.result import Err, Ok, Result
 
 EXPORT_FORMAT_VERSION = "1.0"
@@ -84,6 +86,7 @@ class ExportFamilyDataUseCase:
         media: MediaStore,
         events: EventPublisher,
         clock: Clock,
+        lexicon: LexiconRepository,
     ) -> None:
         self._families = families
         self._sparks = sparks
@@ -94,6 +97,7 @@ class ExportFamilyDataUseCase:
         self._media = media
         self._events = events
         self._clock = clock
+        self._lexicon = lexicon
 
     def execute(self, query: ExportFamilyDataQuery) -> Result[dict[str, Any], DomainError]:
         family_result = self._families.get(query.family_id)
@@ -120,6 +124,9 @@ class ExportFamilyDataUseCase:
         media = self._media.list_for_family(query.family_id)
         if media.is_err():
             return Err(media.unwrap_err())
+        lexicon = self._lexicon.load(query.family_id)
+        if lexicon.is_err():
+            return Err(lexicon.unwrap_err())
 
         archive: dict[str, Any] = {
             "format_version": EXPORT_FORMAT_VERSION,
@@ -142,6 +149,9 @@ class ExportFamilyDataUseCase:
                 ],
             },
             "sparks": [spark_to_export(s) for s in sparks.unwrap()],
+            # What this family's words mean to this family, which is the only place that
+            # is written down (PRD 44: export everything).
+            "lexicon": lexicon.unwrap().to_dict(),
             "moments": [
                 {
                     "id": str(m.id),
@@ -226,6 +236,7 @@ class DeleteFamilyDataUseCase:
         events: EventPublisher,
         clock: Clock,
         uow: UnitOfWork,
+        lexicon: LexiconRepository,
     ) -> None:
         self._families = families
         self._sparks = sparks
@@ -237,6 +248,7 @@ class DeleteFamilyDataUseCase:
         self._events = events
         self._clock = clock
         self._uow = uow
+        self._lexicon = lexicon
 
     def execute(self, command: DeleteFamilyDataCommand) -> Result[dict[str, int], DomainError]:
         exists = self._families.get(command.family_id)
@@ -258,6 +270,9 @@ class DeleteFamilyDataUseCase:
                 ("little_things", self._little_things),
                 ("right_now", self._right_now),
                 ("recordings", self._voice_notes),
+                # A family's own words go with the family. A lexicon left behind would be
+                # the one thing that survived "delete everything" (PRD 44).
+                ("lexicon", self._lexicon),
             ):
                 deleted = repository.delete_for_family(command.family_id)
                 if deleted.is_err():
@@ -286,3 +301,301 @@ class DeleteFamilyDataUseCase:
             family_id=command.family_id,
         )
         return Ok(counts)
+
+
+# ------------------------------------------------------------------ Child Rights (PRD 45, PRD 25)
+@dataclass(frozen=True, slots=True)
+class HideChildContentCommand:
+    family_id: FamilyId
+    child_id: ChildId
+    spark_id: SparkId
+    requestor_id: MemberId
+
+
+class HideChildContentUseCase:
+    """PRD 45 - The child (or parent on their behalf) can hide any spark about them."""
+
+    def __init__(
+        self,
+        *,
+        families: FamilyRepository,
+        sparks: SparkRepository,
+        events: EventPublisher,
+        uow: UnitOfWork,
+    ) -> None:
+        self._families = families
+        self._sparks = sparks
+        self._events = events
+        self._uow = uow
+
+    def execute(self, command: HideChildContentCommand) -> Result[Spark, DomainError]:
+        family_res = self._families.get(command.family_id)
+        if family_res.is_err():
+            return Err(family_res.unwrap_err())
+        family = family_res.unwrap()
+
+        child_res = family.child(command.child_id)
+        if child_res.is_err():
+            return Err(child_res.unwrap_err())
+
+        member_res = family.member(command.requestor_id)
+        if member_res.is_err():
+            return Err(member_res.unwrap_err())
+        member = member_res.unwrap()
+
+        # Authorization: either the child themselves or a parent
+        if member.role not in (MemberRole.CHILD, MemberRole.PARENT, MemberRole.CO_PARENT):
+            return Err(
+                DomainError(
+                    ErrorCode.PERMISSION_DENIED,
+                    f"member {command.requestor_id} cannot hide content for child",
+                )
+            )
+
+        spark_res = self._sparks.get(command.spark_id)
+        if spark_res.is_err():
+            return Err(spark_res.unwrap_err())
+        spark = spark_res.unwrap()
+
+        if spark.family_id != command.family_id:
+            return Err(
+                DomainError(
+                    ErrorCode.PERMISSION_DENIED,
+                    "spark belongs to a different family",
+                )
+            )
+
+        # Set visibility to PRIVATE so it disappears from family view and films
+        hidden = spark.change_visibility(Visibility.PRIVATE)
+        if hidden.is_err():
+            return Err(hidden.unwrap_err())
+        updated_spark = hidden.unwrap()
+
+        with self._uow:
+            saved = self._sparks.save(updated_spark)
+            if saved.is_err():
+                self._uow.rollback()
+                return Err(saved.unwrap_err())
+            self._events.publish(updated_spark.pending_events, family_id=command.family_id)
+            self._uow.commit()
+
+        return Ok(updated_spark)
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteChildContentCommand:
+    family_id: FamilyId
+    child_id: ChildId
+    spark_id: SparkId
+    requestor_id: MemberId
+
+
+class DeleteChildContentUseCase:
+    """PRD 45 - The child can permanently delete any spark/moment about them."""
+
+    def __init__(
+        self,
+        *,
+        families: FamilyRepository,
+        sparks: SparkRepository,
+        moments: MomentRepository,
+        events: EventPublisher,
+        uow: UnitOfWork,
+    ) -> None:
+        self._families = families
+        self._sparks = sparks
+        self._moments = moments
+        self._events = events
+        self._uow = uow
+
+    def execute(self, command: DeleteChildContentCommand) -> Result[None, DomainError]:
+        family_res = self._families.get(command.family_id)
+        if family_res.is_err():
+            return Err(family_res.unwrap_err())
+        family = family_res.unwrap()
+
+        child_res = family.child(command.child_id)
+        if child_res.is_err():
+            return Err(child_res.unwrap_err())
+
+        member_res = family.member(command.requestor_id)
+        if member_res.is_err():
+            return Err(member_res.unwrap_err())
+        member = member_res.unwrap()
+
+        if member.role not in (MemberRole.CHILD, MemberRole.PARENT, MemberRole.CO_PARENT):
+            return Err(
+                DomainError(
+                    ErrorCode.PERMISSION_DENIED,
+                    f"member {command.requestor_id} cannot delete content for child",
+                )
+            )
+
+        spark_res = self._sparks.get(command.spark_id)
+        if spark_res.is_err():
+            return Err(spark_res.unwrap_err())
+        spark = spark_res.unwrap()
+
+        if spark.family_id != command.family_id:
+            return Err(
+                DomainError(
+                    ErrorCode.PERMISSION_DENIED,
+                    "spark belongs to a different family",
+                )
+            )
+
+        with self._uow:
+            # A Spark that was brought back has a Moment hanging off it. Erasing the Spark
+            # and leaving the Moment would leave a memory whose origin no longer exists.
+            moment_res = self._moments.find_by_spark(command.spark_id)
+            if moment_res.is_err():
+                self._uow.rollback()
+                return Err(moment_res.unwrap_err())
+            moment = moment_res.unwrap()
+            if moment is not None:
+                removed = self._moments.delete(moment.id)
+                if removed.is_err():
+                    self._uow.rollback()
+                    return Err(removed.unwrap_err())
+
+            deleted = self._sparks.delete(command.spark_id)
+            if deleted.is_err():
+                self._uow.rollback()
+                return Err(deleted.unwrap_err())
+            self._uow.commit()
+
+        return Ok(None)
+
+
+@dataclass(frozen=True, slots=True)
+class ExportChildVaultQuery:
+    family_id: FamilyId
+    child_id: ChildId
+    requestor_id: MemberId
+
+
+class ExportChildVaultUseCase:
+    """PRD 45 - The child can own the whole record later: export personal sub-vault."""
+
+    def __init__(
+        self,
+        *,
+        families: FamilyRepository,
+        sparks: SparkRepository,
+        moments: MomentRepository,
+        little_things: LittleThingRepository,
+        right_now: RightNowRepository,
+        voice_notes: VoiceNoteRepository,
+        media: MediaStore,
+        events: EventPublisher,
+        clock: Clock,
+    ) -> None:
+        self._families = families
+        self._sparks = sparks
+        self._moments = moments
+        self._little_things = little_things
+        self._right_now = right_now
+        self._voice_notes = voice_notes
+        self._media = media
+        self._events = events
+        self._clock = clock
+
+    def execute(self, query: ExportChildVaultQuery) -> Result[dict[str, Any], DomainError]:
+        family_res = self._families.get(query.family_id)
+        if family_res.is_err():
+            return Err(family_res.unwrap_err())
+        family = family_res.unwrap()
+
+        child_res = family.child(query.child_id)
+        if child_res.is_err():
+            return Err(child_res.unwrap_err())
+        child = child_res.unwrap()
+
+        member_res = family.member(query.requestor_id)
+        if member_res.is_err():
+            return Err(member_res.unwrap_err())
+        member = member_res.unwrap()
+
+        if member.role not in (MemberRole.CHILD, MemberRole.PARENT, MemberRole.CO_PARENT):
+            return Err(
+                DomainError(
+                    ErrorCode.PERMISSION_DENIED,
+                    f"member {query.requestor_id} cannot export vault for child",
+                )
+            )
+
+        today = self._clock.today()
+
+        # 1. Filter sparks for this child
+        all_sparks = self._sparks.list_for_family(query.family_id)
+        if all_sparks.is_err():
+            return Err(all_sparks.unwrap_err())
+        child_sparks = [s for s in all_sparks.unwrap() if s.subject_child_id == query.child_id]
+        child_spark_ids = {s.id for s in child_sparks}
+
+        # 2. Filter moments for this child's sparks
+        all_moments = self._moments.list_for_family(query.family_id)
+        if all_moments.is_err():
+            return Err(all_moments.unwrap_err())
+        child_moments = [m for m in all_moments.unwrap() if m.spark_id in child_spark_ids]
+
+        # 3. Filter little things for this child
+        all_things = self._little_things.list_for_family(query.family_id)
+        if all_things.is_err():
+            return Err(all_things.unwrap_err())
+        child_things = [t for t in all_things.unwrap() if t.subject_child_id == query.child_id]
+
+        # 4. Filter right now snapshots for this child
+        all_rn = self._right_now.list_for_family(query.family_id)
+        if all_rn.is_err():
+            return Err(all_rn.unwrap_err())
+        child_rn = [s for s in all_rn.unwrap() if s.child_id == query.child_id]
+
+        # 5. Media manifest
+        all_media = self._media.list_for_family(query.family_id)
+        if all_media.is_err():
+            return Err(all_media.unwrap_err())
+
+        vault: dict[str, Any] = {
+            "format_version": EXPORT_FORMAT_VERSION,
+            "exported_at": self._clock.now().isoformat(),
+            "vault_owner_child": {
+                "id": str(child.id),
+                "display_name": child.display_name,
+                "date_of_birth": child.date_of_birth.isoformat(),
+                "age_years": child.age_years(today),
+            },
+            "sparks": [spark_to_export(s) for s in child_sparks],
+            "moments": [
+                {
+                    "id": str(m.id),
+                    "spark_id": str(m.spark_id),
+                    "happened_on": m.happened_on.isoformat(),
+                    "reflection": m.reflection,
+                    "photo_media_id": m.photo_media_id,
+                    "audio_media_id": m.audio_media_id,
+                }
+                for m in child_moments
+            ],
+            "little_things": [
+                {
+                    "id": str(t.id),
+                    "text": t.text,
+                    "audio_media_id": t.audio_media_id,
+                    "captured_on": t.created_at.date().isoformat(),
+                }
+                for t in child_things
+            ],
+            "right_now": [
+                {
+                    "id": str(s.id),
+                    "prompt": s.prompt,
+                    "answer": s.answer,
+                    "captured_on": s.captured_at.date().isoformat(),
+                }
+                for s in child_rn
+            ],
+            "media_manifest": [m.to_dict() for m in all_media.unwrap()],
+        }
+
+        return Ok(vault)

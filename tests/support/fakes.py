@@ -13,6 +13,7 @@ from types import TracebackType
 
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import ChildProfile, Family, Member
+from anuvritti.domain.lexicon import FamilyLexicon
 from anuvritti.domain.media import MediaKind, MediaObject
 from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing, RightNowSnapshot
@@ -371,6 +372,29 @@ class InMemoryVoiceNoteRepository:
         for key in doomed:
             del self._items[key]
         return Ok(len(doomed))
+
+
+class InMemoryLexiconRepository:
+    """One dictionary per family, and no way to read across them.
+
+    The real one is a table whose primary key starts with `family_id`. This one is keyed
+    by family for the same reason: a fake that let a test read every family's words at once
+    would make the guarantee untestable in exactly the tests that most want to check it.
+    """
+
+    def __init__(self) -> None:
+        self._by_family: dict[str, FamilyLexicon] = {}
+
+    def load(self, family_id: FamilyId) -> Result[FamilyLexicon, DomainError]:
+        return Ok(self._by_family.get(str(family_id)) or FamilyLexicon.empty(family_id))
+
+    def save(self, lexicon: FamilyLexicon) -> Result[FamilyLexicon, DomainError]:
+        self._by_family[str(lexicon.family_id)] = lexicon
+        return Ok(lexicon)
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        removed = self._by_family.pop(str(family_id), None)
+        return Ok(len(removed) if removed else 0)
 
 
 #: How many bytes of this fake's audio format make up a second. The number is arbitrary; what

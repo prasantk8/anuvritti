@@ -64,6 +64,8 @@ class Settings:
     suggestion_threshold: float
     maturation_horizon_days: int
     min_days_before_return: int
+    public_url: str | None = None
+    trusted_proxies: tuple[str, ...] = ("127.0.0.1", "::1")
     documented: bool = field(default=True, repr=False)
 
     @property
@@ -94,6 +96,8 @@ class Settings:
             "ANUVRITTI_SUGGESTION_THRESHOLD",
             "ANUVRITTI_MATURATION_HORIZON_DAYS",
             "ANUVRITTI_MIN_DAYS_BEFORE_RETURN",
+            "ANUVRITTI_PUBLIC_URL",
+            "ANUVRITTI_TRUSTED_PROXIES",
         )
 
 
@@ -167,6 +171,9 @@ def load_settings(env: dict[str, str]) -> Result[Settings, DomainError]:
 
     media_key = env.get("ANUVRITTI_MEDIA_KEY") or None
     is_production = environment is Environment.PRODUCTION
+    public_url = env.get("ANUVRITTI_PUBLIC_URL") or None
+    raw_proxies = env.get("ANUVRITTI_TRUSTED_PROXIES", "127.0.0.1,::1")
+    trusted_proxies = tuple(p.strip() for p in raw_proxies.split(",") if p.strip())
 
     if is_production and media_key is None:
         return _invalid(
@@ -194,5 +201,7 @@ def load_settings(env: dict[str, str]) -> Result[Settings, DomainError]:
             suggestion_threshold=threshold,
             maturation_horizon_days=horizon_days,
             min_days_before_return=min_days_before_return,
+            public_url=public_url,
+            trusted_proxies=trusted_proxies,
         )
     )

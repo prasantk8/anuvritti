@@ -20,6 +20,7 @@ from anuvritti.adapters.persistence.sqlite import (
     SqliteEventPublisher,
     SqliteFamilyRepository,
     SqliteIdempotencyStore,
+    SqliteLexiconRepository,
     SqliteLittleThingRepository,
     SqliteMediaCatalogue,
     SqliteMomentRepository,
@@ -81,6 +82,7 @@ class Container:
     moments: SqliteMomentRepository
     little_things: SqliteLittleThingRepository
     right_now: SqliteRightNowRepository
+    lexicon: SqliteLexiconRepository
     voice_notes: SqliteVoiceNoteRepository
     media: EncryptedFilesystemMediaStore
     events: SqliteEventPublisher
@@ -151,6 +153,7 @@ def build_container(
     moments = SqliteMomentRepository(connection)
     little_things = SqliteLittleThingRepository(connection)
     right_now = SqliteRightNowRepository(connection)
+    lexicon = SqliteLexiconRepository(connection)
     voice_notes = SqliteVoiceNoteRepository(connection)
     events = SqliteEventPublisher(connection)
     uow = SqliteUnitOfWork(connection)
@@ -184,6 +187,7 @@ def build_container(
         moments=moments,
         little_things=little_things,
         right_now=right_now,
+        lexicon=lexicon,
         voice_notes=voice_notes,
         media=media,
         events=events,
@@ -201,9 +205,14 @@ def build_container(
             clock=clock,
             ids=ids,
             uow=uow,
+            # What this family has already corrected, so the next capture starts from
+            # their vocabulary rather than from general English (TASK-801).
+            lexicon=lexicon,
         ),
         record_why=RecordWhyUseCase(sparks=sparks, events=events, clock=clock, uow=uow),
-        override_field=OverrideFieldUseCase(sparks=sparks, events=events, uow=uow),
+        override_field=OverrideFieldUseCase(
+            sparks=sparks, events=events, uow=uow, clock=clock, lexicon=lexicon
+        ),
         search_vault=SearchVaultUseCase(families=families, sparks=sparks, clock=clock),
         worth_bringing_back=GetWorthBringingBackUseCase(
             families=families,
@@ -264,6 +273,9 @@ def build_container(
             little_things=little_things,
             right_now=right_now,
             voice_notes=voice_notes,
+            # PRD 44 cuts both ways: a family's own vocabulary is theirs to take with
+            # them, and theirs to destroy.
+            lexicon=lexicon,
             media=media,
             events=events,
             clock=clock,
@@ -275,6 +287,9 @@ def build_container(
             little_things=little_things,
             right_now=right_now,
             voice_notes=voice_notes,
+            # PRD 44 cuts both ways: a family's own vocabulary is theirs to take with
+            # them, and theirs to destroy.
+            lexicon=lexicon,
             media=media,
             events=events,
             clock=clock,

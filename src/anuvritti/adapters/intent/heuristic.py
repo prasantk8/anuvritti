@@ -15,6 +15,7 @@ from collections.abc import Iterable, Mapping
 from typing import Final
 from urllib.parse import urlparse
 
+from anuvritti.domain.lexicon import FamilyLexicon, LexiconField, terms_in
 from anuvritti.domain.spark import UNCATEGORISED, Inference
 from anuvritti.domain.values import (
     MAX_CHILD_AGE,
@@ -157,10 +158,20 @@ _WORD_RE: Final = re.compile(r"[a-z]+")
 class HeuristicIntentEngine:
     """Rule-based inference. Same input, same answer, no network, no surprises."""
 
-    def infer(self, source: SourceRef, *, note: str | None = None) -> Inference:
+    def infer(
+        self,
+        source: SourceRef,
+        *,
+        note: str | None = None,
+        lexicon: FamilyLexicon | None = None,
+    ) -> Inference:
         corpus = self._corpus(source, note)
         # What the parent typed is the strongest evidence available (PRD 8.1).
         weighted = self._score_intents(corpus, note)
+        # ...and what this family has already corrected is evidence about this family
+        # (TASK-801). It is added to the general-English score rather than replacing it,
+        # so a family teaches the engine their dialect without having to teach it English.
+        self._add_family_usage(weighted, corpus, lexicon)
         intent, strength = self._best_intent(weighted, source)
         category, category_strength = self._categorise(corpus)
         age_range = self._age_range(corpus)
@@ -196,6 +207,26 @@ class HeuristicIntentEngine:
                     if term in note_text:
                         scores[intent] += weight
         return scores
+
+    def _add_family_usage(
+        self,
+        scores: dict[IntentType, float],
+        corpus: str,
+        lexicon: FamilyLexicon | None,
+    ) -> None:
+        """Weigh what this family has corrected, for the words in front of us.
+
+        An unknown value is skipped rather than guessed at. A lexicon written before an
+        intent was renamed would otherwise crash a capture, and a family losing a capture
+        because of their own vocabulary is the worst possible trade.
+        """
+        if lexicon is None:
+            return
+        for value, weight in lexicon.weights_for(LexiconField.INTENT, terms_in(corpus)).items():
+            try:
+                scores[IntentType(value)] += weight
+            except ValueError:
+                continue
 
     def _best_intent(
         self, scores: dict[IntentType, float], source: SourceRef

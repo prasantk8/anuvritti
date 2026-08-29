@@ -41,6 +41,7 @@ import {
   useAudioRecorderState,
 } from "expo-audio";
 
+import { a11yLabels } from "../a11y/index.ts";
 import type { World } from "../world.ts";
 import { RESTING, type Recording, announce, elapsed, isLive, step } from "../voice/recording.ts";
 import { WINDOW, clock, push, resting } from "../voice/waveform.ts";
@@ -159,6 +160,10 @@ export function HoldToTalk({ world, onKept, saying }: HoldToTalkProps) {
 
   const live = isLive(state);
   const seconds = elapsed(state, performance.now());
+  const a11y = a11yLabels.holdToTalk({
+    isRecording: live,
+    elapsedSeconds: Math.round(seconds),
+  });
 
   return (
     <View style={styles.frame}>
@@ -180,9 +185,11 @@ export function HoldToTalk({ world, onKept, saying }: HoldToTalkProps) {
       <Pressable
         onPressIn={press}
         onPressOut={() => void signal("release")}
-        accessibilityRole="button"
-        accessibilityLabel={announce(state.phase)}
-        accessibilityHint="Hold to record. Let go to keep it."
+        accessible={a11y.accessible}
+        accessibilityRole={a11y.accessibilityRole ?? "button"}
+        accessibilityLabel={a11y.accessibilityLabel}
+        accessibilityHint={a11y.accessibilityHint}
+        accessibilityState={a11y.accessibilityState}
         style={({ pressed }) => [styles.button, (pressed || live) && styles.buttonHeld]}
       >
         <Text style={styles.buttonText}>{live ? clock(seconds) : "Hold to talk"}</Text>

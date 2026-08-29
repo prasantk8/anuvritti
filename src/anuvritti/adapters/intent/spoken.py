@@ -42,6 +42,7 @@ from dataclasses import replace
 from typing import Final
 
 from anuvritti.application.ports import IntentEngine
+from anuvritti.domain.lexicon import FamilyLexicon
 from anuvritti.domain.spark import Inference
 from anuvritti.domain.values import Confidence, IntentType, SourceKind, SourceRef
 
@@ -179,16 +180,22 @@ class SpokenIntentEngine:
     def __init__(self, inner: IntentEngine) -> None:
         self._inner = inner
 
-    def infer(self, source: SourceRef, *, note: str | None = None) -> Inference:
+    def infer(
+        self,
+        source: SourceRef,
+        *,
+        note: str | None = None,
+        lexicon: FamilyLexicon | None = None,
+    ) -> Inference:
         if source.kind is not SourceKind.VOICE:
-            return self._inner.infer(source, note=note)
+            return self._inner.infer(source, note=note, lexicon=lexicon)
 
         # A transcript *is* the parent's own words, so it is handed to the inner engine as
         # the note. That engine already weights a note double - "They were there; we were
         # not" - and a transcript has a better claim to that than a typed caption does.
         # Without this line, speaking would earn strictly less understanding than typing
         # the same sentence, which is the exact gap TASK-604 exists to close.
-        base = self._inner.infer(source, note=note or source.text)
+        base = self._inner.infer(source, note=note or source.text, lexicon=lexicon)
 
         spoken = _spoken_corpus(source, note)
         if not spoken:

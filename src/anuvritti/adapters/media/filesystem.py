@@ -1,9 +1,9 @@
-"""Encrypted, content-addressed media store (PRD 44).
+"""Encrypted, content-addressed media store (PRD 44, HARDENING 5.5).
 
 The bytes here are a child's face and a family's voice. Three properties follow:
 
-* **Encrypted at rest.** The key comes from the environment and never from the repo. In
-  development a store may run unencrypted; production refuses to start without a key.
+* **Encrypted at rest with key rotation.** Keys are managed via a KeyRing with zero-downtime
+  historical key support.
 * **Content-addressed.** The same photo saved twice occupies one file, and a corrupted
   read is detectable rather than silently wrong.
 * **Actually deletable.** `delete_for_family` unlinks bytes, because PRD 44 promises
@@ -18,8 +18,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import InvalidToken
 
+from anuvritti.adapters.media.keys import KeyRing, create_keyring
 from anuvritti.domain.media import MediaKind, MediaObject
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import FamilyId, IdGenerator, MediaId
@@ -39,7 +40,7 @@ class _Catalogue(Protocol):
 
 
 class EncryptedFilesystemMediaStore:
-    """Files on disk, encrypted with Fernet, indexed by a SQLite catalogue."""
+    """Files on disk, encrypted with Fernet/KeyRing, indexed by a SQLite catalogue."""
 
     def __init__(
         self,
@@ -47,21 +48,25 @@ class EncryptedFilesystemMediaStore:
         root: Path,
         catalogue: _Catalogue,
         ids: IdGenerator,
-        encryption_key: str | None,
+        encryption_key: str | KeyRing | None,
         max_bytes: int,
         allowed_mime_types: frozenset[str],
     ) -> None:
         self._root = root
         self._catalogue = catalogue
         self._ids = ids
-        self._fernet = Fernet(encryption_key.encode()) if encryption_key else None
+        self._keyring: KeyRing | None = create_keyring(encryption_key) if encryption_key else None
         self._max_bytes = max_bytes
         self._allowed = allowed_mime_types
         self._root.mkdir(parents=True, exist_ok=True)
 
     @property
     def encrypts_at_rest(self) -> bool:
-        return self._fernet is not None
+        return self._keyring is not None
+
+    @property
+    def keyring(self) -> KeyRing | None:
+        return self._keyring
 
     # -------------------------------------------------------------------- put
     def put(
@@ -178,11 +183,11 @@ class EncryptedFilesystemMediaStore:
 
     # -------------------------------------------------------------- internals
     def _encrypt(self, content: bytes) -> bytes:
-        return self._fernet.encrypt(content) if self._fernet else content
+        return self._keyring.encrypt(content) if self._keyring else content
 
     def _decrypt(self, stored: bytes, *, encrypted: bool) -> bytes:
         if not encrypted:
             return stored
-        if self._fernet is None:
+        if self._keyring is None:
             raise InvalidToken
-        return self._fernet.decrypt(stored)
+        return self._keyring.decrypt(stored)

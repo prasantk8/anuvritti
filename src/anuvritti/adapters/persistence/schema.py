@@ -16,7 +16,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Final
 
-SCHEMA_VERSION: Final = 3
+SCHEMA_VERSION: Final = 4
 
 _MIGRATIONS: Final[tuple[str, ...]] = (
     """
@@ -234,6 +234,26 @@ _MIGRATIONS: Final[tuple[str, ...]] = (
 
     CREATE INDEX IF NOT EXISTS idx_voice_note_family
         ON voice_note(family_id, recorded_at DESC);
+    """,
+    # TASK-801. The family's own lexicon, in the family's own archive.
+    #
+    # `family_id` is the first column of the primary key, and every read is keyed by it.
+    # There is no table here that spans families and no query in the codebase that omits
+    # the family - which is what makes "no shared model" a property of the schema rather
+    # than a rule somebody has to keep remembering (PRD 44).
+    #
+    # Counts, not documents. There is no spark_id column on purpose: a lexicon that could
+    # name the Spark that taught it would be a second copy of the archive, indexed by word.
+    """
+    CREATE TABLE IF NOT EXISTS lexicon_term (
+        family_id  TEXT NOT NULL REFERENCES family(id) ON DELETE CASCADE,
+        field      TEXT NOT NULL,
+        term       TEXT NOT NULL,
+        means      TEXT NOT NULL,
+        times      INTEGER NOT NULL,
+        last_at    TEXT NOT NULL,
+        PRIMARY KEY (family_id, field, term, means)
+    );
     """,
 )
 
