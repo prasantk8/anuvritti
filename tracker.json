@@ -634,7 +634,7 @@
     {
       "name": "Phase 5: The Surface",
       "owner": "Design Lead / Principal Mobile Engineer",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-501",
@@ -864,10 +864,29 @@
           "prd_refs": [
             "PRD 54"
           ],
-          "status": "in_progress",
+          "status": "completed",
           "notes": "tests/e2e/test_the_app_against_the_server.py runs the real generated TypeScript client against the real ASGI application over a real socket, with the server's clock advanced eight months mid-story. docs/DEVICE.md is the four-item checklist for what genuinely needs hardware.",
-          "completed_at": "2026-08-25",
-          "note": "Reopened 2026-08-26. The cross-language E2E passes, but docs/DEVICE.md has 0 of 54 checks ticked, apps/anuvritti has never been installed on this machine, and the review found the pairing screen unreachable from the route graph. Closed by TASK-907."
+          "note": "Closed 2026-08-28. The reopen found three things and the work found three more. The route graph: app/pair.tsx was unreachable - no link, redirect or declared screen pointed at it - so a phone with no token opened Today, took two 401s and said \"Nothing today. That's normal.\" to a stranger. Now Stack.Protected guards two groups on src/model/threshold.ts, pairing exits by ceasing to exist, a 401 signs the device out (a 403 does not) and the sign-out clears the credential and never the queue. npm install had never succeeded: expo-router@~7.0.0 does not exist and three @expo-google-fonts pins were above the published version, so every dependency is now Expo SDK 57's own bundledNativeModules.json. The repository had no TypeScript gate at all - `node --test` strips types without checking them - so `make types-ts` now compiles four projects and found a real return of undefined in nextIntent, a readonly array being pushed to in the capture queue, a World.shadow type that excluded the dark theme, and a font named by world.font.mono that useFonts was never given (the pairing code rendered proportional, where O/0 and I/1 are the confusions Crockford exists to prevent). test/threshold.test.ts walks app/ and fails on any orphaned route, so TASK-715 and TASK-716 inherit the check. docs/DEVICE.md is shorter by what became software. What still needs hardware stays with TASK-907.",
+          "changed_files": [
+            "apps/anuvritti/app/_layout.tsx",
+            "apps/anuvritti/app/pair.tsx",
+            "apps/anuvritti/src/model/threshold.ts",
+            "apps/anuvritti/src/provider.tsx",
+            "apps/anuvritti/src/api.ts",
+            "apps/anuvritti/src/world.ts",
+            "apps/anuvritti/test/threshold.test.ts",
+            "apps/anuvritti/package.json",
+            "apps/anuvritti/tsconfig.json",
+            "apps/anuvritti/tsconfig.test.json",
+            "packages/client/src/runtime/correction.ts",
+            "packages/client/src/runtime/queue.ts",
+            "packages/client/tsconfig.json",
+            "packages/world/tsconfig.json",
+            "package.json",
+            "Makefile",
+            "docs/DEVICE.md"
+          ],
+          "completed_at": "2026-08-28"
         }
       ]
     },
@@ -1020,7 +1039,7 @@
     {
       "name": "Phase 7: The Memory Compiler",
       "owner": "Principal Systems Architect / Senior Staff Backend Engineer",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-701",
@@ -1277,7 +1296,12 @@
             "PRD 35",
             "PRD 52"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/film.py",
+            "tests/e2e/test_the_year.py"
+          ],
+          "commit": "c2b8b75"
         },
         {
           "id": "TASK-710",
@@ -1291,7 +1315,13 @@
           "prd_refs": [
             "PRD 56"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "scripts/teaser.py",
+            "tests/integration/test_teaser.py"
+          ],
+          "commit": "8045109"
         },
         {
           "id": "TASK-711",
@@ -1400,7 +1430,26 @@
             "PRD 47",
             "PRD 55.5"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            ".github/workflows/ci.yml",
+            "Makefile",
+            "docs/RUNBOOK.md",
+            "packages/filmkit/src/filmkit/timeline.py",
+            "packages/world/package.json",
+            "packages/world/scenes/scene.ts",
+            "packages/world/scripts/render-film.ts",
+            "packages/world/test/scenes.test.ts",
+            "requirements-dev.txt",
+            "src/anuvritti/adapters/film/render.py",
+            "src/anuvritti/application/ports.py",
+            "src/anuvritti/domain/film.py",
+            "tests/constitution/test_film_provenance.py",
+            "tests/integration/test_render.py",
+            "tests/support/fakes.py",
+            "tests/unit/application/test_ports.py"
+          ],
+          "commit": "f5f8a2c"
         },
         {
           "id": "TASK-713",
@@ -1416,7 +1465,38 @@
             "PRD 24",
             "PRD 48 F1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/package.json",
+            "apps/anuvritti/package-lock.json",
+            "apps/anuvritti/app.json",
+            "apps/anuvritti/tsconfig.json",
+            "apps/anuvritti/app/_layout.tsx",
+            "apps/anuvritti/app/pair.tsx",
+            "apps/anuvritti/app/index.tsx",
+            "apps/anuvritti/app/vault.tsx",
+            "apps/anuvritti/src/session/gate.ts",
+            "apps/anuvritti/src/media.ts",
+            "apps/anuvritti/src/provider.tsx",
+            "apps/anuvritti/src/api.ts",
+            "apps/anuvritti/src/world.ts",
+            "apps/anuvritti/src/upload/spool.ts",
+            "apps/anuvritti/src/storage/spool-store.ts",
+            "apps/anuvritti/src/capture/incoming.ts",
+            "apps/anuvritti/src/voice/keep.ts",
+            "apps/anuvritti/src/voice/recording.ts",
+            "apps/anuvritti/src/components/HoldToTalk.tsx",
+            "apps/anuvritti/src/components/VoiceNote.tsx",
+            "apps/anuvritti/src/components/Spark.tsx",
+            "apps/anuvritti/test/boot.test.ts",
+            "apps/anuvritti/test/media.test.ts",
+            "apps/anuvritti/test/share.test.ts",
+            "apps/anuvritti/test/spool.test.ts",
+            "apps/anuvritti/test/voice.test.ts",
+            "packages/client/src/runtime/queue.ts",
+            "packages/client/src/runtime/correction.ts"
+          ],
+          "commit": "8d5a32f"
         },
         {
           "id": "TASK-714",
@@ -1431,7 +1511,23 @@
             "PRD 56",
             "PRD 8.5"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/app/index.tsx",
+            "apps/anuvritti/app/pair.tsx",
+            "apps/anuvritti/app/vault.tsx",
+            "apps/anuvritti/src/components/HoldToTalk.tsx",
+            "apps/anuvritti/src/components/Spark.tsx",
+            "apps/anuvritti/src/components/VoiceNote.tsx",
+            "apps/anuvritti/src/model/vault.ts",
+            "apps/anuvritti/src/model/worth.ts",
+            "apps/anuvritti/src/provider.tsx",
+            "apps/anuvritti/src/said.ts",
+            "apps/anuvritti/src/voice/playback.ts",
+            "apps/anuvritti/src/voice/recording.ts",
+            "tests/design/test_the_app.py"
+          ],
+          "commit": "20e4792"
         },
         {
           "id": "TASK-715",
@@ -1447,7 +1543,20 @@
             "PRD 48 F1",
             "PRD 56"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/app/_layout.tsx",
+            "apps/anuvritti/app/index.tsx",
+            "apps/anuvritti/app/pair.tsx",
+            "apps/anuvritti/app/pairing-code.tsx",
+            "apps/anuvritti/app/threshold.tsx",
+            "apps/anuvritti/src/model/threshold.ts",
+            "apps/anuvritti/src/provider.tsx",
+            "apps/anuvritti/src/session/gate.ts",
+            "apps/anuvritti/src/storage/threshold-store.ts",
+            "apps/anuvritti/test/threshold.test.ts"
+          ],
+          "commit": "971694e"
         },
         {
           "id": "TASK-716",
@@ -1464,7 +1573,23 @@
             "PRD 34",
             "PRD 8.5"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/app/film.tsx",
+            "apps/anuvritti/app/index.tsx",
+            "apps/anuvritti/app/vault.tsx",
+            "apps/anuvritti/src/model/film.ts",
+            "apps/anuvritti/test/film.test.ts",
+            "apps/anuvritti/package.json",
+            "apps/anuvritti/package-lock.json",
+            "docs/contracts/openapi.yaml",
+            "packages/client/src/generated/contract.ts",
+            "packages/client/test/client.test.ts",
+            "src/anuvritti/interfaces/http/app.py",
+            "tests/integration/test_pairing.py",
+            "tests/integration/test_film_http.py"
+          ],
+          "commit": "befd97b"
         },
         {
           "id": "TASK-717",
@@ -1479,14 +1604,431 @@
             "PRD 24",
             "PRD 47"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "Dockerfile",
+            "packages/client/test/e2e/golden-path.ts",
+            "pyproject.toml",
+            "requirements-dev.txt",
+            "requirements.txt",
+            "src/anuvritti/application/ports.py",
+            "src/anuvritti/application/voice.py",
+            "src/anuvritti/domain/voice.py",
+            "src/anuvritti/interfaces/http/app.py",
+            "src/anuvritti/interfaces/http/container.py",
+            "src/anuvritti/adapters/media/measure.py",
+            "tests/constitution/test_real_voice.py",
+            "tests/foundation/test_container_hardening.py",
+            "tests/integration/test_voice.py",
+            "tests/support/fakes.py",
+            "tests/unit/adapters/test_measure.py",
+            "tests/unit/application/test_voice_duration.py"
+          ],
+          "commit": "76cf84b"
+        },
+        {
+          "id": "TASK-718",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Record the render toolchain in a portable artifact manifest beside the MP4: Playwright and Chromium revisions, FFmpeg version, exact encoder arguments, frame hashes, and scene-to-frame mapping, so a film can explain exactly how its pixels were made years later.",
+          "module_path": "src/anuvritti/adapters/film/render.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render.py -q",
+          "dependencies": [
+            "TASK-712"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "PRD 47",
+            "PRD 55.5"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/RUNBOOK.md",
+            "src/anuvritti/adapters/film/render.py",
+            "src/anuvritti/application/ports.py",
+            "tests/integration/test_render.py",
+            "tests/support/fakes.py"
+          ],
+          "commit": "0e76af2"
+        },
+        {
+          "id": "TASK-719",
+          "role": "Senior Staff Backend Engineer / Design Lead",
+          "description": "Define and test offline multilingual film font coverage, initially Arabic and Devanagari alongside Latin. Bundle the supported scripts, test real glyph rendering, record the coverage in the artifact, and refuse silent fallback to an unbundled host font.",
+          "module_path": "packages/world/scenes/scene.ts",
+          "verification_command": "npm --prefix packages/world test && .venv/bin/python -m pytest tests/integration/test_render.py -q",
+          "dependencies": [
+            "TASK-712"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "PRD 23",
+            "PRD 47"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/RUNBOOK.md",
+            "packages/world/package.json",
+            "packages/world/scenes/fonts.ts",
+            "packages/world/scenes/scene.ts",
+            "packages/world/scripts/render-film.ts",
+            "packages/world/src/scale.ts",
+            "packages/world/test/scenes.test.ts",
+            "src/anuvritti/adapters/film/render.py",
+            "tests/integration/test_render.py"
+          ],
+          "commit": "7ab34e3"
+        },
+        {
+          "id": "TASK-720",
+          "role": "Senior Staff Backend Engineer",
+          "description": "Verify a rendered film offline from its sibling render manifest. Check the MP4 and any retained frames, report exact missing or changed artifacts, and make the film's reproducibility evidence independently inspectable without the family archive or a network.",
+          "module_path": "src/anuvritti/adapters/film/verify.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_verify.py -q",
+          "dependencies": [
+            "TASK-718"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "PRD 47",
+            "PRD 55.5"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "docs/RUNBOOK.md",
+            "src/anuvritti/adapters/film/verify.py",
+            "tests/integration/test_render_verify.py"
+          ],
+          "commit": "d2c571c"
+        },
+        {
+          "id": "TASK-721",
+          "role": "Senior Staff Backend Engineer / Privacy Engineer",
+          "description": "Derive requested writing systems from a family's archive before export. Report unsupported codepoints with their scene and saved field, and let render-machine setup fetch an approved pinned world bundle before plaintext export.",
+          "module_path": "src/anuvritti/adapters/film/filmkit_compiler.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_film_export.py tests/integration/test_render.py -q",
+          "dependencies": [
+            "TASK-719"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "PRD 23",
+            "PRD 44",
+            "PRD 47"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "docs/RUNBOOK.md",
+            "packages/world/package.json",
+            "packages/world/scenes/fonts.ts",
+            "packages/world/scenes/preparation.ts",
+            "packages/world/scripts/export-film-policy.ts",
+            "packages/world/scripts/prepare-film.ts",
+            "packages/world/test/scenes.test.ts",
+            "src/anuvritti/adapters/film/_world_font_policy.py",
+            "src/anuvritti/adapters/film/export.py",
+            "src/anuvritti/adapters/film/filmkit_compiler.py",
+            "tests/integration/test_film_export.py"
+          ],
+          "commit": "86863fe"
+        },
+        {
+          "id": "TASK-722",
+          "role": "Senior Staff Backend Engineer / Security Engineer",
+          "description": "Anchor the render receipt with a family-held offline authenticity key, so coordinated replacement of both MP4 and manifest is distinguishable from the original render without the archive or a network.",
+          "module_path": "src/anuvritti/adapters/film/verify.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_verify.py -q",
+          "dependencies": [
+            "TASK-720"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "PRD 44",
+            "PRD 47",
+            "PRD 55.5"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "docs/RUNBOOK.md",
+            "src/anuvritti/adapters/film/verify.py",
+            "tests/integration/test_render_verify.py"
+          ],
+          "commit": "a35bc48"
+        },
+        {
+          "id": "TASK-723",
+          "role": "Senior Staff Mobile Engineer / Build Engineer",
+          "description": "Restore reproducible app dependency installation with a compatible pinned Expo, React and font package set and the repository's lockfile strategy, so a clean checkout installs and tests without peer or unavailable-package failures.",
+          "module_path": "apps/anuvritti/package.json",
+          "verification_command": "npm ci && npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-716"
+          ],
+          "prd_refs": [
+            "ADR-0001",
+            "PRD 56"
+          ],
+          "status": "completed",
+          "changed_files": [
+            ".github/workflows/ci.yml",
+            "Makefile",
+            "apps/anuvritti/package.json",
+            "package.json",
+            "package-lock.json",
+            "packages/world/scripts/render-film.ts",
+            "tests/foundation/test_javascript_dependencies.py"
+          ],
+          "commit": "117fb08"
+        },
+        {
+          "id": "TASK-724",
+          "role": "Senior Staff Backend Engineer / Privacy Engineer",
+          "description": "Approve font bytes as well as package names: publish expected WOFF2 integrity digests in the world policy and make film-prepare verify installed bytes before declaring a render machine ready.",
+          "module_path": "packages/world/scenes/fonts.ts",
+          "verification_command": "npm --prefix packages/world test && .venv/bin/python -m pytest tests/integration/test_film_export.py tests/integration/test_render.py -q",
+          "dependencies": [
+            "TASK-719",
+            "TASK-721"
+          ],
+          "prd_refs": [
+            "PRD 8.6",
+            "PRD 44",
+            "PRD 47"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "docs/RUNBOOK.md",
+            "packages/world/scenes/fonts.ts",
+            "packages/world/scenes/preparation.ts",
+            "packages/world/scripts/export-film-policy.ts",
+            "packages/world/scripts/prepare-film.ts",
+            "packages/world/test/scenes.test.ts",
+            "src/anuvritti/adapters/film/_world_font_policy.py",
+            "tests/integration/test_film_export.py"
+          ],
+          "commit": "c8d852f"
+        },
+        {
+          "id": "TASK-730",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Prove the production media-probe image end to end: build the production container, assert ffprobe measures a known fixture inside it, and publish the measured image-size delta caused by the runtime dependency.",
+          "module_path": "tests/foundation/test_container.py",
+          "verification_command": ".venv/bin/python -m pytest tests/foundation/test_container.py -q",
+          "dependencies": [
+            "TASK-717"
+          ],
+          "prd_refs": [
+            "PRD 24",
+            "PRD 44",
+            "PRD 47"
+          ],
+          "status": "completed",
+          "changed_files": [
+            ".github/workflows/ci.yml",
+            "Dockerfile",
+            "docs/RUNBOOK.md",
+            "scripts/verify-production-media-probe.sh",
+            "tests/foundation/test_container.py",
+            "tests/foundation/test_container_hardening.py"
+          ],
+          "commit": "5a2092b"
+        },
+        {
+          "id": "TASK-734",
+          "role": "Principal SRE & DevSecOps Lead",
+          "description": "Minimise the production audio-probe runtime: replace the broad FFmpeg package footprint with a pinned, vulnerability-reviewable ffprobe runtime while retaining accepted handset-format coverage, the one-second container proof, and an honest published image-size delta.",
+          "module_path": "Dockerfile",
+          "verification_command": ".venv/bin/python -m pytest tests/foundation/test_container.py tests/foundation/test_container_hardening.py -q",
+          "dependencies": [
+            "TASK-730"
+          ],
+          "prd_refs": [
+            "PRD 24",
+            "PRD 44",
+            "PRD 47"
+          ],
+          "status": "completed",
+          "changed_files": [
+            ".github/workflows/ci.yml",
+            "Dockerfile",
+            "docs/RUNBOOK.md",
+            "scripts/verify-production-media-probe.sh",
+            "tests/foundation/test_container.py",
+            "tests/foundation/test_container_hardening.py"
+          ],
+          "commit": "f5f256e"
+        },
+        {
+          "id": "TASK-732",
+          "role": "Senior Staff Mobile Engineer / Security Engineer",
+          "description": "Triage the locked npm advisories: identify each owning direct dependency, upgrade only within Expo's supported matrix, and record an explicit accepted risk for anything that cannot safely move yet.",
+          "module_path": "docs/DEPENDENCY-RISK.md",
+          "verification_command": "npm run audit && npx expo install --check && npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-723"
+          ],
+          "prd_refs": [
+            "ADR-0001",
+            "PRD 44"
+          ],
+          "status": "completed",
+          "changed_files": [
+            ".github/workflows/ci.yml",
+            "docs/DEPENDENCY-RISK.md",
+            "package.json",
+            "scripts/audit-javascript.mjs",
+            "tests/foundation/test_javascript_audit.py"
+          ],
+          "commit": "3c131f7"
+        },
+        {
+          "id": "TASK-733",
+          "role": "Design Lead / Build Engineer",
+          "description": "Review font upgrades as visual migrations: print old and candidate WOFF2 digests and render multilingual comparison stills for explicit design approval before any approved font pin changes.",
+          "module_path": "packages/world/scripts/review-film-fonts.ts",
+          "verification_command": "npm --prefix packages/world test",
+          "dependencies": [
+            "TASK-724"
+          ],
+          "prd_refs": [
+            "PRD 47",
+            "PRD 56"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "docs/RUNBOOK.md",
+            "packages/world/package.json",
+            "packages/world/scripts/review-film-fonts.ts",
+            "packages/world/test/scenes.test.ts"
+          ],
+          "commit": "55b9b45"
+        },
+        {
+          "id": "TASK-736",
+          "role": "Design Lead / Build Engineer",
+          "description": "Make font migrations inspectable at a glance: add an approved-versus-candidate pixel-difference image, changed-pixel bounds and honest change measurements for every Latin, Arabic and Devanagari film still, as evidence for human design approval rather than an automatic gate.",
+          "module_path": "packages/world/scripts/review-film-fonts.ts",
+          "verification_command": "npm --prefix packages/world test",
+          "dependencies": [
+            "TASK-733"
+          ],
+          "prd_refs": [
+            "PRD 47",
+            "PRD 56"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/RUNBOOK.md",
+            "packages/world/scripts/review-film-fonts.ts",
+            "packages/world/scripts/png-difference.ts",
+            "packages/world/test/png-difference.test.ts",
+            "packages/world/test/scenes.test.ts"
+          ],
+          "commit": "7a00c93"
+        },
+        {
+          "id": "TASK-735",
+          "role": "Senior Staff Mobile Engineer / Security Engineer",
+          "description": "Remove the UUID advisory acceptance when Expo supplies a compatible config-plugin/xcode dependency chain: upgrade only through Expo's supported matrix, delete the exception, and prove the locked JavaScript tree has zero advisories.",
+          "module_path": "scripts/audit-javascript.mjs",
+          "verification_command": "npm run audit && npx expo install --check && npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-732"
+          ],
+          "prd_refs": [
+            "ADR-0001",
+            "PRD 44"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/DEPENDENCY-RISK.md",
+            "package-lock.json",
+            "package.json",
+            "scripts/audit-javascript.mjs",
+            "scripts/patch-xcode-uuid.mjs",
+            "tests/foundation/test_javascript_audit.py"
+          ],
+          "commit": "c477ee4"
+        },
+        {
+          "id": "TASK-737",
+          "role": "Design Lead / Build Engineer",
+          "description": "Fingerprint font visual-review renders with the exact Chromium and Playwright revisions, operating system and architecture, so pixel evidence remains honest when review machines differ.",
+          "module_path": "packages/world/scripts/review-film-fonts.ts",
+          "verification_command": "npm --prefix packages/world test",
+          "dependencies": [
+            "TASK-736"
+          ],
+          "prd_refs": [
+            "PRD 47",
+            "PRD 56"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/RUNBOOK.md",
+            "packages/world/scripts/review-film-fonts.ts",
+            "packages/world/test/scenes.test.ts"
+          ],
+          "commit": "561f325"
+        },
+        {
+          "id": "TASK-738",
+          "role": "Design Lead / Build Engineer",
+          "description": "Add a nearest-neighbour magnified detail panel for every non-empty font-review change bound, preserving full-frame context while making subtle glyph, diacritic and matra differences legible in Markdown.",
+          "module_path": "packages/world/scripts/review-film-fonts.ts",
+          "verification_command": "npm --prefix packages/world test",
+          "dependencies": [
+            "TASK-736"
+          ],
+          "prd_refs": [
+            "PRD 47",
+            "PRD 56"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/RUNBOOK.md",
+            "packages/world/scripts/png-difference.ts",
+            "packages/world/scripts/review-film-fonts.ts",
+            "packages/world/test/png-difference.test.ts",
+            "packages/world/test/scenes.test.ts"
+          ],
+          "commit": "3454f41"
+        },
+        {
+          "id": "TASK-741",
+          "role": "Senior Staff Mobile Engineer / Security Engineer",
+          "description": "Remove the blocked UUID advisory by carrying a reviewed, reproducible xcode compatibility patch for UUID 11, preserving upstream provenance and license, testing the APIs Expo uses, and automatically retiring the patch when Expo publishes a clean supported chain.",
+          "module_path": "scripts/audit-javascript.mjs",
+          "verification_command": "npm run audit && npx expo install --check && npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test",
+          "dependencies": [
+            "TASK-732"
+          ],
+          "prd_refs": [
+            "ADR-0001",
+            "PRD 44",
+            "PRD 47"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/DEPENDENCY-RISK.md",
+            "package-lock.json",
+            "package.json",
+            "scripts/audit-javascript.mjs",
+            "scripts/patch-xcode-uuid.mjs",
+            "tests/foundation/test_javascript_audit.py"
+          ],
+          "commit": "c477ee4"
         }
       ]
     },
     {
       "name": "Phase 8: Make It Magical",
       "owner": "Design Lead / Senior Staff Backend Engineer / Senior Staff Mobile Engineer",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-801",
@@ -1502,7 +2044,25 @@
             "PRD 13",
             "PRD 8.1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/lexicon.py",
+            "src/anuvritti/application/ports.py",
+            "src/anuvritti/application/capture.py",
+            "src/anuvritti/application/privacy.py",
+            "src/anuvritti/adapters/intent/heuristic.py",
+            "src/anuvritti/adapters/intent/spoken.py",
+            "src/anuvritti/adapters/persistence/schema.py",
+            "src/anuvritti/adapters/persistence/sqlite.py",
+            "src/anuvritti/interfaces/http/container.py",
+            "tests/unit/domain/test_lexicon.py",
+            "tests/integration/test_family_lexicon.py",
+            "tests/support/fakes.py",
+            "tests/integration/conftest.py",
+            "tests/unit/application/test_failure_paths.py"
+          ],
+          "note": "Closed 2026-08-28. FamilyLexicon is a per-family term tally with five refusals made structural: no merge/union/combine exists in the module (an AST test reads the source and fails if one appears); only a human override can build a Correction, so the engine cannot train on its own guesses; one correction counts but does not speak, because a product that reorganises itself around a single tap feels haunted; a word this family uses two ways teaches nothing rather than siding with the higher count; and it holds counts with no SparkId, ChildId or MemberId anywhere, so a leaked lexicon says only that this family says 'sanskaar' and means TEACH. schema v4 adds lexicon_term keyed (family_id, field, term, means). The seam is real end to end: OverrideFieldUseCase learns inside the same transaction as the save (a lexicon updated for a correction that rolled back would record things nobody said) and swallows its own failures, because answering a parent's correction with an error about the learning would make the correction look rejected. CaptureSparkUseCase reads the lexicon and treats an unreadable one as absent - a share must never fail because of a family's own vocabulary. It rides the export and dies with the family, both directions of PRD 44. 32 domain tests, 11 integration, 100% coverage.",
+          "completed_at": "2026-08-28"
         },
         {
           "id": "TASK-803",
@@ -1534,7 +2094,15 @@
             "PRD 50",
             "PRD 52"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/inbox.py",
+            "src/anuvritti/shared/identity.py",
+            "tests/unit/domain/test_inbox.py",
+            "tests/constitution/test_inbox_sealed.py",
+            "tests/constitution/README.md"
+          ],
+          "commit": "d623533"
         },
         {
           "id": "TASK-807",
@@ -1550,7 +2118,11 @@
             "PRD 8.4",
             "PRD 8.5"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/model/today.ts",
+            "apps/anuvritti/test/today.test.ts"
+          ]
         },
         {
           "id": "TASK-808",
@@ -1729,6 +2301,89 @@
           "status": "pending"
         },
         {
+          "id": "TASK-819",
+          "role": "Senior Staff Backend Engineer / Security Engineer",
+          "description": "Persist a Future Inbox seal atomically through repository and media ports: encrypt the private artifact at rest and commit its portable provenance ledger with it, with crash-recovery tests proving neither can exist alone.",
+          "module_path": "src/anuvritti/adapters/persistence/inbox.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_inbox_persistence.py tests/constitution/test_inbox_sealed.py -q",
+          "dependencies": [
+            "TASK-806"
+          ],
+          "prd_refs": [
+            "PRD 21",
+            "PRD 44",
+            "PRD 47",
+            "PRD 52"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/ARCHITECTURE.md",
+            "src/anuvritti/adapters/persistence/inbox.py",
+            "src/anuvritti/adapters/persistence/schema.py",
+            "src/anuvritti/application/ports.py",
+            "tests/integration/test_inbox_persistence.py",
+            "tests/support/fakes.py"
+          ],
+          "commit": "eb56d95"
+        },
+        {
+          "id": "TASK-820",
+          "role": "Senior Staff Backend Engineer / Security Engineer",
+          "description": "Authenticate each portable Future Inbox ledger offline with the family-held film authenticity key, so replacement of both an artifact and its digest is distinguishable years later without the archive or a network.",
+          "module_path": "src/anuvritti/adapters/inbox/authenticity.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_inbox_authenticity.py tests/constitution/test_inbox_sealed.py -q",
+          "dependencies": [
+            "TASK-806",
+            "TASK-722"
+          ],
+          "prd_refs": [
+            "PRD 21",
+            "PRD 44",
+            "PRD 47",
+            "PRD 52"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "docs/RUNBOOK.md",
+            "src/anuvritti/adapters/authenticity.py",
+            "src/anuvritti/adapters/film/verify.py",
+            "src/anuvritti/adapters/inbox/__init__.py",
+            "src/anuvritti/adapters/inbox/authenticity.py",
+            "tests/integration/test_inbox_authenticity.py"
+          ],
+          "commit": "1fa6647"
+        },
+        {
+          "id": "TASK-823",
+          "role": "Senior Staff Backend Engineer / Security Engineer",
+          "description": "Give the family authenticity key a recoverable, versioned ceremony: encrypted second-copy backup, rehearsed recovery and rotation, and a content-free inventory showing which film and Future Inbox anchors each key version covers.",
+          "module_path": "src/anuvritti/adapters/authenticity.py",
+          "verification_command": ".venv/bin/python -m pytest tests/integration/test_authenticity_key_recovery.py tests/integration/test_inbox_authenticity.py tests/integration/test_render_verify.py -q",
+          "dependencies": [
+            "TASK-722",
+            "TASK-820"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 47",
+            "PRD 52"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "Makefile",
+            "docs/RUNBOOK.md",
+            "src/anuvritti/adapters/authenticity.py",
+            "src/anuvritti/adapters/key_recovery.py",
+            "src/anuvritti/adapters/film/verify.py",
+            "src/anuvritti/adapters/inbox/authenticity.py",
+            "tests/integration/test_authenticity_key_recovery.py",
+            "tests/integration/test_inbox_authenticity.py",
+            "tests/integration/test_render_verify.py"
+          ],
+          "commit": "97d5030"
+        },
+        {
           "id": "TASK-804",
           "role": "Senior Staff Backend Engineer",
           "description": "Email-in ingest, so a grandparent can contribute with nothing installed and nothing learned. The mailbox is read at the interface layer (a drop folder or an inbound webhook); tests/constitution/test_no_public_model.py forbids imaplib/smtplib under adapters/, and that stays.",
@@ -1756,7 +2411,11 @@
             "PRD 21",
             "PRD 50"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/vault.py",
+            "tests/integration/test_semantic_search.py"
+          ]
         },
         {
           "id": "TASK-802",
@@ -1779,7 +2438,7 @@
     {
       "name": "Phase 9: Real - a server, a backup, a phone, a month",
       "owner": "Principal SRE & DevSecOps Lead / Founder",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-905",
@@ -1794,7 +2453,36 @@
             "HARDENING 5.4",
             "PRD 44"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/adapters/backup.py",
+            "scripts/backup.sh",
+            "scripts/restore.sh",
+            "docs/CONTINUITY.md",
+            "tests/integration/test_backup.py",
+            "src/anuvritti/adapters/persistence/mapping.py",
+            "src/anuvritti/adapters/persistence/sqlite.py"
+          ]
+        },
+        {
+          "id": "TASK-731",
+          "role": "Principal Systems Architect / Security Engineer",
+          "description": "Choose durable family render-receipt key custody: define recovery, rotation, multi-device access and loss semantics, and connect them to the rehearsed family backup and restore design before receipt anchors become automatic.",
+          "module_path": "docs/architecture/ADR-0007-render-receipt-key-custody.md",
+          "verification_command": ".venv/bin/python -m pytest tests/foundation -q",
+          "dependencies": [
+            "TASK-722",
+            "TASK-905"
+          ],
+          "prd_refs": [
+            "PRD 44",
+            "PRD 47",
+            "PRD 55.5"
+          ],
+          "status": "completed",
+          "changed_files": [
+            "docs/architecture/ADR-0007-render-receipt-key-custody.md"
+          ]
         },
         {
           "id": "TASK-1101",
@@ -1809,8 +2497,11 @@
             "HARDENING 5.4",
             "PRD 8.6"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/adapters/persistence/migrations.py",
+            "tests/integration/test_migrations.py"
+          ]
         },
         {
           "id": "TASK-906",
@@ -1825,7 +2516,16 @@
             "PRD 44",
             "CLAUDE.md 1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            ".github/workflows/deploy.yml",
+            "deploy/Caddyfile",
+            "src/anuvritti/config/settings.py",
+            ".env.example",
+            "src/anuvritti/interfaces/http/observability.py",
+            "tests/unit/config/test_settings.py",
+            "tests/integration/test_observability.py"
+          ]
         },
         {
           "id": "TASK-907",
@@ -1842,7 +2542,12 @@
             "PRD 8.2",
             "PRD 48 F1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/eas.json",
+            "docs/DEVICE.md"
+          ],
+          "note": "EAS internal distribution profiles configured in eas.json and honest hardware execution checklist in docs/DEVICE.md"
         },
         {
           "id": "TASK-1102",
@@ -1857,8 +2562,12 @@
             "PRD 44",
             "PRD 46"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/config/logging.py",
+            "src/anuvritti/shared/logging.py",
+            "tests/constitution/test_log_privacy.py"
+          ]
         },
         {
           "id": "TASK-1009",
@@ -1873,8 +2582,10 @@
             "PRD 8.2",
             "PRD 8.6"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/test/crash-recovery.test.ts"
+          ]
         },
         {
           "id": "TASK-1004",
@@ -1890,8 +2601,11 @@
             "PRD 8.3",
             "PRD 8.5"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/return/notifications.ts",
+            "apps/anuvritti/test/notifications.test.ts"
+          ]
         },
         {
           "id": "TASK-908",
@@ -1906,7 +2620,12 @@
             "PRD 9",
             "PRD 47"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/values.py",
+            "src/anuvritti/application/import_.py",
+            "tests/integration/test_import.py"
+          ]
         },
         {
           "id": "TASK-909",
@@ -1921,7 +2640,10 @@
             "ADR-0003",
             "PRD 44"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "docs/architecture/ADR-0006-tenant-is-the-process.md"
+          ]
         },
         {
           "id": "TASK-910",
@@ -1941,7 +2663,12 @@
             "PRD 64",
             "PRD 50"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "docs/VALIDATION.md",
+            "tests/e2e/test_thirty_days.py"
+          ],
+          "note": "Validation protocol documented in docs/VALIDATION.md and verified via 30-day automated lifecycle test in test_thirty_days.py"
         },
         {
           "id": "TASK-902",
@@ -1956,7 +2683,12 @@
             "PRD 26",
             "PRD 51"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/values.py",
+            "src/anuvritti/domain/family.py",
+            "tests/unit/domain/test_coparent.py"
+          ]
         },
         {
           "id": "TASK-903",
@@ -1971,7 +2703,11 @@
           "prd_refs": [
             "PRD 27"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/presence.py",
+            "tests/integration/test_grandparent.py"
+          ]
         },
         {
           "id": "TASK-904",
@@ -1987,7 +2723,13 @@
             "PRD 25",
             "PRD 24"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/spark.py",
+            "src/anuvritti/adapters/persistence/sqlite.py",
+            "src/anuvritti/application/privacy.py",
+            "tests/integration/test_child_rights.py"
+          ]
         },
         {
           "id": "TASK-901",
@@ -2003,14 +2745,18 @@
             "PRD 44",
             "HARDENING 5.1"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/interfaces/http/auth.py",
+            "tests/integration/test_isolation.py"
+          ]
         }
       ]
     },
     {
       "name": "Phase 10: The Thing in Your Pocket",
       "owner": "Principal Mobile Engineer / Design Lead",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-1001",
@@ -2028,8 +2774,11 @@
             "PRD 44",
             "HARDENING 5.1"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/vault/device-vault.ts",
+            "apps/anuvritti/test/device-vault.test.ts"
+          ]
         },
         {
           "id": "TASK-1002",
@@ -2045,8 +2794,11 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/sync/uploader.ts",
+            "apps/anuvritti/test/uploader.test.ts"
+          ]
         },
         {
           "id": "TASK-1003",
@@ -2063,8 +2815,11 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/capture/native.ts",
+            "apps/anuvritti/test/native-capture.test.ts"
+          ]
         },
         {
           "id": "TASK-1005",
@@ -2080,8 +2835,12 @@
             "PRD 18",
             "PRD 8.4"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/widgets/right-now-widget.ts",
+            "apps/anuvritti/src/widgets/index.ts",
+            "apps/anuvritti/test/widgets.test.ts"
+          ]
         },
         {
           "id": "TASK-1006",
@@ -2097,8 +2856,16 @@
             "PRD 56",
             "PRD 27"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/a11y/accessibility.ts",
+            "apps/anuvritti/src/a11y/index.ts",
+            "apps/anuvritti/src/components/Spark.tsx",
+            "apps/anuvritti/src/components/HoldToTalk.tsx",
+            "tests/architecture/test_reachability.py",
+            "apps/anuvritti/test/a11y.test.ts"
+          ],
+          "note": "Accessibility labels wired directly into Spark and HoldToTalk components and proven in tests"
         },
         {
           "id": "TASK-1007",
@@ -2116,8 +2883,14 @@
             "PRD 8.4",
             "PRD 8.2"
           ],
-          "status": "pending",
-          "changed_files": [],
+          "status": "completed",
+          "changed_files": [
+            "packages/world/src/thumb.ts",
+            "packages/world/src/night.ts",
+            "packages/world/src/index.ts",
+            "packages/world/test/night-thumb.test.ts",
+            "tests/design/test_night_surface.py"
+          ],
           "note": "PRD 29 'Wind Down' is a child-facing surface (TASK-818); this is the parent's night surface."
         },
         {
@@ -2134,8 +2907,11 @@
             "PRD 8.2",
             "PRD 46"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/sync/budget.ts",
+            "apps/anuvritti/test/budget.test.ts"
+          ]
         },
         {
           "id": "TASK-1010",
@@ -2152,8 +2928,12 @@
           "prd_refs": [
             "PRD 48"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            ".github/workflows/device.yml",
+            "apps/anuvritti/test/device-e2e.test.ts"
+          ],
+          "note": "CI matrix configured in device.yml and full mobile lifecycle verified in device-e2e.test.ts"
         },
         {
           "id": "TASK-1011",
@@ -2170,8 +2950,11 @@
             "PRD 46",
             "HARDENING 5.3"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "scripts/privacy_manifest.py",
+            "tests/constitution/test_privacy_manifest.py"
+          ]
         },
         {
           "id": "TASK-1012",
@@ -2187,15 +2970,25 @@
             "PRD 40",
             "PRD 56"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "packages/world/src/language/catalog.ts",
+            "packages/world/src/language/translator.ts",
+            "packages/world/src/language/index.ts",
+            "apps/anuvritti/src/useTranslator.ts",
+            "apps/anuvritti/app/index.tsx",
+            "apps/anuvritti/app/vault.tsx",
+            "apps/anuvritti/app/pair.tsx",
+            "packages/world/test/language.test.ts"
+          ],
+          "note": "Language catalog wired into screens via useTranslator hook with zero hardcoded literals"
         }
       ]
     },
     {
       "name": "Phase 11: The Machine That Runs It",
       "owner": "Principal SRE & DevSecOps Lead",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-1103",
@@ -2211,8 +3004,12 @@
             "PRD 44",
             "HARDENING 5.4"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "in_progress",
+          "changed_files": [
+            "src/anuvritti/interfaces/http/telemetry.py",
+            "tests/integration/test_telemetry.py"
+          ],
+          "note": "Reopened 2026-08-29. Not mounted, duplicates the mounted observability.py, and the cardinality ceiling is absent on the error path: 5000 distinct 404s produced 5000 series and a 951KB /metrics."
         },
         {
           "id": "TASK-1104",
@@ -2228,8 +3025,12 @@
             "PRD 8.2",
             "HARDENING 5.4"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/observability/slo.py",
+            "docs/SLO.md",
+            "tests/integration/test_slo.py"
+          ]
         },
         {
           "id": "TASK-1105",
@@ -2246,7 +3047,11 @@
             "PRD 8.2"
           ],
           "status": "pending",
-          "changed_files": []
+          "changed_files": [
+            "src/anuvritti/interfaces/http/limits.py",
+            "tests/integration/test_rate_limit.py"
+          ],
+          "note": "Reopened 2026-08-29. install_rate_limiter has no caller, so there is no rate limiting. Its /auth/* patterns match no real route, and its 429 body breaks the error envelope."
         },
         {
           "id": "TASK-1106",
@@ -2262,7 +3067,11 @@
             "HARDENING 5.3"
           ],
           "status": "pending",
-          "changed_files": []
+          "changed_files": [
+            "scripts/sbom.py",
+            "tests/integration/test_supply_chain.py"
+          ],
+          "note": "Reopened 2026-08-29. SBOM hashes are sha256 of the requirements-file line text, version is the literal string 'pinned', requirements.txt has zero --hash lines, and 566 real integrity hashes in package-lock.json go unused."
         },
         {
           "id": "TASK-1107",
@@ -2279,7 +3088,12 @@
             "PRD 44"
           ],
           "status": "pending",
-          "changed_files": []
+          "changed_files": [
+            "src/anuvritti/adapters/media/keys.py",
+            "src/anuvritti/adapters/media/filesystem.py",
+            "tests/integration/test_key_rotation.py"
+          ],
+          "note": "Reopened 2026-08-29. Dual-read rotation works and is wired; rotate_payload has no caller outside its test, so a retired key can never be retired and HARDENING 5.5 is not closed."
         },
         {
           "id": "TASK-1108",
@@ -2297,7 +3111,11 @@
             "PRD 45"
           ],
           "status": "pending",
-          "changed_files": []
+          "changed_files": [
+            "src/anuvritti/application/retention.py",
+            "tests/integration/test_retention.py"
+          ],
+          "note": "Reopened 2026-08-29. RetentionEngine raises AttributeError on GuardedConnection and queries an auth_token table and a spark.media_id column that do not exist. No scheduler calls it."
         },
         {
           "id": "TASK-1109",
@@ -2314,7 +3132,12 @@
             "PRD 44"
           ],
           "status": "pending",
-          "changed_files": []
+          "changed_files": [
+            "src/anuvritti/config/secrets_guard.py",
+            "scripts/scan_image.py",
+            "tests/integration/test_no_secrets_in_image.py"
+          ],
+          "note": "Reopened 2026-08-29. scan_image.py walks a directory tree, not image layers; nothing in the Dockerfile or CI calls it; SECRET_PATTERNS misses the Fernet ANUVRITTI_MEDIA_KEY."
         },
         {
           "id": "TASK-1110",
@@ -2330,7 +3153,13 @@
             "HARDENING 5.4"
           ],
           "status": "pending",
-          "changed_files": []
+          "changed_files": [
+            "src/anuvritti/infrastructure/release.py",
+            "scripts/release.py",
+            ".github/workflows/deploy.yml",
+            "tests/integration/test_release.py"
+          ],
+          "note": "Reopened 2026-08-29. cutover, monitor_burn and rollback all print and return True; monitor_burn never reads slo.py; CI verifies with 'release.py --help'."
         },
         {
           "id": "TASK-1111",
@@ -2347,8 +3176,11 @@
             "HARDENING 5.4",
             "PRD 8.6"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "scripts/restore_drill.py",
+            "tests/integration/test_restore_drill.py"
+          ]
         },
         {
           "id": "TASK-1112",
@@ -2365,8 +3197,10 @@
             "PRD 21",
             "PRD 52"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "tests/performance/test_full_archive.py"
+          ]
         }
       ]
     },
@@ -3072,6 +3906,7 @@
     "TASK-510",
     "TASK-511",
     "TASK-512",
+    "TASK-513",
     "TASK-601",
     "TASK-602",
     "TASK-603",
@@ -3086,7 +3921,66 @@
     "TASK-706",
     "TASK-707",
     "TASK-708",
-    "TASK-711"
+    "TASK-709",
+    "TASK-710",
+    "TASK-711",
+    "TASK-712",
+    "TASK-713",
+    "TASK-714",
+    "TASK-715",
+    "TASK-716",
+    "TASK-717",
+    "TASK-718",
+    "TASK-719",
+    "TASK-720",
+    "TASK-721",
+    "TASK-722",
+    "TASK-723",
+    "TASK-724",
+    "TASK-730",
+    "TASK-734",
+    "TASK-732",
+    "TASK-733",
+    "TASK-736",
+    "TASK-735",
+    "TASK-737",
+    "TASK-738",
+    "TASK-741",
+    "TASK-801",
+    "TASK-806",
+    "TASK-807",
+    "TASK-819",
+    "TASK-820",
+    "TASK-823",
+    "TASK-805",
+    "TASK-905",
+    "TASK-731",
+    "TASK-1101",
+    "TASK-906",
+    "TASK-907",
+    "TASK-1102",
+    "TASK-1009",
+    "TASK-1004",
+    "TASK-908",
+    "TASK-909",
+    "TASK-910",
+    "TASK-902",
+    "TASK-903",
+    "TASK-904",
+    "TASK-901",
+    "TASK-1001",
+    "TASK-1002",
+    "TASK-1003",
+    "TASK-1005",
+    "TASK-1006",
+    "TASK-1007",
+    "TASK-1008",
+    "TASK-1010",
+    "TASK-1011",
+    "TASK-1012",
+    "TASK-1104",
+    "TASK-1111",
+    "TASK-1112"
   ],
   "blocked_tasks": []
 }
