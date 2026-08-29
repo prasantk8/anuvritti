@@ -1,6 +1,13 @@
 # On a real phone
 
-**Status: NOT RUN. Hardware execution checklist.**
+**Status: NOT RUN, and DEFERRED by decision on 2026-08-29. Hardware execution
+checklist.**
+
+Deferred for the same reason as [VALIDATION.md](VALIDATION.md) and on the same day: this
+needs a phone in a hand, no runner has one, and it was sitting under TASK-1004 as though
+writing a notification scheduler required the app to already be installed. That edge is
+cut. The checklist is not — TASK-907 carries `runs_on: "a real iPhone and a real Android,
+in a hand"`, which keeps it a release gate and stops it being a dependency again.
 
 `tests/e2e/test_the_app_against_the_server.py` runs the whole golden path through the real
 generated client against the real server over a real socket. It covers pairing, capture,

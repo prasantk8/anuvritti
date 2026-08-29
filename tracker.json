@@ -730,7 +730,7 @@
           "id": "TASK-506",
           "role": "Principal Mobile Engineer",
           "description": "The Spark as an object rather than a card: front is what was saved, back is why it was saved. The flip is the product's core gesture.",
-          "module_path": "apps/anuvritti/src/spark/SparkObject.tsx",
+          "module_path": "apps/anuvritti/src/components/Spark.tsx",
           "verification_command": "npm --prefix apps/anuvritti test -- spark",
           "dependencies": [
             "TASK-505",
@@ -743,13 +743,16 @@
           ],
           "status": "completed",
           "notes": "apps/anuvritti/src/components/Spark.tsx. Front is what was saved, back is why. The flip is the only motion allowed past the design system's ceiling, and it is announced to a screen reader because a rotation is not an event one can observe.",
-          "completed_at": "2026-08-25"
+          "completed_at": "2026-08-25",
+          "changed_files": [
+            "apps/anuvritti/src/components/Spark.tsx"
+          ]
         },
         {
           "id": "TASK-507",
           "role": "Principal Mobile Engineer",
           "description": "Time as language, never as a number: bind describe_elapsed semantics through the client so the interface can say 'a Tuesday last spring' and cannot say '247 days'.",
-          "module_path": "apps/anuvritti/src/time/elapsed.ts",
+          "module_path": "packages/client/src/runtime/time.ts",
           "verification_command": "npm --prefix apps/anuvritti test -- elapsed",
           "dependencies": [
             "TASK-506",
@@ -761,13 +764,16 @@
           ],
           "status": "completed",
           "notes": "days_since_capture removed from the wire; Spark.saved and Suggestion.elapsed carry the phrase. Instant and Elapsed are branded in the generated client, and packages/client contains no Date.parse, new Date, Date.now, getTime or valueOf - asserted by a test that also mutation-checks its own regexes.",
-          "completed_at": "2026-08-25"
+          "completed_at": "2026-08-25",
+          "changed_files": [
+            "packages/client/src/runtime/time.ts"
+          ]
         },
         {
           "id": "TASK-508",
           "role": "Principal Mobile Engineer",
           "description": "Capture under ten seconds: an iOS Share Extension and an Android SEND intent filter that post straight to /v1/sparks and answer with 'Saved.' - the PRD's primary path, native on both platforms.",
-          "module_path": "apps/anuvritti/share-extension",
+          "module_path": "apps/anuvritti/src/capture/incoming.ts",
           "verification_command": "npm --prefix apps/anuvritti test -- capture",
           "dependencies": [
             "TASK-505"
@@ -779,13 +785,18 @@
           ],
           "status": "completed",
           "notes": "expo-sharing's first-party config plugin (verified against the published 57.0.15 tarball) covers iOS share extension and Android SEND in one declaration. readShare() is a pure function with no expo import and 20 tests.",
-          "completed_at": "2026-08-25"
+          "completed_at": "2026-08-25",
+          "changed_files": [
+            "apps/anuvritti/src/capture/incoming.ts",
+            "apps/anuvritti/test/share.test.ts"
+          ],
+          "note": "The reading side is real and tested: apps/anuvritti/src/capture/incoming.ts spools a shared photograph exactly like a recording (TASK-713). The native iOS share-extension target itself does not exist and cannot - it needs provisioning and a device. That is DEVICE.md item 1 and TASK-907, which is a deferred release gate, not this task."
         },
         {
           "id": "TASK-509",
           "role": "Principal Mobile Engineer",
           "description": "Offline-first capture queue with idempotent replay, so a parent with no signal still saves in under ten seconds.",
-          "module_path": "apps/anuvritti/src/queue",
+          "module_path": "apps/anuvritti/src/storage/queue-store.ts",
           "verification_command": "npm --prefix apps/anuvritti test -- queue",
           "dependencies": [
             "TASK-508"
@@ -795,13 +806,17 @@
           ],
           "status": "completed",
           "notes": "Idempotency-Key on all four capture endpoints, storing a request fingerprint so a reused key with a different body is a CONFLICT rather than a silent success. Client queue enqueues without touching the network, classifies failure rather than counting it, and jitters its backoff.",
-          "completed_at": "2026-08-25"
+          "completed_at": "2026-08-25",
+          "changed_files": [
+            "apps/anuvritti/src/storage/queue-store.ts",
+            "apps/anuvritti/src/storage/spool-store.ts"
+          ]
         },
         {
           "id": "TASK-510",
           "role": "Principal Mobile Engineer",
           "description": "One-tap correction: the inferred chip cycles through alternatives and never becomes a form, driving the Attributed override path the domain already models.",
-          "module_path": "apps/anuvritti/src/spark/InferenceChip.tsx",
+          "module_path": "apps/anuvritti/src/components/Spark.tsx",
           "verification_command": "npm --prefix apps/anuvritti test -- inference",
           "dependencies": [
             "TASK-506"
@@ -813,7 +828,10 @@
           ],
           "status": "completed",
           "notes": "The chip cycles through a likelihood-ordered permutation of the six intents; every cycle is proven to visit all six and return. Optimistic, so the word changes before the server answers.",
-          "completed_at": "2026-08-25"
+          "completed_at": "2026-08-25",
+          "changed_files": [
+            "apps/anuvritti/src/components/Spark.tsx"
+          ]
         },
         {
           "id": "TASK-511",
@@ -2094,7 +2112,7 @@
             "PRD 50",
             "PRD 52"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/domain/inbox.py",
             "src/anuvritti/shared/identity.py",
@@ -2103,7 +2121,7 @@
             "tests/constitution/README.md"
           ],
           "commit": "d623533",
-          "note": "src/anuvritti/adapters/persistence/inbox.py is declared out of service: the Future Inbox store is built and the container does not hold it."
+          "note": "Re-closed 2026-08-29. Reopened last session on a mis-filed excuse: test_reachability.py blamed TASK-806 for src/anuvritti/adapters/persistence/inbox.py, which TASK-819 built. The domain this task owns - src/anuvritti/domain/inbox.py - is reached by application/ports.py and the adapter, and its 43 tests pass. The adapter's darkness is TASK-819's debt and is filed there now."
         },
         {
           "id": "TASK-807",
@@ -2119,11 +2137,12 @@
             "PRD 8.4",
             "PRD 8.5"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/model/today.ts",
             "apps/anuvritti/test/today.test.ts"
-          ]
+          ],
+          "note": "Reopened 2026-08-29. apps/anuvritti/src/model/today.ts is out of service: papaToday has no screen. Closes when a route under app/ reaches it."
         },
         {
           "id": "TASK-808",
@@ -2316,7 +2335,7 @@
             "PRD 47",
             "PRD 52"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "docs/ARCHITECTURE.md",
             "src/anuvritti/adapters/persistence/inbox.py",
@@ -2325,7 +2344,8 @@
             "tests/integration/test_inbox_persistence.py",
             "tests/support/fakes.py"
           ],
-          "commit": "eb56d95"
+          "commit": "eb56d95",
+          "note": "Reopened 2026-08-29. src/anuvritti/adapters/persistence/inbox.py is out of service: the Future Inbox store is built and the container does not hold it. Closes when the container wires it."
         },
         {
           "id": "TASK-820",
@@ -2489,7 +2509,7 @@
           "id": "TASK-1101",
           "role": "Principal SRE & DevSecOps Lead",
           "description": "Schema migration with a forward path and a rehearsed way back, applied against a copy of a real archive before it is applied to one.",
-          "module_path": "src/anuvritti/adapters/persistence/migrations",
+          "module_path": "src/anuvritti/adapters/persistence/migrations.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_migrations.py -q",
           "dependencies": [
             "TASK-905"
@@ -2549,13 +2569,14 @@
             "apps/anuvritti/eas.json",
             "docs/DEVICE.md"
           ],
-          "note": "NOT RUN. docs/DEVICE.md says so at the top: the five things it lists - the share sheet, the flip, the keychain across a cold start, ten seconds measured, the microphone - all need hardware, and no hardware has run them."
+          "note": "DEFERRED alongside TASK-910, 2026-08-29. Needs hardware in a hand and no CI runner has one; docs/DEVICE.md lists the five things - the share sheet, the flip, the keychain across a cold start, ten seconds measured, the microphone - that only a phone can answer. Carries runs_on, so it is a release gate rather than a dependency edge; it no longer blocks TASK-1004.",
+          "runs_on": "a real iPhone and a real Android, in a hand"
         },
         {
           "id": "TASK-1102",
           "role": "Principal SRE & DevSecOps Lead",
           "description": "A privacy budget for logs: no content, no transcript, no filename and no child's name can reach a log line, asserted by reading the emitted stream back.",
-          "module_path": "src/anuvritti/shared/logging.py",
+          "module_path": "src/anuvritti/config/logging.py",
           "verification_command": ".venv/bin/python -m pytest tests/constitution/test_log_privacy.py -q",
           "dependencies": [
             "TASK-906"
@@ -2564,13 +2585,12 @@
             "PRD 44",
             "PRD 46"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/config/logging.py",
-            "src/anuvritti/shared/logging.py",
             "tests/constitution/test_log_privacy.py"
           ],
-          "note": "src/anuvritti/application/import_.py is declared out of service: the importer has no CLI and no route."
+          "note": "Re-closed 2026-08-29. Reopened last session on a mis-filed excuse that blamed it for application/import_.py (TASK-908's). The privacy budget itself is real and wired: src/anuvritti/config/logging.py is reached from interfaces/http/app.py, and tests/constitution/test_log_privacy.py reads the emitted stream back. Its module_path pointed at src/anuvritti/shared/logging.py, a file that was never written; corrected to the one that was."
         },
         {
           "id": "TASK-1009",
@@ -2585,11 +2605,11 @@
             "PRD 8.2",
             "PRD 8.6"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/test/crash-recovery.test.ts"
           ],
-          "note": "src/widgets/right-now-widget.ts is declared out of service: no native widget extension consumes it."
+          "note": "Re-closed 2026-08-29. Reopened last session on a mis-filed excuse that blamed it for src/widgets/* (TASK-1005's). The spool journal it owns is exercised by apps/anuvritti/test/crash-recovery.test.ts inside the 200-test app suite, which passes."
         },
         {
           "id": "TASK-1004",
@@ -2597,9 +2617,7 @@
           "description": "The return arrives on the lock screen: local notifications scheduled on device, at most one a day, silenceable forever in one tap and never re-enabled by an update.",
           "module_path": "apps/anuvritti/src/return/notifications.ts",
           "verification_command": "npm --prefix apps/anuvritti test",
-          "dependencies": [
-            "TASK-907"
-          ],
+          "dependencies": [],
           "prd_refs": [
             "PRD 14",
             "PRD 8.3",
@@ -2625,12 +2643,13 @@
             "PRD 9",
             "PRD 47"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "src/anuvritti/domain/values.py",
             "src/anuvritti/application/import_.py",
             "tests/integration/test_import.py"
-          ]
+          ],
+          "note": "Reopened 2026-08-29. src/anuvritti/application/import_.py is out of service in test_reachability.py: the importer has no CLI and no route, so nothing in production constructs it. Closes when a front door reaches it."
         },
         {
           "id": "TASK-909",
@@ -2673,7 +2692,8 @@
             "docs/VALIDATION.md",
             "tests/e2e/test_thirty_days.py"
           ],
-          "note": "NOT RUN. docs/VALIDATION.md says so at the top. Thirty days with one real family, then a document written from it; the previous close was a document written from tests/e2e fixtures."
+          "note": "DEFERRED by founder decision, 2026-08-29, and recorded in docs/VALIDATION.md. Not run, and not pretended: thirty days with a real family, then a document written from it. What changed is its place on the board - it gated 57 tasks across Phases 10 to 14 as a dependency edge, which meant nothing could be built until a human month had passed. It is a release gate now, held in writing, carrying runs_on so tracker.py validate refuses to let it become a dependency again. The aim it was blocking: get the product visible, run it end to end, then fix what that finds - and then run these thirty days against something worth thirty days.",
+          "runs_on": "one family, thirty days"
         },
         {
           "id": "TASK-902",
@@ -2743,8 +2763,7 @@
           "module_path": "src/anuvritti/interfaces/http/auth.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_isolation.py -q",
           "dependencies": [
-            "TASK-909",
-            "TASK-910"
+            "TASK-909"
           ],
           "prd_refs": [
             "PRD 44",
@@ -2771,19 +2790,19 @@
           "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
             "TASK-509",
-            "TASK-511",
-            "TASK-910"
+            "TASK-511"
           ],
           "prd_refs": [
             "PRD 21",
             "PRD 44",
             "HARDENING 5.1"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/vault/device-vault.ts",
             "apps/anuvritti/test/device-vault.test.ts"
-          ]
+          ],
+          "note": "Reopened 2026-08-29. apps/anuvritti/src/vault/device-vault.ts is out of service: its only importer is capture/native.ts, which is itself dark. Closes with TASK-1003, when the camera gets a screen and the vault is on the real capture path."
         },
         {
           "id": "TASK-1002",
@@ -2792,8 +2811,7 @@
           "module_path": "apps/anuvritti/src/sync/uploader.ts",
           "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
-            "TASK-1001",
-            "TASK-910"
+            "TASK-1001"
           ],
           "prd_refs": [
             "PRD 11",
@@ -2814,8 +2832,7 @@
           "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
             "TASK-1001",
-            "TASK-601",
-            "TASK-910"
+            "TASK-601"
           ],
           "prd_refs": [
             "PRD 11",
@@ -2835,8 +2852,7 @@
           "module_path": "apps/anuvritti/src/widgets",
           "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
-            "TASK-1004",
-            "TASK-910"
+            "TASK-1004"
           ],
           "prd_refs": [
             "PRD 18",
@@ -2857,8 +2873,7 @@
           "module_path": "apps/anuvritti/src/a11y",
           "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
-            "TASK-506",
-            "TASK-910"
+            "TASK-506"
           ],
           "prd_refs": [
             "PRD 56",
@@ -2883,8 +2898,7 @@
           "verification_command": "npm --prefix packages/world test",
           "dependencies": [
             "TASK-504",
-            "TASK-1003",
-            "TASK-910"
+            "TASK-1003"
           ],
           "prd_refs": [
             "PRD 56",
@@ -2908,8 +2922,7 @@
           "module_path": "apps/anuvritti/src/sync/budget.ts",
           "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
-            "TASK-1002",
-            "TASK-910"
+            "TASK-1002"
           ],
           "prd_refs": [
             "PRD 8.2",
@@ -2931,8 +2944,7 @@
           "dependencies": [
             "TASK-1003",
             "TASK-1004",
-            "TASK-513",
-            "TASK-910"
+            "TASK-513"
           ],
           "prd_refs": [
             "PRD 48"
@@ -2951,8 +2963,7 @@
           "module_path": "scripts/privacy_manifest.py",
           "verification_command": ".venv/bin/python -m pytest tests/constitution/test_privacy_manifest.py -q",
           "dependencies": [
-            "TASK-1002",
-            "TASK-910"
+            "TASK-1002"
           ],
           "prd_refs": [
             "PRD 44",
@@ -2972,8 +2983,7 @@
           "module_path": "packages/world/src/language",
           "verification_command": "npm --prefix packages/world test",
           "dependencies": [
-            "TASK-502",
-            "TASK-910"
+            "TASK-502"
           ],
           "prd_refs": [
             "PRD 40",
@@ -3006,8 +3016,7 @@
           "module_path": "src/anuvritti/interfaces/http/telemetry.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_telemetry.py -q",
           "dependencies": [
-            "TASK-1102",
-            "TASK-910"
+            "TASK-1102"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3029,8 +3038,7 @@
           "module_path": "docs/SLO.md",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_slo.py -q",
           "dependencies": [
-            "TASK-1103",
-            "TASK-910"
+            "TASK-1103"
           ],
           "prd_refs": [
             "PRD 8.2",
@@ -3050,8 +3058,7 @@
           "module_path": "src/anuvritti/interfaces/http/limits.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_rate_limit.py -q",
           "dependencies": [
-            "TASK-901",
-            "TASK-910"
+            "TASK-901"
           ],
           "prd_refs": [
             "HARDENING 5.2",
@@ -3075,8 +3082,7 @@
           "module_path": "requirements.txt",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_supply_chain.py -q",
           "dependencies": [
-            "TASK-403",
-            "TASK-910"
+            "TASK-403"
           ],
           "prd_refs": [
             "HARDENING 5.3"
@@ -3095,8 +3101,7 @@
           "module_path": "src/anuvritti/adapters/media/keys.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_key_rotation.py -q",
           "dependencies": [
-            "TASK-901",
-            "TASK-910"
+            "TASK-901"
           ],
           "prd_refs": [
             "HARDENING 5.5",
@@ -3118,8 +3123,7 @@
           "module_path": "src/anuvritti/application/retention.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_retention.py -q",
           "dependencies": [
-            "TASK-905",
-            "TASK-910"
+            "TASK-905"
           ],
           "prd_refs": [
             "HARDENING 5.6",
@@ -3143,8 +3147,7 @@
           "module_path": "scripts/scan_image.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_no_secrets_in_image.py -q",
           "dependencies": [
-            "TASK-402",
-            "TASK-910"
+            "TASK-402"
           ],
           "prd_refs": [
             "HARDENING 5.3",
@@ -3168,8 +3171,7 @@
           "module_path": ".github/workflows/deploy.yml",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_release.py -q",
           "dependencies": [
-            "TASK-1104",
-            "TASK-910"
+            "TASK-1104"
           ],
           "prd_refs": [
             "HARDENING 5.4"
@@ -3192,8 +3194,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_restore_drill.py -q",
           "dependencies": [
             "TASK-905",
-            "TASK-1101",
-            "TASK-910"
+            "TASK-1101"
           ],
           "prd_refs": [
             "HARDENING 5.4",
@@ -3212,8 +3213,7 @@
           "module_path": "tests/performance/test_full_archive.py",
           "verification_command": ".venv/bin/python -m pytest tests/performance/test_full_archive.py -q",
           "dependencies": [
-            "TASK-805",
-            "TASK-910"
+            "TASK-805"
           ],
           "prd_refs": [
             "PRD 8.2",
@@ -3239,8 +3239,7 @@
           "module_path": "src/anuvritti/application/render_jobs.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_jobs.py -q",
           "dependencies": [
-            "TASK-712",
-            "TASK-910"
+            "TASK-712"
           ],
           "prd_refs": [
             "PRD 34",
@@ -3256,8 +3255,7 @@
           "module_path": "tests/constitution/test_deterministic_render.py",
           "verification_command": ".venv/bin/python -m pytest tests/constitution/test_deterministic_render.py -q",
           "dependencies": [
-            "TASK-1201",
-            "TASK-910"
+            "TASK-1201"
           ],
           "prd_refs": [
             "PRD 8.7",
@@ -3274,8 +3272,7 @@
           "module_path": "docker/render.Dockerfile",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_sandbox.py -q",
           "dependencies": [
-            "TASK-1201",
-            "TASK-910"
+            "TASK-1201"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3291,8 +3288,7 @@
           "module_path": "src/anuvritti/application/render_jobs.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_progress.py -q",
           "dependencies": [
-            "TASK-1201",
-            "TASK-910"
+            "TASK-1201"
           ],
           "prd_refs": [
             "PRD 56",
@@ -3308,8 +3304,7 @@
           "module_path": "src/anuvritti/domain/film.py",
           "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_render_budget.py -q",
           "dependencies": [
-            "TASK-1201",
-            "TASK-910"
+            "TASK-1201"
           ],
           "prd_refs": [
             "PRD 8.2",
@@ -3326,8 +3321,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_failure.py -q",
           "dependencies": [
             "TASK-1201",
-            "TASK-706",
-            "TASK-910"
+            "TASK-706"
           ],
           "prd_refs": [
             "PRD 8.7",
@@ -3344,8 +3338,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_artifact_lifecycle.py -q",
           "dependencies": [
             "TASK-1108",
-            "TASK-1201",
-            "TASK-910"
+            "TASK-1201"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3362,8 +3355,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/render/test_golden_frames.py -q",
           "dependencies": [
             "TASK-708",
-            "TASK-1202",
-            "TASK-910"
+            "TASK-1202"
           ],
           "prd_refs": [
             "PRD 56",
@@ -3379,8 +3371,7 @@
           "module_path": "packages/world/scenes/captions",
           "verification_command": ".venv/bin/python -m pytest tests/constitution/test_film_accessible.py -q",
           "dependencies": [
-            "TASK-708",
-            "TASK-910"
+            "TASK-708"
           ],
           "prd_refs": [
             "PRD 27",
@@ -3396,8 +3387,7 @@
           "module_path": "src/anuvritti/application/sound.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_sound_bed.py -q",
           "dependencies": [
-            "TASK-706",
-            "TASK-910"
+            "TASK-706"
           ],
           "prd_refs": [
             "PRD 43",
@@ -3415,8 +3405,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_fairness.py -q",
           "dependencies": [
             "TASK-1201",
-            "TASK-901",
-            "TASK-910"
+            "TASK-901"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3433,8 +3422,7 @@
           "module_path": "tests/integration/test_render_offline.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_render_offline.py -q",
           "dependencies": [
-            "TASK-1206",
-            "TASK-910"
+            "TASK-1206"
           ],
           "prd_refs": [
             "PRD 8.7",
@@ -3457,8 +3445,7 @@
           "module_path": "docs/contracts/archive.md",
           "verification_command": ".venv/bin/python -m pytest tests/contracts/test_archive_format.py -q",
           "dependencies": [
-            "TASK-905",
-            "TASK-910"
+            "TASK-905"
           ],
           "prd_refs": [
             "PRD 45",
@@ -3476,8 +3463,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_open_export.py -q",
           "dependencies": [
             "TASK-1301",
-            "TASK-904",
-            "TASK-910"
+            "TASK-904"
           ],
           "prd_refs": [
             "PRD 45",
@@ -3494,8 +3480,7 @@
           "module_path": "tests/contracts/test_archive_compat.py",
           "verification_command": ".venv/bin/python -m pytest tests/contracts/test_archive_compat.py -q",
           "dependencies": [
-            "TASK-1301",
-            "TASK-910"
+            "TASK-1301"
           ],
           "prd_refs": [
             "PRD 8.6",
@@ -3512,8 +3497,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_spec_versioning.py -q",
           "dependencies": [
             "TASK-1303",
-            "TASK-1202",
-            "TASK-910"
+            "TASK-1202"
           ],
           "prd_refs": [
             "PRD 8.6",
@@ -3529,8 +3513,7 @@
           "module_path": "tests/e2e/test_time_travel.py",
           "verification_command": ".venv/bin/python -m pytest tests/e2e/test_time_travel.py -q",
           "dependencies": [
-            "TASK-1304",
-            "TASK-910"
+            "TASK-1304"
           ],
           "prd_refs": [
             "PRD 52",
@@ -3546,8 +3529,7 @@
           "module_path": "docs/CONTINUITY.md",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_continuity.py -q",
           "dependencies": [
-            "TASK-1302",
-            "TASK-910"
+            "TASK-1302"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3565,8 +3547,7 @@
           "verification_command": "npm --prefix packages/world run reader:check",
           "dependencies": [
             "TASK-1302",
-            "TASK-502",
-            "TASK-910"
+            "TASK-502"
           ],
           "prd_refs": [
             "PRD 45",
@@ -3583,8 +3564,7 @@
           "module_path": "packages/world/print",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_print_artifact.py -q",
           "dependencies": [
-            "TASK-709",
-            "TASK-910"
+            "TASK-709"
           ],
           "prd_refs": [
             "PRD 36",
@@ -3600,8 +3580,7 @@
           "module_path": "src/anuvritti/domain/artifact.py",
           "verification_command": ".venv/bin/python -m pytest tests/unit/domain/test_artifact_protocol.py -q",
           "dependencies": [
-            "TASK-1301",
-            "TASK-910"
+            "TASK-1301"
           ],
           "prd_refs": [
             "PRD 37",
@@ -3617,8 +3596,7 @@
           "module_path": "src/anuvritti/application/preserve.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_link_rot.py -q",
           "dependencies": [
-            "TASK-706",
-            "TASK-910"
+            "TASK-706"
           ],
           "prd_refs": [
             "PRD 43",
@@ -3634,8 +3612,7 @@
           "module_path": "src/anuvritti/application/fixity.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_fixity.py -q",
           "dependencies": [
-            "TASK-1108",
-            "TASK-910"
+            "TASK-1108"
           ],
           "prd_refs": [
             "PRD 8.6",
@@ -3652,8 +3629,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/e2e/test_eighteen_years.py -q",
           "dependencies": [
             "TASK-1305",
-            "TASK-1307",
-            "TASK-910"
+            "TASK-1307"
           ],
           "prd_refs": [
             "PRD 52",
@@ -3676,8 +3652,7 @@
           "module_path": "apps/anuvritti/src/onboarding",
           "verification_command": "npm --prefix apps/anuvritti test",
           "dependencies": [
-            "TASK-1003",
-            "TASK-910"
+            "TASK-1003"
           ],
           "prd_refs": [
             "PRD 8.2",
@@ -3695,8 +3670,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_invitations.py -q",
           "dependencies": [
             "TASK-902",
-            "TASK-903",
-            "TASK-910"
+            "TASK-903"
           ],
           "prd_refs": [
             "PRD 26",
@@ -3713,8 +3687,7 @@
           "module_path": "src/anuvritti/domain/entitlement.py",
           "verification_command": ".venv/bin/python -m pytest tests/constitution/test_never_hostage.py -q",
           "dependencies": [
-            "TASK-1302",
-            "TASK-910"
+            "TASK-1302"
           ],
           "prd_refs": [
             "PRD 57",
@@ -3731,8 +3704,7 @@
           "module_path": "src/anuvritti/application/billing.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_gift.py -q",
           "dependencies": [
-            "TASK-1403",
-            "TASK-910"
+            "TASK-1403"
           ],
           "prd_refs": [
             "PRD 57",
@@ -3749,8 +3721,7 @@
           "module_path": "src/anuvritti/application/analytics.py",
           "verification_command": ".venv/bin/python -m pytest tests/constitution/test_analytics_blind.py -q",
           "dependencies": [
-            "TASK-1102",
-            "TASK-910"
+            "TASK-1102"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3767,8 +3738,7 @@
           "module_path": "tests/constitution/test_anti_metrics.py",
           "verification_command": ".venv/bin/python -m pytest tests/constitution/test_anti_metrics.py -q",
           "dependencies": [
-            "TASK-1406",
-            "TASK-910"
+            "TASK-1406"
           ],
           "prd_refs": [
             "PRD 53",
@@ -3785,8 +3755,7 @@
           "module_path": "src/anuvritti/application/messaging.py",
           "verification_command": ".venv/bin/python -m pytest tests/constitution/test_no_nagging.py -q",
           "dependencies": [
-            "TASK-1004",
-            "TASK-910"
+            "TASK-1004"
           ],
           "prd_refs": [
             "PRD 8.5",
@@ -3803,8 +3772,7 @@
           "module_path": "docs/TRUST.md",
           "verification_command": ".venv/bin/python -m pytest tests/contracts/test_trust_claims.py -q",
           "dependencies": [
-            "TASK-1306",
-            "TASK-910"
+            "TASK-1306"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3821,8 +3789,7 @@
           "module_path": "src/anuvritti/application/support.py",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_support.py -q",
           "dependencies": [
-            "TASK-901",
-            "TASK-910"
+            "TASK-901"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3838,8 +3805,7 @@
           "module_path": "docs/RUNBOOK.md",
           "verification_command": ".venv/bin/python -m pytest tests/integration/test_incident_drill.py -q",
           "dependencies": [
-            "TASK-1110",
-            "TASK-910"
+            "TASK-1110"
           ],
           "prd_refs": [
             "HARDENING 5.4",
@@ -3855,8 +3821,7 @@
           "module_path": "tests/contracts/test_policy_matches_code.py",
           "verification_command": ".venv/bin/python -m pytest tests/contracts/test_policy_matches_code.py -q",
           "dependencies": [
-            "TASK-1408",
-            "TASK-910"
+            "TASK-1408"
           ],
           "prd_refs": [
             "PRD 44",
@@ -3873,8 +3838,7 @@
           "verification_command": ".venv/bin/python -m pytest tests/e2e/test_the_most_important_test.py -q",
           "dependencies": [
             "TASK-1312",
-            "TASK-1403",
-            "TASK-910"
+            "TASK-1403"
           ],
           "prd_refs": [
             "PRD 60",
@@ -3970,21 +3934,20 @@
     "TASK-738",
     "TASK-741",
     "TASK-801",
-    "TASK-807",
-    "TASK-819",
+    "TASK-806",
     "TASK-820",
     "TASK-823",
     "TASK-805",
     "TASK-905",
     "TASK-731",
     "TASK-906",
-    "TASK-908",
+    "TASK-1102",
+    "TASK-1009",
     "TASK-909",
     "TASK-902",
     "TASK-903",
     "TASK-904",
     "TASK-901",
-    "TASK-1001",
     "TASK-1006",
     "TASK-1007",
     "TASK-1011",

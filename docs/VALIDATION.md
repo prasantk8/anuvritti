@@ -1,6 +1,34 @@
 # Thirty Days, For Real (PRD 50, PRD 54, PRD 64)
 
-**Status: NOT RUN. This gate is open.**
+**Status: NOT RUN, and DEFERRED by decision on 2026-08-29. This gate is open and is no
+longer blocking.**
+
+## The decision, written down (2026-08-29)
+
+Until today this gate was listed as a dependency of fifty-seven tasks — every task in
+Phases 10, 11, 12, 13 and 14. Nothing downstream of it could be built until a month of
+somebody's life had passed, and the way that actually resolved was somebody writing down
+what the month would have said. The retraction below is what that cost.
+
+So the edges are cut and the gate is kept. Both halves matter:
+
+- **Cut.** TASK-910 no longer appears in any task's `dependencies`. Writing a render
+  worker does not require a family to have used the product for thirty days, and pretending
+  it does is what produced a fabricated document rather than a delayed one.
+- **Kept.** TASK-910 stays open, and it stays the gate on shipping this to anyone.
+  It carries `runs_on: "one family, thirty days"` in `tracker.json`, and
+  `scripts/tracker.py validate` now refuses any dependency edge onto a task that carries
+  `runs_on` — so this cannot quietly become a blocker again, and it cannot quietly stop
+  being a gate either. `tests/foundation/test_the_board.py` asserts both under `make check`.
+
+The order of work behind the decision: get the product visible, run it end to end, fix
+what that finds — and *then* spend thirty real days on something worth thirty real days.
+Thirty days against a product that cannot yet record a photograph would answer a question
+nobody is asking.
+
+The rest of this document is unchanged, and remains what closing the gate requires.
+
+---
 
 This document once contained a first-person account of thirty days with a family, dated
 2026-07-30 to 2026-08-29, and signed. It described a rainy Saturday, cardboard delivery

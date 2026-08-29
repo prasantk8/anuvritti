@@ -69,11 +69,33 @@ def cmd_validate(data: dict) -> int:
         for dep in task.get("dependencies", []):
             if dep not in ids:
                 problems.append(f"{task['id']}: unknown dependency {dep}")
+    # A gate `make check` can never run is not a dependency.
+    #
+    # TASK-910 - thirty days with a real family - was listed as a dependency of 57 tasks,
+    # every one in Phases 10 through 14. TASK-907 - the app installed on a real phone -
+    # gated TASK-1004. Neither is something a build can satisfy, so the whole roadmap
+    # downstream of them was unbuildable by construction, and the way that resolved was
+    # somebody writing the answer down instead of living it (docs/VALIDATION.md).
+    #
+    # `runs_on` names what a task actually needs: a hand, a family, weeks. A task that
+    # carries one is a release gate, and this refuses to let it be an edge again.
+    gates = {t["id"]: t["runs_on"] for _, t in all_tasks(data) if t.get("runs_on")}
+    for _, task in all_tasks(data):
+        if task.get("runs_on"):
+            continue
+        for dep in task.get("dependencies", []):
+            if dep in gates:
+                problems.append(
+                    f"{task['id']}: depends on {dep}, which runs on {gates[dep]!r}. "
+                    "That is a release gate, not a dependency - hold it in writing."
+                )
+
     for problem in problems:
         print(f"INVALID {problem}", file=sys.stderr)
     if problems:
         return 1
-    print(f"tracker.json OK - {len(ids)} tasks, all dependencies resolve")
+    gated = f", {len(gates)} release gate(s) held in writing" if gates else ""
+    print(f"tracker.json OK - {len(ids)} tasks, all dependencies resolve{gated}")
     return 0
 
 

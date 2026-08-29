@@ -192,53 +192,95 @@ saw one somewhere.
 
 ## What is actually open
 
-Re-checked 2026-08-29, after Phases 7-11 were merged onto `main` and every gate ran green.
-Each line below is a claim the evidence did not support, and the evidence is named.
+Re-checked 2026-08-29 (second pass, after the first pass' own findings were audited). Each
+line is a claim the evidence did not support, and the evidence is named.
 
-**Not run, and the documents say so.** TASK-910 (`docs/VALIDATION.md`: thirty days with one
-real family) and TASK-907 (`docs/DEVICE.md`: five things that need hardware). Both documents
-now open with **NOT RUN**, which is the honest deliverable. The tracker did not agree with
-them until now. TASK-910 is the root of the board: seventeen completed tasks depend on it,
-which is what `tracker.py audit` has been trying to say.
+### The thirty-day gate is deferred, in writing
 
-**Built, and nothing calls it.** TASK-806 (Future Inbox store), TASK-1101 (the
-rehearse-before-apply migration engine - the container still calls `schema.migrate()`),
-TASK-1102 (the importer, no CLI and no route), and on the phone TASK-1002, TASK-1003,
-TASK-1004, TASK-1005, TASK-1008, TASK-1009. Every one of these is *already* named in
-`NOT_IN_SERVICE` or `TS_NOT_IN_SERVICE` with its own task id as the reason - the module was
-honest and the board was not. `test_every_excuse_names_a_task_that_is_still_open` compares
-the two records now, so they cannot disagree again.
+TASK-910 — thirty days with one real family — was listed as a `dependencies` entry on
+**fifty-seven** tasks: every task in Phases 10, 11, 12, 13 and 14. Nothing downstream of it
+could be built until a month of somebody's life had passed, and what that pressure actually
+produced was a document written from `tests/e2e/test_thirty_days.py` fixtures and signed as
+lived experience. TASK-907 (a build on a real phone) sat under TASK-1004 the same way.
 
-**Claimed wider than it is.** TASK-1010 said a device matrix; `device.yml` runs
-`npm --prefix apps/anuvritti test` on a GitHub runner and `device-e2e.test.ts` mocks
-`SecureKeyStorage` and `NativeMediaDriver`. A good subsystem test, not a device. TASK-1012
-said zero hardcoded literals; the visible copy is translated into three languages and every
-screen-reader announcement in `src/a11y/accessibility.ts` is hardcoded English, so a parent
-using Anuvritti in Hindi with VoiceOver hears an English app.
+Founder decision, 2026-08-29, recorded in `docs/VALIDATION.md` and `docs/DEVICE.md`: **the
+edges are cut and the gates are kept.** Neither task is closed, neither is pretended. Both
+carry `runs_on` in `tracker.json` — `"one family, thirty days"`, `"a real iPhone and a real
+Android, in a hand"` — and `scripts/tracker.py validate` now refuses any dependency edge
+onto a task that carries one. A gate no build can run is held in writing, never as an edge.
 
-**Closed, and they stayed closed.** TASK-1103, 1105, 1106, 1107, 1108, 1109 and 1110 are
-wired and reachable, and `make check` is green on all of it. Three things had to be fixed
-first, and all three are the same shape as everything above: `rewrap_all` counted successes
-and swallowed the files no key could open, `scan_image.py` skipped layer members it could
-not read, and the SBOM emitted a component called `-e packages/filmkit` at version
-`"pinned"`. Each was a routine that reported success about work it had not done.
+The order behind it: make the product visible, run it end to end, fix what that finds, and
+*then* spend thirty real days on something worth thirty real days.
 
-**One thing the branch cleanup found.** `filmkit` was installed editable from
-`/Users/…/task-712/packages/filmkit/src` - a task worktree. Every film test on this machine
-had been passing against source in a directory nobody was editing, and `make check` went
-green to twenty-nine collection errors the moment that worktree was deleted. One task per
-chat means worktrees appear routinely, and a `pip install -e .` run inside one redirects
-the toolchain into it silently. `test_the_source_under_test_is_this_checkout` now asserts
-both editable packages resolve inside the repository.
+### The excuse lists were filed against the wrong tasks
 
-**Phase 8 still holds fourteen pending tasks** (802-805, 808-818) and is the phase where the
-product becomes magical rather than merely correct.
+`NOT_IN_SERVICE` and `TS_NOT_IN_SERVICE` are the record of what is built and dark. Six of
+their eleven entries named a task that had never touched the module — each one drifted by a
+line, so `capture/native.ts` was filed under TASK-1002 (the uploader), `sync/budget.ts`
+under TASK-1003 (the camera), the widget under TASK-1009 (crash recovery).
 
-**Both of the things "worth doing regardless" are done.** `pip install -e .` works -
-`requirements-dev.txt` never installed the project, `pythonpath = ["src"]` hid it from every
-test for eleven phases, and two gates in `tests/foundation/test_toolchain.py` now hold it.
-And everything is on `git@github.com:prasantk8/anuvritti.git`: twenty-eight branches that
-existed only on one laptop are merged into `main`, and `main` is the only branch left.
+That was not cosmetic. The first pass of this re-check reopened the tasks the excuses
+*named*, which meant three tasks were reopened for work they had already done (TASK-806,
+TASK-1102, TASK-1009 — all re-closed, all verified passing) while four tasks that own dark
+code stayed green (TASK-908, TASK-819, TASK-807, TASK-1001 — now open). The ids are looked
+up from `tracker.json` rather than typed now:
+`test_every_excuse_names_the_task_that_owns_the_module`.
+
+Two neighbouring record failures came out of the same pull. TASK-1102's `changed_files`
+listed `src/anuvritti/shared/logging.py` — a file that was never written — beside the
+`config/logging.py` that was. And five completed tasks (506–510) named **no path that
+existed on disk at all**, because Phase 5 renamed files during implementation and never
+recorded it. `test_a_completed_task_names_a_file_that_exists` closes that.
+
+### Built, and nothing calls it — nine tasks, and they are the product
+
+This is the whole distance between "we have the code" and "we have a product":
+
+| Task | Dark module | What closes it |
+|---|---|---|
+| TASK-1003 | `src/capture/native.ts` | a camera screen |
+| TASK-1001 | `src/vault/device-vault.ts` | falls out of TASK-1003 — its only importer is the camera |
+| TASK-1002 | `src/sync/uploader.ts` | the capture path uploads through it |
+| TASK-1008 | `src/sync/budget.ts` | the sync path meters through it |
+| TASK-1004 | `src/return/notifications.ts` | a screen registers the scheduler |
+| TASK-1005 | `src/widgets/*` | something on the device consumes the payload |
+| TASK-807 | `src/model/today.ts` | `papaToday` gets a screen |
+| TASK-819 | `adapters/persistence/inbox.py` | the container holds the store |
+| TASK-908 | `application/import_.py` | a CLI or a route reaches the importer |
+| TASK-1101 | `adapters/persistence/migrations.py` | the container rehearses before it applies |
+
+`tracker.py audit` is down from seventeen standing tasks to three, and the three name
+exactly TASK-1002, TASK-1003 and TASK-1101.
+
+### Claimed wider than it is
+
+TASK-1010 said a device matrix; `device.yml` runs `npm --prefix apps/anuvritti test` on a
+GitHub runner and `device-e2e.test.ts` mocks `SecureKeyStorage` and `NativeMediaDriver`. A
+good subsystem test, not a device. TASK-1012 said zero hardcoded literals; the visible copy
+is translated into three languages and every screen-reader announcement in
+`src/a11y/accessibility.ts` is hardcoded English, so a parent using Anuvritti in Hindi with
+VoiceOver hears an English app.
+
+### Closed, and they stayed closed
+
+TASK-1103, 1105, 1106, 1107, 1108, 1109 and 1110 are wired and reachable. Three things had
+to be fixed first, all the same shape: `rewrap_all` counted successes and swallowed the
+files no key could open, `scan_image.py` skipped layer members it could not read, and the
+SBOM emitted a component called `-e packages/filmkit` at version `"pinned"`. Each was a
+routine reporting success about work it had not done.
+
+### What the branch cleanup found
+
+`filmkit` was installed editable from `/Users/…/task-712/packages/filmkit/src` — a task
+worktree. Every film test on this machine had been passing against source in a directory
+nobody was editing, and `make check` went from green to twenty-nine collection errors the
+moment that worktree was deleted. One task per chat means worktrees appear routinely, and a
+`pip install -e .` run inside one redirects the toolchain into it silently.
+`test_the_source_under_test_is_this_checkout` asserts both editable packages resolve inside
+the repository.
+
+**Phase 8 still holds fifteen pending tasks** (802–804, 808–818) and is the phase where the
+product becomes magical rather than merely correct. It is not gated on anything above.
 
 ---
 

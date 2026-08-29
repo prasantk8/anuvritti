@@ -52,11 +52,13 @@ PY_SCRIPT_IMPORTS = ("anuvritti.adapters.backup",)
 
 #: Reached by nothing that runs. Each line is a debt with an owner, not an exemption.
 NOT_IN_SERVICE: dict[str, str] = {
-    "anuvritti.application.import_": "TASK-1102 - importer has no CLI and no route",
+    "anuvritti.application.import_": "TASK-908 - the importer has no CLI and no route",
     "anuvritti.adapters.persistence.inbox": (
-        "TASK-806 - the Future Inbox store is built and the container does not hold it"
+        "TASK-819 - the Future Inbox store is built and the container does not hold it"
     ),
-    "anuvritti.adapters.persistence.migrations": "TASK-1101 - container calls schema.migrate()",
+    "anuvritti.adapters.persistence.migrations": (
+        "TASK-1101 - the container calls schema.migrate(), so rehearse-before-apply never runs"
+    ),
 }
 
 
@@ -128,9 +130,76 @@ def test_nothing_declared_out_of_service_is_actually_wired():
     )
 
 
-def test_every_excuse_names_a_task():
-    for module, reason in (*NOT_IN_SERVICE.items(), *TS_NOT_IN_SERVICE.items()):
-        assert re.match(r"TASK-\d+", reason), f"{module}: '{reason}' names no task"
+#: Where an excused module lives, so its owning task can be looked up rather than typed.
+#: Python names are dotted and rooted at `src/`; the app's are already repo-relative to
+#: `apps/anuvritti/`.
+_EXCUSE_PATHS = {
+    "python": lambda name: f"src/{name.replace('.', '/')}.py",
+    "typescript": lambda name: f"apps/anuvritti/{name}",
+}
+
+
+def _excuses() -> list[tuple[str, str, str]]:
+    """Every excuse as (module, reason, repo-relative path)."""
+    return [
+        (module, reason, _EXCUSE_PATHS[language](module))
+        for language, listing in (
+            ("python", NOT_IN_SERVICE),
+            ("typescript", TS_NOT_IN_SERVICE),
+        )
+        for module, reason in listing.items()
+    ]
+
+
+def _owners_of(path: str, board: dict) -> list[str]:
+    """Every task whose `module_path` covers `path`.
+
+    A file is rarely one task's: something creates it and something later extends it, and
+    `module_path` records both. So this is a set rather than a single owner, and the rule
+    below is membership - which is still enough to reject a task that never touched the
+    file at all, and that was the whole failure.
+    """
+    return [
+        task["id"]
+        for phase in board["phases"]
+        for task in phase["tasks"]
+        if any(
+            path == named or path.startswith(named.rstrip("/") + "/")
+            # `module_path` is what the task planned to touch; `changed_files` is what it
+            # did. Both count, because a module is often created by one task and extended
+            # by a later one, and the later one is usually who the debt belongs to.
+            for named in (task["module_path"], *task.get("changed_files", []))
+        )
+    ]
+
+
+def test_every_excuse_names_the_task_that_owns_the_module():
+    """The debt is filed against whoever built it, and that is looked up, not typed.
+
+    Every id here used to be hand-written, and six of eleven named the wrong task - each
+    one drifted by a line, so `capture/native.ts` was filed under TASK-1002 (the uploader),
+    `sync/budget.ts` under TASK-1003 (the camera), the widget under TASK-1009 (crash
+    recovery). The consequence was not cosmetic: closing the named task would not have
+    wired the module, and reopening the named task reopened work that was actually done
+    while the task that owned the dark code stayed green.
+
+    `tracker.json` already records who owns what, in `module_path`. This asks it.
+    """
+    board = json.loads((ROOT / "tracker.json").read_text())
+    wrong = []
+    for module, reason, path in _excuses():
+        named = re.match(r"TASK-\d+", reason)
+        assert named, f"{module}: '{reason}' names no task"
+        owners = _owners_of(path, board)
+        assert owners, f"{module}: no task in tracker.json has a module_path covering {path}"
+        if named.group(0) not in owners:
+            wrong.append(
+                f"{module} -> blames {named.group(0)}, which never touched {path}; "
+                f"it belongs to {', '.join(sorted(owners))}"
+            )
+    assert not wrong, "these excuses are filed against the wrong task:\n  " + "\n  ".join(
+        sorted(wrong)
+    )
 
 
 def test_every_excuse_names_a_task_that_is_still_open():
@@ -142,12 +211,15 @@ def test_every_excuse_names_a_task_that_is_still_open():
     task done, and `tracker.py audit` reporting "board OK" because it only ever compared
     tasks to each other. Two records of the same fact disagreeing is exactly what a
     fitness function is for.
+
+    With the test above holding the id honest, this says the thing CLAUDE.md section 4
+    says: a task is not done until something in production calls it.
     """
     board = json.loads((ROOT / "tracker.json").read_text())
     status = {task["id"]: task["status"] for phase in board["phases"] for task in phase["tasks"]}
     closed = {
         f"{module} -> {reason}"
-        for module, reason in (*NOT_IN_SERVICE.items(), *TS_NOT_IN_SERVICE.items())
+        for module, reason, _ in _excuses()
         if status.get(re.match(r"TASK-\d+", reason).group(0)) == "completed"  # type: ignore[union-attr]
     }
     assert not closed, (
@@ -164,14 +236,16 @@ TS_ENTRY_GLOB = "app/**/*.tsx"
 
 #: The app's own source that no screen reaches. Same rule, same shrinking list.
 TS_NOT_IN_SERVICE: dict[str, str] = {
-    "src/capture/native.ts": "TASK-1002 - in-app camera has no screen",
-    "src/model/today.ts": "TASK-1008 - papaToday has no screen",
+    "src/capture/native.ts": "TASK-1003 - the in-app camera has no screen",
+    "src/model/today.ts": "TASK-807 - papaToday has no screen",
     "src/return/notifications.ts": "TASK-1004 - no screen registers the scheduler",
-    "src/sync/budget.ts": "TASK-1003 - metering has no caller",
+    "src/sync/budget.ts": "TASK-1008 - metering has no caller",
     "src/sync/uploader.ts": "TASK-1002 - resumable upload has no caller",
-    "src/vault/device-vault.ts": "TASK-1005 - reachable only from capture/native.ts",
-    "src/widgets/index.ts": "TASK-1009 - barrel over the widget",
-    "src/widgets/right-now-widget.ts": "TASK-1009 - no native widget extension consumes it",
+    "src/vault/device-vault.ts": (
+        "TASK-1001 - its only importer is capture/native.ts, which is itself dark under TASK-1003"
+    ),
+    "src/widgets/index.ts": "TASK-1005 - barrel over the widget",
+    "src/widgets/right-now-widget.ts": "TASK-1005 - no native widget extension consumes it",
 }
 
 _TS_IMPORT = re.compile(r"""from\s+["'](\.[^"']+)["']""")
