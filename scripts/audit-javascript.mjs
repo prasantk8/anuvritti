@@ -1,21 +1,7 @@
+import { createRequire } from "node:module";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-
-const acceptedNodes = [
-  "@expo/cli",
-  "@expo/config",
-  "@expo/config-plugins",
-  "@expo/inline-modules",
-  "@expo/local-build-cache-provider",
-  "@expo/metro-config",
-  "@expo/prebuild-config",
-  "expo",
-  "expo-sharing",
-  "uuid",
-  "xcode",
-];
-const acceptedAdvisory = 1119441;
 
 const audit = spawnSync("npm", ["audit", "--json"], { encoding: "utf8" });
 if (!audit.stdout) {
@@ -25,19 +11,19 @@ if (!audit.stdout) {
 
 const report = JSON.parse(audit.stdout);
 const nodes = Object.keys(report.vulnerabilities ?? {}).sort();
-if (JSON.stringify(nodes) !== JSON.stringify([...acceptedNodes].sort())) {
+if (nodes.length !== 0) {
   process.stderr.write(`npm advisory set changed: ${nodes.join(", ") || "none"}\n`);
   process.exit(1);
 }
 
-const uuidVia = report.vulnerabilities.uuid?.via ?? [];
-const advisories = uuidVia.filter((entry) => typeof entry === "object");
-if (
-  advisories.length !== 1 ||
-  advisories[0].source !== acceptedAdvisory ||
-  advisories[0].severity !== "moderate"
-) {
-  process.stderr.write("the accepted uuid advisory changed identity or severity\n");
+const xcodePackage = JSON.parse(readFileSync("node_modules/xcode/package.json", "utf8"));
+const uuidPackage = JSON.parse(readFileSync("node_modules/uuid/package.json", "utf8"));
+if (xcodePackage.version !== "3.0.1" || xcodePackage.dependencies?.uuid !== "11.1.1") {
+  process.stderr.write("the reviewed xcode UUID patch is absent or must be retired\n");
+  process.exit(1);
+}
+if (uuidPackage.version !== "11.1.1") {
+  process.stderr.write(`xcode resolved an unreviewed UUID version: ${uuidPackage.version}\n`);
   process.exit(1);
 }
 
@@ -46,11 +32,18 @@ const sources = readdirSync(xcodeRoot)
   .filter((name) => name.endsWith(".js"))
   .map((name) => readFileSync(join(xcodeRoot, name), "utf8"))
   .join("\n");
-if (!sources.includes("uuid.v4()") || /uuid\.v(?:3|5|6)\s*\(/.test(sources)) {
-  process.stderr.write("xcode's use of uuid is no longer outside the accepted advisory path\n");
+if (!sources.includes("uuid.v4()") || /uuid\.v(?:1|3|5|6|7)\s*\(/.test(sources)) {
+  process.stderr.write("xcode's UUID API use changed and needs a new compatibility review\n");
   process.exit(1);
 }
 
-console.log(
-  `accepted GHSA-w5hq-g745-h8pq for unreachable uuid v3/v5/v6 buffer APIs; ${nodes.length} derived moderate nodes, no others`,
-);
+const require = createRequire(import.meta.url);
+const project = require("xcode").project("compatibility-smoke-test.pbxproj");
+project.hash = { project: { objects: {} } };
+const generated = project.generateUuid();
+if (!/^[0-9A-F]{24}$/.test(generated)) {
+  process.stderr.write("xcode could not generate its 24-character project identifier\n");
+  process.exit(1);
+}
+
+console.log("zero npm advisories; reviewed xcode@3.0.1 UUID 11 compatibility patch is active");
