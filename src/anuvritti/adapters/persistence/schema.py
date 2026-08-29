@@ -277,6 +277,34 @@ _MIGRATIONS: Final[tuple[str, ...]] = (
     CREATE INDEX IF NOT EXISTS idx_future_inbox_family
         ON future_inbox(family_id, sealed_at);
     """,
+    # TASK-1201. Compilation as a durable job.
+    #
+    # A render job is keyed by id, and indexed by (family_id, spec_hash).
+    # If a job for the same spec_hash exists and is PENDING, RUNNING, or COMPLETED,
+    # submitting it again returns the existing job (idempotent compilation).
+    """
+    CREATE TABLE IF NOT EXISTS render_job (
+        id                TEXT PRIMARY KEY,
+        family_id         TEXT NOT NULL REFERENCES family(id) ON DELETE CASCADE,
+        child_id          TEXT NOT NULL,
+        spec_hash         TEXT NOT NULL,
+        status            TEXT NOT NULL,
+        archive_path      TEXT NOT NULL,
+        output_path       TEXT,
+        manifest_path     TEXT,
+        progress_percent  REAL NOT NULL DEFAULT 0.0,
+        progress_message  TEXT NOT NULL DEFAULT '',
+        error_message     TEXT,
+        created_at        TEXT NOT NULL,
+        started_at        TEXT,
+        completed_at      TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_render_job_family_spec
+        ON render_job(family_id, spec_hash);
+    CREATE INDEX IF NOT EXISTS idx_render_job_status
+        ON render_job(status, created_at);
+    """,
 )
 
 #: Derived, not declared. `migrate` stamps `user_version` with the index of the last

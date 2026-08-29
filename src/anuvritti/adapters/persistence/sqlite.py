@@ -11,6 +11,7 @@ import json
 import sqlite3
 from collections.abc import Sequence
 from datetime import datetime
+from pathlib import Path
 from types import TracebackType
 
 from anuvritti.adapters.persistence.mapping import (
@@ -24,6 +25,7 @@ from anuvritti.adapters.persistence.mapping import (
     spark_to_row,
 )
 from anuvritti.adapters.persistence.schema import GuardedConnection
+from anuvritti.application.render_jobs import JobStatus, RenderJob
 from anuvritti.domain.access import Device, PairingRequest
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import Family
@@ -757,4 +759,165 @@ def _row_to_device(row: sqlite3.Row) -> Device:
         created_at=datetime.fromisoformat(row["created_at"]),
         last_seen_at=datetime.fromisoformat(row["last_seen_at"]) if row["last_seen_at"] else None,
         revoked_at=datetime.fromisoformat(row["revoked_at"]) if row["revoked_at"] else None,
+    )
+
+
+class SqliteRenderJobRepository:
+    """Durable render job store in SQLite (PRD 34, PRD 52, TASK-1201)."""
+
+    def __init__(self, connection: GuardedConnection) -> None:
+        self._db = connection
+
+    def submit(self, job: RenderJob) -> Result[tuple[RenderJob, bool], DomainError]:
+        row = self._db.execute(
+            "SELECT * FROM render_job WHERE family_id = ? AND spec_hash = ? "
+            "AND status IN ('PENDING', 'RUNNING', 'COMPLETED') "
+            "ORDER BY created_at DESC LIMIT 1",
+            (str(job.family_id), job.spec_hash),
+        ).fetchone()
+
+        if row is not None:
+            return Ok((_row_to_render_job(row), False))
+
+        self._db.execute(
+            "INSERT INTO render_job ("
+            "id, family_id, child_id, spec_hash, status, archive_path, "
+            "output_path, manifest_path, progress_percent, progress_message, "
+            "error_message, created_at, started_at, completed_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                job.id,
+                str(job.family_id),
+                str(job.child_id),
+                job.spec_hash,
+                job.status.value,
+                str(job.archive_path),
+                str(job.output_path) if job.output_path else None,
+                str(job.manifest_path) if job.manifest_path else None,
+                job.progress_percent,
+                job.progress_message,
+                job.error_message,
+                job.created_at.isoformat(),
+                job.started_at.isoformat() if job.started_at else None,
+                job.completed_at.isoformat() if job.completed_at else None,
+            ),
+        )
+        return Ok((job, True))
+
+    def get(self, job_id: str) -> Result[RenderJob | None, DomainError]:
+        row = self._db.execute("SELECT * FROM render_job WHERE id = ?", (job_id,)).fetchone()
+        if row is None:
+            return Ok(None)
+        return Ok(_row_to_render_job(row))
+
+    def find_by_spec_hash(
+        self, family_id: FamilyId, spec_hash: str
+    ) -> Result[RenderJob | None, DomainError]:
+        row = self._db.execute(
+            "SELECT * FROM render_job WHERE family_id = ? AND spec_hash = ? "
+            "ORDER BY created_at DESC LIMIT 1",
+            (str(family_id), spec_hash),
+        ).fetchone()
+        if row is None:
+            return Ok(None)
+        return Ok(_row_to_render_job(row))
+
+    def list_for_family(self, family_id: FamilyId) -> Result[Sequence[RenderJob], DomainError]:
+        rows = self._db.execute(
+            "SELECT * FROM render_job WHERE family_id = ? ORDER BY created_at DESC",
+            (str(family_id),),
+        ).fetchall()
+        return Ok(tuple(_row_to_render_job(r) for r in rows))
+
+    def claim_next_pending(self, *, started_at: datetime) -> Result[RenderJob | None, DomainError]:
+        # Fair multi-tenant scheduling (TASK-1211):
+        # Prioritize pending jobs for families with fewer currently running jobs.
+        # For ties, schedule FIFO by created_at.
+        sql = """
+            SELECT rj.*
+            FROM render_job rj
+            LEFT JOIN (
+                SELECT family_id, COUNT(*) as running_count
+                FROM render_job
+                WHERE status = 'RUNNING'
+                GROUP BY family_id
+            ) running ON rj.family_id = running.family_id
+            WHERE rj.status = 'PENDING'
+            ORDER BY
+                COALESCE(running.running_count, 0) ASC,
+                rj.created_at ASC
+            LIMIT 1
+        """
+        row = self._db.execute(sql).fetchone()
+        if row is None:
+            return Ok(None)
+        job_id = row["id"]
+        self._db.execute(
+            "UPDATE render_job SET status = 'RUNNING', started_at = ?, "
+            "progress_message = 'Rendering started' "
+            "WHERE id = ? AND status = 'PENDING'",
+            (started_at.isoformat(), job_id),
+        )
+        updated_row = self._db.execute(
+            "SELECT * FROM render_job WHERE id = ?", (job_id,)
+        ).fetchone()
+        if updated_row is None:
+            return Ok(None)
+        return Ok(_row_to_render_job(updated_row))
+
+    def save(self, job: RenderJob) -> Result[RenderJob, DomainError]:
+        self._db.execute(
+            "UPDATE render_job SET status = ?, output_path = ?, manifest_path = ?, "
+            "progress_percent = ?, progress_message = ?, error_message = ?, "
+            "started_at = ?, completed_at = ? WHERE id = ?",
+            (
+                job.status.value,
+                str(job.output_path) if job.output_path else None,
+                str(job.manifest_path) if job.manifest_path else None,
+                job.progress_percent,
+                job.progress_message,
+                job.error_message,
+                job.started_at.isoformat() if job.started_at else None,
+                job.completed_at.isoformat() if job.completed_at else None,
+                job.id,
+            ),
+        )
+        return Ok(job)
+
+    def cancel(self, job_id: str) -> Result[bool, DomainError]:
+        cursor = self._db.execute(
+            "UPDATE render_job SET status = 'CANCELLED', progress_message = 'Job cancelled' "
+            "WHERE id = ? AND status IN ('PENDING', 'RUNNING')",
+            (job_id,),
+        )
+        return Ok(cursor.rowcount > 0)
+
+    def recover_interrupted_jobs(self) -> Result[int, DomainError]:
+        cursor = self._db.execute(
+            "UPDATE render_job SET status = 'PENDING', started_at = NULL, "
+            "progress_message = 'Recovered after worker restart' WHERE status = 'RUNNING'"
+        )
+        return Ok(cursor.rowcount)
+
+    def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]:
+        cursor = self._db.execute("DELETE FROM render_job WHERE family_id = ?", (str(family_id),))
+        return Ok(cursor.rowcount)
+
+
+def _row_to_render_job(row: sqlite3.Row) -> RenderJob:
+    return RenderJob(
+        id=row["id"],
+        family_id=FamilyId(row["family_id"]),
+        child_id=ChildId(row["child_id"]),
+        spec_hash=row["spec_hash"],
+        status=JobStatus(row["status"]),
+        archive_path=Path(row["archive_path"]),
+        output_path=Path(row["output_path"]) if row["output_path"] else None,
+        manifest_path=Path(row["manifest_path"]) if row["manifest_path"] else None,
+        progress_percent=float(row["progress_percent"]),
+        progress_message=row["progress_message"] or "",
+        error_message=row["error_message"],
+        created_at=datetime.fromisoformat(row["created_at"]),
+        started_at=datetime.fromisoformat(row["started_at"]) if row["started_at"] else None,
+        completed_at=datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None,
     )

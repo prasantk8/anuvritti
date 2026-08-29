@@ -36,6 +36,7 @@ from anuvritti.application.ports import (
     SparkRepository,
     VoiceNoteRepository,
 )
+from anuvritti.application.sound import SoundBedCatalogue, get_default_sound_catalogue
 from anuvritti.domain.film import (
     Citation,
     CitationKind,
@@ -82,6 +83,7 @@ class VerifyProvenanceUseCase:
         voice_notes: VoiceNoteRepository,
         little_things: LittleThingRepository,
         media: MediaStore,
+        sound_beds: SoundBedCatalogue | None = None,
         clock: Clock,
     ) -> None:
         self._sparks = sparks
@@ -89,6 +91,7 @@ class VerifyProvenanceUseCase:
         self._voice_notes = voice_notes
         self._little_things = little_things
         self._media = media
+        self._sound_beds = sound_beds if sound_beds is not None else get_default_sound_catalogue()
         self._clock = clock
 
     def execute(self, draft: FilmDraft) -> Result[Provenance, DomainError]:
@@ -127,6 +130,38 @@ class VerifyProvenanceUseCase:
                 return self._little_thing(citation.id, family_id)
             case CitationKind.MEDIA:
                 return self._media_file(citation.id, family_id, hashes)
+            case CitationKind.SOUND_BED:
+                return self._sound_bed(citation.id, hashes)
+
+    def _sound_bed(self, cited: str, hashes: dict[str, str]) -> Result[_Verdict, DomainError]:
+        found = self._sound_beds.get(cited)
+        if found.is_err():
+            return _absent_or_raise(found.unwrap_err())
+        track = found.unwrap()
+        expected = hashes.get(cited, track.content_hash)
+        if track.content_hash != expected:
+            return Ok(
+                _Verdict(
+                    ProvenanceStatus.ALTERED,
+                    "the sound bed audio has been modified from its approved master",
+                    track.content_hash,
+                )
+            )
+        if not track.is_license_clean:
+            return Ok(
+                _Verdict(
+                    ProvenanceStatus.ALTERED,
+                    "the sound bed track is not licence-clean",
+                    track.content_hash,
+                )
+            )
+        return Ok(
+            _Verdict(
+                ProvenanceStatus.VERIFIED,
+                f"Licence: {track.license} ({track.title})",
+                track.content_hash,
+            )
+        )
 
     def _spark(self, cited: str, family_id: FamilyId) -> Result[_Verdict, DomainError]:
         found = self._sparks.get(SparkId(cited))

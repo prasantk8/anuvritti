@@ -25,6 +25,11 @@ from anuvritti.shared.result import Err, Ok, Result
 
 # Rehearsed rollback scripts for each schema version
 _ROLLBACKS: Final[dict[int, str]] = {
+    6: """
+    DROP INDEX IF EXISTS idx_render_job_status;
+    DROP INDEX IF EXISTS idx_render_job_family_spec;
+    DROP TABLE IF EXISTS render_job;
+    """,
     # TASK-819. The index goes with the table; a sealed message's ciphertext lives in the
     # file named by storage_key, and dropping this row makes it unreadable rather than
     # deleted. That is the correct outcome for a rollback: a schema step that could erase a

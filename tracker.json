@@ -3230,7 +3230,7 @@
     {
       "name": "Phase 12: The Render Farm",
       "owner": "Principal Systems Architect",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-1201",
@@ -3245,8 +3245,11 @@
             "PRD 34",
             "PRD 52"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/render_jobs.py"
+          ],
+          "note": "Durable, resumable, and spec_hash-idempotent render jobs with SQLite persistence and worker crash recovery"
         },
         {
           "id": "TASK-1202",
@@ -3261,9 +3264,11 @@
             "PRD 8.7",
             "PRD 52"
           ],
-          "status": "pending",
-          "changed_files": [],
-          "note": "Byte-identical frames will not survive a Chromium upgrade; TASK-1208's perceptual diff is the real gate. Scope this to spec + timeline hashes, not pixels."
+          "status": "completed",
+          "changed_files": [
+            "tests/constitution/test_deterministic_render.py"
+          ],
+          "note": "Constitutional determinism proven by spec, timeline, and provenance hashes with mutation sensitivity"
         },
         {
           "id": "TASK-1203",
@@ -3278,8 +3283,11 @@
             "PRD 44",
             "HARDENING 5.1"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "docker/render.Dockerfile"
+          ],
+          "note": "Offline sandboxed render worker with --network none, read-only root, and single-job ephemeral custody"
         },
         {
           "id": "TASK-1204",
@@ -3294,8 +3302,11 @@
             "PRD 56",
             "PRD 8.5"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/render_jobs.py"
+          ],
+          "note": "Truthful progress messages in words a parent reads and cancellation that actively stops the machine and purges partial files"
         },
         {
           "id": "TASK-1205",
@@ -3310,8 +3321,11 @@
             "PRD 8.2",
             "PRD 57"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/film.py"
+          ],
+          "note": "Up-front render budget and duration ceiling checking before first frame"
         },
         {
           "id": "TASK-1206",
@@ -3327,8 +3341,11 @@
             "PRD 8.7",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/render_jobs.py"
+          ],
+          "note": "Failure that tells a family something true with dead letter carrying scene, citation, and human sentence"
         },
         {
           "id": "TASK-1207",
@@ -3344,8 +3361,11 @@
             "PRD 44",
             "PRD 8.6"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/retention.py"
+          ],
+          "note": "Artifact lifecycle with render host artifacts expiring on a clock and sovereign family archive remaining permanent"
         },
         {
           "id": "TASK-1208",
@@ -3361,8 +3381,11 @@
             "PRD 56",
             "PRD 8.6"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "tests/render/test_golden_frames.py"
+          ],
+          "note": "Golden frames with perceptual diff over fixed scenes preventing unapproved visual drift"
         },
         {
           "id": "TASK-1209",
@@ -3377,8 +3400,11 @@
             "PRD 27",
             "PRD 56"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "packages/world/scenes/captions.ts"
+          ],
+          "note": "Captions and audio descriptions generated on every film by default"
         },
         {
           "id": "TASK-1210",
@@ -3393,9 +3419,11 @@
             "PRD 43",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": [],
-          "note": "PRD 30 'Sound Garden' is a child sound-play surface (TASK-818); this is the film's audio bed."
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/sound.py"
+          ],
+          "note": "The Sound Garden licence-clean audio bed with provenance recorded alongside family memories"
         },
         {
           "id": "TASK-1211",
@@ -3411,9 +3439,11 @@
             "PRD 44",
             "PRD 8.2"
           ],
-          "status": "pending",
-          "changed_files": [],
-          "note": "Closed by ADR-0006 (TASK-909) if the tenant is the process."
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/adapters/persistence/sqlite.py"
+          ],
+          "note": "Backpressure and fair round-robin scheduling across multi-tenant families"
         },
         {
           "id": "TASK-1212",
@@ -3428,8 +3458,11 @@
             "PRD 8.7",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "tests/integration/test_render_offline.py"
+          ],
+          "note": "The compiler's constitution runs where the film is made: end-to-end offline rendering with blocked network"
         }
       ]
     },
@@ -4051,7 +4084,19 @@
     "TASK-1109",
     "TASK-1110",
     "TASK-1111",
-    "TASK-1112"
+    "TASK-1112",
+    "TASK-1201",
+    "TASK-1202",
+    "TASK-1203",
+    "TASK-1204",
+    "TASK-1205",
+    "TASK-1206",
+    "TASK-1207",
+    "TASK-1208",
+    "TASK-1209",
+    "TASK-1210",
+    "TASK-1211",
+    "TASK-1212"
   ],
   "blocked_tasks": []
 }

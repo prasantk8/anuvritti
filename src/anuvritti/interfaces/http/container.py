@@ -26,6 +26,7 @@ from anuvritti.adapters.persistence.sqlite import (
     SqliteMediaCatalogue,
     SqliteMomentRepository,
     SqlitePairingRepository,
+    SqliteRenderJobRepository,
     SqliteRightNowRepository,
     SqliteSparkRepository,
     SqliteUnitOfWork,
@@ -48,6 +49,11 @@ from anuvritti.application.capture import (
 from anuvritti.application.moments import MarkAsDoneUseCase
 from anuvritti.application.presence import CaptureLittleThingUseCase, CaptureRightNowUseCase
 from anuvritti.application.privacy import DeleteFamilyDataUseCase, ExportFamilyDataUseCase
+from anuvritti.application.render_jobs import (
+    CancelRenderJobUseCase,
+    GetRenderJobUseCase,
+    SubmitRenderJobUseCase,
+)
 from anuvritti.application.retention import RetentionEngine
 from anuvritti.application.returning import (
     GetWorthBringingBackUseCase,
@@ -92,6 +98,7 @@ class Container:
     devices: SqliteDeviceRepository
     pairings: SqlitePairingRepository
     idempotency: SqliteIdempotencyStore
+    render_jobs: SqliteRenderJobRepository
 
     capture_spark: CaptureSparkUseCase
     record_why: RecordWhyUseCase
@@ -115,6 +122,9 @@ class Container:
     list_devices: ListDevicesUseCase
     revoke_device: RevokeDeviceUseCase
     retention: RetentionEngine
+    submit_render_job: SubmitRenderJobUseCase
+    get_render_job: GetRenderJobUseCase
+    cancel_render_job: CancelRenderJobUseCase
 
     def close(self) -> None:
         self.connection.close()
@@ -163,6 +173,7 @@ def build_container(
     devices = SqliteDeviceRepository(connection)
     pairings = SqlitePairingRepository(connection)
     idempotency = SqliteIdempotencyStore(connection)
+    render_jobs = SqliteRenderJobRepository(connection)
     media = EncryptedFilesystemMediaStore(
         root=Path(settings.media_dir),
         catalogue=SqliteMediaCatalogue(connection),
@@ -198,6 +209,7 @@ def build_container(
         devices=devices,
         pairings=pairings,
         idempotency=idempotency,
+        render_jobs=render_jobs,
         capture_spark=CaptureSparkUseCase(
             families=families,
             sparks=sparks,
@@ -315,6 +327,10 @@ def build_container(
             db=connection,
             media_root=Path(settings.media_dir),
             upload_spool_dir=Path(settings.media_dir) / "spool",
+            render_artifacts_dir=Path("var/film"),
             now_fn=clock.now,
         ),
+        submit_render_job=SubmitRenderJobUseCase(jobs=render_jobs, clock=clock, ids=ids, uow=uow),
+        get_render_job=GetRenderJobUseCase(jobs=render_jobs),
+        cancel_render_job=CancelRenderJobUseCase(jobs=render_jobs, uow=uow),
     )

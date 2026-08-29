@@ -44,6 +44,7 @@ from anuvritti.adapters.film._world_font_policy import (
     WORLD_FONT_PACKAGES,
 )
 from anuvritti.domain.film import (
+    AudioDescriptionCue,
     CompiledFilm,
     CompiledScene,
     Cue,
@@ -187,6 +188,20 @@ class FilmkitFilmCompiler:
             for scene, start, hold in zip(spec.scenes, starts, holds, strict=True)
         )
 
+        audio_desc_cues = tuple(
+            AudioDescriptionCue(
+                start_seconds=scene.start_seconds,
+                end_seconds=scene.end_seconds,
+                description=(
+                    f"{spec_scene.heading}: {spec_scene.body}"
+                    if spec_scene.body
+                    else spec_scene.heading
+                ),
+            )
+            for scene, spec_scene in zip(compiled, spec.scenes, strict=True)
+            if spec_scene.heading
+        )
+
         timeline_payload = timeline.to_json()
         timeline_payload["render_requirements"] = requirements
         film = CompiledFilm(
@@ -198,6 +213,7 @@ class FilmkitFilmCompiler:
                 for start, end, text in caption_cues(timeline)
                 if text.strip()
             ),
+            audio_descriptions=audio_desc_cues,
             timeline=timeline_payload,
             timing=report.to_json(),
             notes=(),
@@ -322,6 +338,7 @@ def _with_notes(film: CompiledFilm, over_target: bool, target_seconds: float) ->
         title=film.title,
         scenes=film.scenes,
         cues=film.cues,
+        audio_descriptions=film.audio_descriptions,
         timeline=film.timeline,
         timing=film.timing,
         notes=tuple(notes),

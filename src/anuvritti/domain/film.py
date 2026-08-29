@@ -151,6 +151,7 @@ class CitationKind(StrEnum):
     MEDIA = "MEDIA"
     VOICE_NOTE = "VOICE_NOTE"
     LITTLE_THING = "LITTLE_THING"
+    SOUND_BED = "SOUND_BED"
 
 
 class NarrationOrigin(StrEnum):
@@ -334,7 +335,10 @@ class FilmScene:
     def media_ids(self) -> frozenset[str]:
         """Every real file this scene needs: the audio it plays, and the media it shows."""
         named = {str(self.voice.media_id)} if self.voice.media_id else set()
-        return frozenset(named | {c.id for c in self.cites if c.kind is CitationKind.MEDIA})
+        return frozenset(
+            named
+            | {c.id for c in self.cites if c.kind in (CitationKind.MEDIA, CitationKind.SOUND_BED)}
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -361,6 +365,30 @@ class FilmSpec:
         """Every file the whole film names. What a `MediaBundle` must carry, exactly."""
         return frozenset(media_id for scene in self.scenes for media_id in scene.media_ids)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "family_id": str(self.family_id),
+            "title": self.title,
+            "scenes": [
+                {
+                    "id": scene.id,
+                    "kind": scene.kind.value,
+                    "heading": scene.heading,
+                    "body": scene.body,
+                    "voice": scene.voice.to_dict(),
+                    "cites": [c.to_dict() for c in scene.cites],
+                }
+                for scene in self.scenes
+            ],
+            "child_id": str(self.child_id) if self.child_id else None,
+            "fps": self.fps,
+            "width": self.width,
+            "height": self.height,
+            "target_seconds": self.target_seconds,
+            "tolerance_seconds": self.tolerance_seconds,
+        }
+
 
 @dataclass(frozen=True, slots=True)
 class Cue:
@@ -369,6 +397,29 @@ class Cue:
     start_seconds: float
     end_seconds: float
     text: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "start_seconds": round(self.start_seconds, 3),
+            "end_seconds": round(self.end_seconds, 3),
+            "text": self.text,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class AudioDescriptionCue:
+    """An audio description cue for accessibility (PRD 27, PRD 56)."""
+
+    start_seconds: float
+    end_seconds: float
+    description: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "start_seconds": round(self.start_seconds, 3),
+            "end_seconds": round(self.end_seconds, 3),
+            "description": self.description,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -432,6 +483,7 @@ class CompiledFilm:
     title: str
     scenes: tuple[CompiledScene, ...]
     cues: tuple[Cue, ...] = ()
+    audio_descriptions: tuple[AudioDescriptionCue, ...] = ()
     timeline: dict[str, Any] = field(default_factory=dict)
     timing: dict[str, Any] = field(default_factory=dict)
     notes: tuple[str, ...] = ()
@@ -499,6 +551,8 @@ class CompiledFilm:
             "narration": self.narration,
             "notes": list(self.notes),
             "scenes": [scene.to_dict() for scene in self.scenes],
+            "cues": [cue.to_dict() for cue in self.cues],
+            "audio_descriptions": [ad.to_dict() for ad in self.audio_descriptions],
             # The renderer consumes the arithmetic the compiler checked. Reconstructing
             # it from rounded summaries at the far end is how audio and picture drift.
             "timeline": self.timeline,
@@ -754,3 +808,89 @@ class FilmPackage:
             "bundle": self.bundle.to_dict(),
             "provenance": self.provenance.to_dict(),
         }
+
+
+# ============================================================================
+# Render Budget & Up-Front Ceilings (PRD 8.2, PRD 57, TASK-1205)
+# ============================================================================
+
+MAX_ANNUAL_FILM_DURATION_SECONDS = 720.0  # 12 minutes max
+MAX_SCENE_COUNT = 60
+MAX_SINGLE_SCENE_SECONDS = 180.0  # 3 minutes max for a single scene
+MAX_BUNDLE_MEDIA_COUNT = 150
+MAX_BUNDLE_BYTE_SIZE = 1024 * 1024 * 1024  # 1 GB
+ESTIMATED_SECONDS_PER_SCENE_RENDER = 10.0
+MAX_TOTAL_RENDER_TIME_SECONDS = 600.0  # 10 minutes ceiling on compilation
+
+
+@dataclass(frozen=True, slots=True)
+class RenderBudget:
+    """A ceiling on time and cost, checked before the first frame (PRD 8.2, PRD 57).
+
+    A film that would take an hour is refused up front with a sentence, not discovered
+    half-rendered.
+    """
+
+    max_duration_seconds: float = MAX_ANNUAL_FILM_DURATION_SECONDS
+    max_scenes: int = MAX_SCENE_COUNT
+    max_single_scene_seconds: float = MAX_SINGLE_SCENE_SECONDS
+    max_media_count: int = MAX_BUNDLE_MEDIA_COUNT
+    max_total_bytes: int = MAX_BUNDLE_BYTE_SIZE
+    max_estimated_render_seconds: float = MAX_TOTAL_RENDER_TIME_SECONDS
+
+    def check_spec(self, spec: FilmSpec) -> None:
+        """Validate spec against budget limits before compilation."""
+        if len(spec.scenes) > self.max_scenes:
+            raise ValueError(
+                f"This film contains {len(spec.scenes)} scenes, which exceeds the limit "
+                f"of {self.max_scenes} scenes."
+            )
+        if len(spec.media_ids) > self.max_media_count:
+            raise ValueError(
+                f"This film references {len(spec.media_ids)} media files, which exceeds "
+                f"the limit of {self.max_media_count}."
+            )
+
+    def check_compiled(self, film: CompiledFilm) -> None:
+        """Validate compiled timeline arithmetic against budget limits."""
+        if len(film.scenes) > self.max_scenes:
+            raise ValueError(
+                f"This film contains {len(film.scenes)} scenes, which exceeds the limit "
+                f"of {self.max_scenes} scenes."
+            )
+        if film.duration_seconds > self.max_duration_seconds:
+            duration_mins = film.duration_seconds / 60.0
+            max_mins = self.max_duration_seconds / 60.0
+            raise ValueError(
+                f"This film runs for {duration_mins:.1f} minutes, which exceeds the maximum "
+                f"allowed duration of {max_mins:.1f} minutes."
+            )
+        for scene in film.scenes:
+            if scene.visual_seconds > self.max_single_scene_seconds:
+                raise ValueError(
+                    f"Scene '{scene.id}' runs for {scene.visual_seconds:.1f}s, which exceeds "
+                    f"the maximum single scene limit of {self.max_single_scene_seconds:.1f}s."
+                )
+
+        estimated_render = len(film.scenes) * ESTIMATED_SECONDS_PER_SCENE_RENDER
+        if estimated_render > self.max_estimated_render_seconds:
+            raise ValueError(
+                f"Estimated compilation time ({estimated_render:.0f}s) exceeds the maximum "
+                f"render budget of {self.max_estimated_render_seconds:.0f}s."
+            )
+
+    def check_package(self, package: FilmPackage) -> None:
+        """Validate entire package (arithmetic, bundle, media size) before starting renderer."""
+        self.check_compiled(package.film)
+        if len(package.bundle.items) > self.max_media_count:
+            raise ValueError(
+                f"The media bundle carries {len(package.bundle.items)} items, which exceeds "
+                f"the budget limit of {self.max_media_count}."
+            )
+        if package.bundle.byte_size > self.max_total_bytes:
+            mb = package.bundle.byte_size / (1024 * 1024)
+            max_mb = self.max_total_bytes / (1024 * 1024)
+            raise ValueError(
+                f"The media bundle is {mb:.1f} MB, which exceeds the budget ceiling "
+                f"of {max_mb:.0f} MB."
+            )

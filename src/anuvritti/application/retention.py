@@ -30,6 +30,7 @@ class RetentionSummary:
     purged_auth_tokens: int
     reclaimed_bytes: int
     executed_at: datetime
+    purged_render_artifacts: int = 0
 
 
 class RetentionEngine:
@@ -40,11 +41,13 @@ class RetentionEngine:
         db: Any,
         media_root: Path,
         upload_spool_dir: Path,
+        render_artifacts_dir: Path | None = None,
         now_fn: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._db = db
         self._media_root = media_root
         self._upload_spool_dir = upload_spool_dir
+        self._render_artifacts_dir = render_artifacts_dir
         self._now = now_fn
 
     def _query(self, sql: str, params: tuple[Any, ...] = ()) -> list[Any]:
@@ -131,21 +134,48 @@ class RetentionEngine:
 
         return purged_count, reclaimed_bytes
 
+    def prune_expired_render_artifacts(self, max_age_hours: int = 48) -> tuple[int, int]:
+        """Prune expired render host intermediate frames, export archives and mp4s (TASK-1207).
+
+        Constitutional invariant: Rendered films and frames expire from the render host on a clock,
+        and NEVER from the family's own sovereign archive (media_root).
+        """
+        if self._render_artifacts_dir is None or not self._render_artifacts_dir.exists():
+            return 0, 0
+
+        cutoff = self._now() - timedelta(hours=max_age_hours)
+        purged_files = 0
+        reclaimed_bytes = 0
+
+        for path in self._render_artifacts_dir.rglob("*"):
+            if path.is_file():
+                mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+                if mtime < cutoff:
+                    size = path.stat().st_size
+                    path.unlink(missing_ok=True)
+                    purged_files += 1
+                    reclaimed_bytes += size
+
+        return purged_files, reclaimed_bytes
+
     def run_retention_cycle(
         self,
         spool_max_age_hours: int = 24,
         deleted_grace_days: int = 30,
         auth_max_age_minutes: int = 15,
+        render_max_age_hours: int = 48,
     ) -> RetentionSummary:
         """Execute a full retention cycle."""
         spool_files, spool_bytes = self.prune_ephemeral_upload_spools(spool_max_age_hours)
         auth_purged = self.prune_expired_auth_tokens(auth_max_age_minutes)
         deleted_purged, deleted_bytes = self.prune_soft_deleted_records(deleted_grace_days)
+        render_purged, render_bytes = self.prune_expired_render_artifacts(render_max_age_hours)
 
         return RetentionSummary(
             purged_upload_spools=spool_files,
             purged_soft_deleted_records=deleted_purged,
             purged_auth_tokens=auth_purged,
-            reclaimed_bytes=spool_bytes + deleted_bytes,
+            purged_render_artifacts=render_purged,
+            reclaimed_bytes=spool_bytes + deleted_bytes + render_bytes,
             executed_at=self._now(),
         )
