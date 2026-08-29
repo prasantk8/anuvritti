@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types test cov cov-core check run tracker clean world client app design filmkit specimen
+.PHONY: install lint format types types-ts test cov cov-core check run tracker clean world client app design filmkit specimen
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -41,16 +41,29 @@ specimen: world
 	@echo "serving packages/world/specimen at http://127.0.0.1:8765/specimen/"
 	@cd packages/world && python3 -m http.server 8765 --bind 127.0.0.1
 
+# `scripts/` is in scope because it is not scaffolding: backup, restore, the SBOM, the
+# image scan and the release runner are the operational surface, and for three phases they
+# were the only Python in the repo that no gate ever read.
+LINT_PATHS := src tests scripts packages/client/codegen
+
 lint:
-	$(PY) -m ruff check src tests packages/client/codegen
-	$(PY) -m ruff format --check src tests packages/client/codegen
+	$(PY) -m ruff check $(LINT_PATHS)
+	$(PY) -m ruff format --check $(LINT_PATHS)
 
 format:
-	$(PY) -m ruff format src tests packages/client/codegen
-	$(PY) -m ruff check src tests packages/client/codegen --fix
+	$(PY) -m ruff format $(LINT_PATHS)
+	$(PY) -m ruff check $(LINT_PATHS) --fix
 
 types:
 	$(PY) -m mypy
+
+# The other half of the type gate. `node --test` strips types without checking them, so
+# until this existed the whole TypeScript surface - the client, the design language and the
+# app - compiled in nobody's head. Four projects because they run in three different hosts:
+# Hermes has no DOM, Node has no React Native, and the tests are Node programs that read the
+# app's own source.
+types-ts:
+	npm run typecheck --silent
 
 test:
 	$(PY) -m pytest
@@ -65,7 +78,17 @@ cov-core:
 cov:
 	$(PY) -m pytest --cov=anuvritti --cov-report=term-missing --cov-fail-under=90
 
-check: world lint types cov-core cov design filmkit
+# Every gate runs, and the failures are reported together. Make stops at the first failed
+# prerequisite, so a target list hides everything behind the first thing that is red - for
+# three phases `lint` sat second and the type and coverage gates were never reached. `-k`
+# keeps going after a failure; the `$(MAKE)` recursion is what makes each gate a separate
+# job rather than one shell whose exit code is the last command's.
+check:
+	@$(MAKE) -k _gates || (echo ""; echo "make check: one or more gates failed - see above"; exit 1)
+
+.PHONY: _gates
+_gates: world lint types types-ts cov-core cov design filmkit
+	@echo "all gates green"
 
 run:
 	$(PY) -m uvicorn anuvritti.interfaces.http.asgi:app --host 0.0.0.0 --port 8000

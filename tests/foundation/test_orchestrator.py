@@ -177,6 +177,37 @@ class TestTrackerProtocol:
         _write_tracker(sandbox, [broken])
         assert _run_cli(sandbox, "validate").returncode == 1
 
+    def test_audit_catches_a_task_finished_on_an_open_gate(self, sandbox: Path):
+        """The Phase 10/11 failure, in miniature.
+
+        Twenty tasks closed on TASK-910 while TASK-910 had never been run. `validate` is
+        blind to it - the file is perfectly well formed - so the question gets its own
+        command.
+        """
+        _write_tracker(
+            sandbox,
+            [_task("GATE"), _task("TASK-1", ["GATE"], status="completed")],
+        )
+        assert _run_cli(sandbox, "validate").returncode == 0
+
+        result = _run_cli(sandbox, "audit")
+        assert result.returncode == 1
+        assert "TASK-1" in result.stderr
+        assert "GATE" in result.stderr
+
+    def test_audit_passes_when_every_finished_task_stands_on_finished_work(self, sandbox: Path):
+        _write_tracker(
+            sandbox,
+            [_task("GATE", status="completed"), _task("TASK-1", ["GATE"], status="completed")],
+        )
+        assert _run_cli(sandbox, "audit").returncode == 0
+
+    def test_a_note_records_why_a_task_moved(self, sandbox: Path):
+        _write_tracker(sandbox, [_task("TASK-1", status="completed")])
+        _run_cli(sandbox, "set", "TASK-1", "pending", "--note", "reopened: the claim was untrue")
+        data = json.loads((sandbox / "tracker.json").read_text())
+        assert data["phases"][0]["tasks"][0]["note"] == "reopened: the claim was untrue"
+
 
 class TestRealTracker:
     def test_the_projects_own_tracker_is_valid(self):

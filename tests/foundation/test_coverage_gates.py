@@ -29,15 +29,25 @@ class TestGatesAreDeclared:
         threshold = int(overall.split("--cov-fail-under=")[1].split()[0])
         assert threshold >= 80
 
+    #: `check` delegates to `_gates` under `make -k`, so one red gate no longer hides the
+    #: rest. The guarantee being tested is unchanged: these gates run under `make check`.
+    def _gate_list(self) -> str:
+        return next(line for line in MAKEFILE.splitlines() if line.startswith("_gates:"))
+
+    def test_check_delegates_to_the_gate_list_without_stopping_at_the_first_failure(self):
+        check = next(line for line in MAKEFILE.splitlines() if line.startswith("\t@$(MAKE) -k"))
+        assert "-k" in check
+        assert "_gates" in check
+
     def test_check_runs_both_gates(self):
-        check = next(line for line in MAKEFILE.splitlines() if line.startswith("check:"))
-        assert "cov-core" in check
-        assert "cov" in check
+        gates = self._gate_list()
+        assert "cov-core" in gates
+        assert "cov" in gates
 
     def test_check_also_runs_lint_and_types(self):
-        check = next(line for line in MAKEFILE.splitlines() if line.startswith("check:"))
-        assert "lint" in check
-        assert "types" in check
+        gates = self._gate_list()
+        assert "lint" in gates
+        assert "types" in gates
 
 
 class TestCoverageMeasuresWhatItShould:

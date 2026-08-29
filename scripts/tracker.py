@@ -7,8 +7,10 @@ Usage:
   tracker.py brief TASK-ID          # the task, its dependencies' files, what it unlocks
   tracker.py status TASK-ID
   tracker.py board                  # everything in flight, blocked, or landed with a commit
-  tracker.py set TASK-ID {pending|in_progress|completed|blocked} [--files a.py,b.py] [--commit SHA]
-  tracker.py validate
+  tracker.py set TASK-ID {pending|in_progress|completed|blocked} [--files a.py,b.py]
+                        [--commit SHA] [--note "why"]
+  tracker.py validate                # the file is well formed
+  tracker.py audit                   # no completed task stands on an open dependency
 
 `brief` is where a chat starts: the task, what its dependencies left behind and what it
 unlocks. tracker.json is 130 KB, so chats query it rather than open it whole. `board`
@@ -72,6 +74,35 @@ def cmd_validate(data: dict) -> int:
     if problems:
         return 1
     print(f"tracker.json OK - {len(ids)} tasks, all dependencies resolve")
+    return 0
+
+
+def cmd_audit(data: dict) -> int:
+    """Does the board hang together?
+
+    Twenty tasks once closed on TASK-910, a gate that had never been run. A finished task
+    standing on an unfinished dependency is the shape of that failure, and it is invisible
+    to `validate`, which only asks whether the file is well formed. This asks the other
+    question, and it is the one that was wrong.
+    """
+    ids = {t["id"] for _, t in all_tasks(data)}
+    done = {t["id"] for _, t in all_tasks(data) if t["status"] == "completed"}
+    standing = []
+    for _, task in all_tasks(data):
+        if task.get("status") != "completed":
+            continue
+        open_deps = [d for d in task.get("dependencies", []) if d in ids and d not in done]
+        if open_deps:
+            standing.append((task["id"], open_deps))
+    for task_id, open_deps in standing:
+        print(f"STANDING ON OPEN {task_id}: depends on {', '.join(open_deps)}", file=sys.stderr)
+    if standing:
+        print(
+            f"\n{len(standing)} completed task(s) stand on a dependency that is open again.",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"board OK - every completed task stands on completed work ({len(done)} done)")
     return 0
 
 
@@ -163,7 +194,14 @@ def cmd_board(data: dict) -> int:
     return 0
 
 
-def cmd_set(data: dict, task_id: str, status: str, files: list[str], commit: str | None) -> int:
+def cmd_set(
+    data: dict,
+    task_id: str,
+    status: str,
+    files: list[str],
+    commit: str | None,
+    note: str | None = None,
+) -> int:
     if status not in STATES:
         print(f"bad status {status}", file=sys.stderr)
         return 1
@@ -181,6 +219,8 @@ def cmd_set(data: dict, task_id: str, status: str, files: list[str], commit: str
             task["changed_files"] = files
         if commit:
             task["commit"] = commit
+        if note is not None:
+            task["note"] = note
         break
     else:
         print(f"unknown task {task_id}", file=sys.stderr)
@@ -211,6 +251,8 @@ def main(argv: list[str]) -> int:
     cmd = argv[0]
     if cmd == "validate":
         return cmd_validate(data)
+    if cmd == "audit":
+        return cmd_audit(data)
     if cmd == "next":
         return cmd_next(data)
     if cmd == "board":
@@ -229,9 +271,12 @@ def main(argv: list[str]) -> int:
         commit: str | None = None
         if "--files" in argv:
             files = argv[argv.index("--files") + 1].split(",")
+        note: str | None = None
         if "--commit" in argv:
             commit = argv[argv.index("--commit") + 1]
-        return cmd_set(data, argv[1], argv[2], files, commit)
+        if "--note" in argv:
+            note = argv[argv.index("--note") + 1]
+        return cmd_set(data, argv[1], argv[2], files, commit, note)
     print(f"unknown command {cmd}", file=sys.stderr)
     return 1
 
