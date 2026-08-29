@@ -39,6 +39,7 @@ import pytest
 from anuvritti.adapters.film import filmkit_compiler
 from anuvritti.adapters.film.export import FILM_FILENAME, FilesystemFilmExporter
 from anuvritti.application import film as film_application
+from anuvritti.application import voice as voice_application
 from anuvritti.application.film import ComposeFilmUseCase
 from anuvritti.application.ports import Narrator
 from anuvritti.domain import film as film_domain
@@ -204,6 +205,17 @@ class TestMeasuredNeverEstimated:
             source = Path(inspect.getfile(module)).read_text().lower()
             for word in forbidden:
                 assert word not in source, f"{module.__name__} mentions {word}"
+
+    def test_a_handsets_timer_cannot_become_a_voice_notes_length(self):
+        tree = ast.parse(Path(inspect.getfile(voice_application)).read_text())
+        assignments = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.keyword) and node.arg == "duration_seconds"
+        ]
+        assert assignments
+        for assignment in assignments:
+            assert "command.duration_seconds" not in ast.unparse(assignment.value)
 
     def test_the_compilers_one_reading_pace_reaches_a_report_and_never_a_duration(self):
         """filmkit's `plan` prints "you asked for roughly this". Nothing else may see it."""

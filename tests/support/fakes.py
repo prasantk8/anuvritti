@@ -342,6 +342,18 @@ class FakeFilmRenderer:
         return Ok(self.result)
 
 
+class FakeAudioDurationMeasurer:
+    """Returns a measurement independent of anything the handset claimed."""
+
+    def __init__(self, seconds: float) -> None:
+        self.seconds = seconds
+        self.seen: list[tuple[bytes, str]] = []
+
+    def measure(self, content: bytes, *, mime_type: str) -> Result[float, DomainError]:
+        self.seen.append((content, mime_type))
+        return Ok(self.seconds)
+
+
 class DeafTranscriber:
     """A transcriber that always fails. Nothing it does may cost a family a recording."""
 

@@ -34,8 +34,8 @@ from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import FamilyId, MediaId, MemberId
 from anuvritti.shared.result import Err, Ok, Result
 
-#: Four hours. Not a judgement about length - a bound on what one HTTP request may claim,
-#: because a client reporting 1e30 seconds would poison every duration sum in the film.
+#: Four hours. Not a judgement about length - a bound on what ffprobe may report before a
+#: malformed container poisons every duration sum in the film.
 MAX_DURATION_SECONDS: Final = 4 * 60 * 60.0
 
 #: What an engine is called when there is no engine. A transcript never has an unnamed

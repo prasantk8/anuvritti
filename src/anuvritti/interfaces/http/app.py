@@ -683,7 +683,17 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
             )
             if result.is_err():
                 return error_response(result.unwrap_err())
-            return JSONResponse(status_code=201, content=render_voice(result.unwrap()))
+            note = result.unwrap()
+            if abs(note.duration_seconds - body.duration_seconds) > 0.25:
+                log.info(
+                    "handset duration differed from measured audio",
+                    extra={
+                        "media_id": str(note.media_id),
+                        "claimed_duration_seconds": body.duration_seconds,
+                        "measured_duration_seconds": note.duration_seconds,
+                    },
+                )
+            return JSONResponse(status_code=201, content=render_voice(note))
 
         return idempotency.replay_or_perform(
             store=box.idempotency,

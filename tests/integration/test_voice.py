@@ -12,6 +12,8 @@ type anything about it.
 
 from __future__ import annotations
 
+import io
+import wave
 from datetime import UTC, datetime
 
 import pytest
@@ -26,9 +28,20 @@ from tests.support.http import PairedClient
 
 T0 = datetime(2026, 1, 13, 21, 40, tzinfo=UTC)
 
+
 #: A short m4a-ish blob. The bytes are never decoded by anything under test; what matters
 #: is that the media store treats them as audio.
-CLIP = b"\x00\x00\x00\x20ftypM4A " + b"his voice" * 60
+def _clip(seconds: float = 0.25) -> bytes:
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(48_000)
+        audio.writeframes(b"\x00\x00" * round(48_000 * seconds))
+    return buffer.getvalue()
+
+
+CLIP = _clip()
 
 
 @pytest.fixture
@@ -54,7 +67,7 @@ def api(tmp_path):
             self.family_id = family["id"]
             self.papa_id = family["members"][0]["id"]
 
-        def upload(self, content: bytes = CLIP, mime: str = "audio/m4a") -> str:
+        def upload(self, content: bytes = CLIP, mime: str = "audio/wav") -> str:
             response = self.client.post("/v1/media", files={"file": ("note.m4a", content, mime)})
             assert response.status_code == 201, response.text
             return response.json()["id"]
@@ -73,22 +86,18 @@ class TestKeepingARecording:
         assert response.status_code == 201
         body = response.json()
         assert body["media_id"].startswith("id-")
-        assert body["duration_seconds"] == 4.2
+        assert body["duration_seconds"] == 0.25
         assert body["recorded_at"] == T0.isoformat()
 
     def test_nothing_is_indexed_by_default_and_that_is_a_complete_answer(self, api):
         """The shipping configuration: no model installed, every recording kept."""
         assert api.keep().json()["transcript"] is None
 
-    @pytest.mark.parametrize("duration", [0.0, 0.3, 0.5, 4.2, 190.0])
-    def test_five_seconds_is_a_target_and_not_a_minimum(self, api, duration):
-        """TASK-601, PRD 24. There is no bar to clear, at any layer of this stack."""
-        assert api.keep(duration=duration).status_code == 201
-
-    def test_a_negative_duration_is_the_one_refusal(self, api):
-        response = api.keep(duration=-1.0)
-        assert response.status_code == 422
-        assert response.json()["error"]["code"] == "VALIDATION_FAILED"
+    @pytest.mark.parametrize("claimed", [-1.0, 0.0, 0.3, 4.2, 190.0])
+    def test_the_handsets_timer_never_decides_the_duration(self, api, claimed):
+        kept = api.keep(duration=claimed)
+        assert kept.status_code == 201
+        assert kept.json()["duration_seconds"] == 0.25
 
     def test_a_photograph_is_not_a_voice_note(self, api):
         photo = api.client.post(
@@ -155,7 +164,7 @@ class TestCorrectingWhatTheMachineMisheard:
         media_id = api.keep(duration=4.2).json()["media_id"]
         api.client.post(f"/v1/voice/{media_id}/transcript", json={"text": "words"})
         after = api.client.get(f"/v1/voice/{media_id}").json()
-        assert after["duration_seconds"] == 4.2
+        assert after["duration_seconds"] == 0.25
         assert api.client.get(f"/v1/media/{media_id}").content == CLIP
 
     def test_a_blank_correction_is_refused_rather_than_erasing_the_index(self, api):
@@ -240,7 +249,7 @@ class TestVoiceRidesWithTheThingItExplains:
         why = api.client.get(f"/v1/sparks/{spark['id']}").json()["why"]
 
         assert why["voice_media_id"] == media_id
-        assert why["voice"]["duration_seconds"] == 4.2
+        assert why["voice"]["duration_seconds"] == 0.25
         assert why["voice"]["transcript"]["text"] == "I never had one of these growing up"
 
     def test_a_why_with_only_words_has_no_recording_and_says_so_plainly(self, api):
@@ -326,7 +335,7 @@ class TestTheFamilyKeepsIt:
         """TASK-707 will cut a film against this number, so it has to be a number."""
         api.keep(duration=4.2)
         archive = api.client.get(f"/v1/families/{api.family_id}/export").json()
-        assert archive["recordings"][0]["duration_seconds"] == 4.2
+        assert archive["recordings"][0]["duration_seconds"] == 0.25
 
     def test_deleting_the_family_takes_the_recordings_with_it(self, api):
         api.keep()
