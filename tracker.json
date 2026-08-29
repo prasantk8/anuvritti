@@ -3020,7 +3020,7 @@
             "tests/integration/test_telemetry.py",
             "tests/architecture/test_reachability.py"
           ],
-          "note": "REDMetrics mounted in observability.py with 404 normalization and strict 500-series ceiling"
+          "note": "REDMetrics is installed by install_observability with 404 normalisation and a 500-series cardinality ceiling; make check green"
         },
         {
           "id": "TASK-1104",

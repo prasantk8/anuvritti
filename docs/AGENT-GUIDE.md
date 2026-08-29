@@ -223,6 +223,14 @@ and swallowed the files no key could open, `scan_image.py` skipped layer members
 not read, and the SBOM emitted a component called `-e packages/filmkit` at version
 `"pinned"`. Each was a routine that reported success about work it had not done.
 
+**One thing the branch cleanup found.** `filmkit` was installed editable from
+`/Users/…/task-712/packages/filmkit/src` - a task worktree. Every film test on this machine
+had been passing against source in a directory nobody was editing, and `make check` went
+green to twenty-nine collection errors the moment that worktree was deleted. One task per
+chat means worktrees appear routinely, and a `pip install -e .` run inside one redirects
+the toolchain into it silently. `test_the_source_under_test_is_this_checkout` now asserts
+both editable packages resolve inside the repository.
+
 **Phase 8 still holds fourteen pending tasks** (802-805, 808-818) and is the phase where the
 product becomes magical rather than merely correct.
 

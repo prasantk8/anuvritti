@@ -89,3 +89,28 @@ def test_the_command_continuity_promises_names_a_real_module():
 
     assert (ROOT / "docs" / "CONTINUITY.md").read_text().count("make run") >= 1
     assert hasattr(importlib.import_module(module), attribute)
+
+
+def test_the_source_under_test_is_this_checkout():
+    """Every gate proves something about *these* files, or it proves nothing.
+
+    `filmkit` was installed editable from `/Users/…/task-712/packages/filmkit/src` - a
+    task worktree, created for one task and deleted when it was merged. Every film test
+    on this machine had been passing against source in a directory nobody was editing,
+    and `make check` went from green to twenty-nine collection errors the moment that
+    worktree was removed. One task per chat means worktrees appear routinely, and a
+    `pip install -e .` run inside one silently redirects the whole toolchain into it.
+
+    This checks the two editable packages resolve inside the repository, which is the
+    only way to know the suite is reading the code under review.
+    """
+    import filmkit
+
+    import anuvritti
+
+    for package in (anuvritti, filmkit):
+        source = Path(package.__file__ or "").resolve()
+        assert source.is_relative_to(ROOT), (
+            f"`{package.__name__}` is installed from {source}, outside this checkout. "
+            "Re-run `make install` from the repository root."
+        )
