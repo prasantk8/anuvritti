@@ -12,11 +12,22 @@
   },
   "scripts": {
     "build": "node scripts/build.ts",
-    "test": "npm run build --silent && node --test \"test/**/*.test.ts\" && node scripts/check-specimen.ts && node scripts/check-scenes.ts",
+    "test": "npm run build --silent && npm run policy:check --silent && node --test \"test/**/*.test.ts\" && node scripts/check-specimen.ts && node scripts/check-scenes.ts",
+    "policy:check": "node scripts/export-film-policy.ts --check",
+    "policy:write": "node scripts/export-film-policy.ts",
+    "fonts:review": "node scripts/review-film-fonts.ts",
     "specimen:check": "npm run build --silent && node scripts/check-specimen.ts",
     "scenes:check": "npm run build --silent && node scripts/check-scenes.ts"
   },
   "engines": {
     "node": ">=22.6"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "@fontsource/newsreader": "5.3.0",
+    "@fontsource/noto-naskh-arabic": "5.3.0",
+    "@fontsource/noto-sans-arabic": "5.3.0",
+    "@fontsource/noto-sans-devanagari": "5.3.0",
+    "@fontsource/noto-serif-devanagari": "5.3.0"
   }
 }

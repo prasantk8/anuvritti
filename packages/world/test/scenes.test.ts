@@ -7,12 +7,20 @@
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 
 import { FRAME, SCENE_KINDS, escapeHtml, renderScene, type SceneKind } from "../scenes/scene.ts";
 import { emitSceneCss, FILM_ROOT_PX } from "../scenes/css.ts";
+import { FILM_FONTS, FILM_SCRIPTS, unsupportedFilmCodepoints } from "../scenes/fonts.ts";
+import {
+  approveRenderRequirements,
+  assertInstalledFilmFontDigests,
+} from "../scenes/preparation.ts";
+import { decodePng, encodePng } from "../scripts/png-difference.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const domain = readFileSync(
@@ -105,6 +113,209 @@ describe("the document a renderer opens", () => {
     const html = renderScene({ id: "s1", kind: "OPENING", heading: "a heading" });
     assert.ok(html.includes('href="world.css"'));
     assert.ok(!html.includes("<style"));
+  });
+
+  test("can carry the same styles inline for a browser with no base URL", () => {
+    const html = renderScene(
+      { id: "s1", kind: "OPENING", heading: "a heading" },
+      { inlineCss: [":root { --w-color-ground: white; }", ".frame { display: grid; }"] }
+    );
+    assert.ok(html.includes("<style>:root"));
+    assert.ok(html.includes("<style>.frame"));
+    assert.ok(!html.includes("<link"));
+  });
+
+  test("lets each saved line establish its own direction", () => {
+    const html = renderScene({
+      id: "s1",
+      kind: "MOMENT",
+      heading: "أول مرة نزل فيها وحده",
+      body: "पहली बार वह अकेले फिसला",
+    });
+    assert.match(html, /<h1[^>]+dir="auto"/);
+    assert.match(html, /<p class="quiet lead measure" dir="auto"/);
+  });
+});
+
+describe("the film's offline writing systems", () => {
+  test("declares Latin, Arabic and Devanagari and bundles display and body faces", () => {
+    assert.deepEqual(
+      FILM_SCRIPTS.map((script) => script.name),
+      ["Latin", "Arabic", "Devanagari"]
+    );
+    for (const script of FILM_SCRIPTS) {
+      assert.ok(FILM_FONTS.some((font) => font.script === script.name && font.role === "display"));
+      assert.ok(FILM_FONTS.some((font) => font.script === script.name && font.role === "body"));
+    }
+  });
+
+  test("accepts real family text in every declared script", () => {
+    assert.deepEqual(unsupportedFilmCodepoints("Aarav’s first slide — 2026"), []);
+    assert.deepEqual(unsupportedFilmCodepoints("أول مرة نزل فيها وحده"), []);
+    assert.deepEqual(unsupportedFilmCodepoints("पहली बार वह अकेले फिसला"), []);
+  });
+
+  test("names an unbundled glyph instead of silently borrowing a host font", () => {
+    assert.deepEqual(unsupportedFilmCodepoints("家"), ["U+5BB6"]);
+  });
+
+  test("approves only this exact pinned world bundle before setup fetches it", () => {
+    const font_packages = Object.fromEntries(
+      FILM_FONTS.map((face) => [face.package, face.version])
+    );
+    const requirements = {
+      schema: "anuvritti.render-requirements.v1",
+      scripts: ["Arabic"],
+      world: { package: "@anuvritti/world", version: "0.1.0", font_packages },
+    };
+    assert.deepEqual(
+      approveRenderRequirements(requirements, {
+        name: "@anuvritti/world",
+        version: "0.1.0",
+      }).scripts,
+      ["Arabic"]
+    );
+    assert.throws(
+      () =>
+        approveRenderRequirements(
+          { ...requirements, world: { ...requirements.world, font_packages: { "host-font": "latest" } } },
+          { name: "@anuvritti/world", version: "0.1.0" }
+        ),
+      /approved pinned font bundle exactly/
+    );
+  });
+
+  test("approves the bytes of every bundled face, not only its package name", () => {
+    const installed = Object.fromEntries(FILM_FONTS.map((face) => [face.file, face.sha256]));
+
+    assert.doesNotThrow(() => assertInstalledFilmFontDigests(installed));
+    assert.ok(FILM_FONTS.every((face) => /^[0-9a-f]{64}$/.test(face.sha256)));
+    assert.throws(
+      () =>
+        assertInstalledFilmFontDigests({
+          ...installed,
+          [FILM_FONTS[0].file]: "0".repeat(64),
+        }),
+      new RegExp(`installed font bytes are not approved: ${FILM_FONTS[0].file}`)
+    );
+  });
+
+  test("reviews approved and candidate bytes as six multilingual stills", () => {
+    const temporary = mkdtempSync(join(tmpdir(), "anuvritti-font-review-"));
+    const output = join(temporary, "review");
+    const fakePlaywright = join(temporary, "playwright");
+    const fixture = join(temporary, "frame.png");
+    const candidateFixture = join(temporary, "candidate-frame.png");
+    writeFileSync(
+      fixture,
+      encodePng({ width: 2, height: 1, pixels: Uint8Array.from([19, 27, 42, 255, 249, 248, 243, 255]) })
+    );
+    writeFileSync(
+      candidateFixture,
+      encodePng({ width: 2, height: 1, pixels: Uint8Array.from([19, 27, 42, 255, 46, 74, 140, 255]) })
+    );
+    writeFileSync(
+      fakePlaywright,
+      "#!/bin/sh\n" +
+        "if [ \"$1\" = \"--version\" ]; then echo 'Version 1.62.0'; exit 0; fi\n" +
+        "if [ \"$1\" = \"install\" ]; then\n" +
+        "  echo 'Chrome for Testing 151.0.7922.34 (playwright chromium v1234)'\n" +
+        "  echo '  Install location: /review/chromium-1234'\n" +
+        "  exit 0\n" +
+        "fi\n" +
+        "for last do :; done\n" +
+        "case \"$last\" in *candidate-*) cp \"$PLAYWRIGHT_CANDIDATE_FIXTURE\" \"$last\" ;; " +
+        "*) cp \"$PLAYWRIGHT_FIXTURE\" \"$last\" ;; esac\n"
+    );
+    chmodSync(fakePlaywright, 0o700);
+    try {
+      const reviewed = spawnSync(
+        process.execPath,
+        [
+          join(root, "scripts", "review-film-fonts.ts"),
+          "--candidate-root",
+          join(root, "node_modules"),
+          "--candidate-version",
+          "5.3.0",
+          "--output",
+          output,
+        ],
+        {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PLAYWRIGHT_CLI: fakePlaywright,
+            PLAYWRIGHT_FIXTURE: fixture,
+            PLAYWRIGHT_CANDIDATE_FIXTURE: candidateFixture,
+          },
+        }
+      );
+      assert.equal(reviewed.status, 0, reviewed.stderr);
+      const receipt = JSON.parse(readFileSync(join(output, "font-review.json"), "utf8")) as {
+        schema: string;
+        environment: {
+          playwright: { version: string };
+          chromium: { version: string; revision: string; install_path: string };
+          host: { platform: string; release: string; architecture: string };
+        };
+        faces: { approved_sha256: string; candidate_sha256: string }[];
+        comparisons: {
+          script: string;
+          changed_pixels: number;
+          bounds: unknown;
+          details: { approved: string; candidate: string; difference: string; scale: number } | null;
+        }[];
+      };
+      assert.equal(receipt.schema, "anuvritti.font-review.v4");
+      assert.deepEqual(receipt.environment.playwright, { version: "1.62.0" });
+      assert.deepEqual(receipt.environment.chromium, {
+        version: "151.0.7922.34",
+        revision: "1234",
+        install_path: "/review/chromium-1234",
+      });
+      assert.ok(receipt.environment.host.platform.length > 0);
+      assert.ok(receipt.environment.host.release.length > 0);
+      assert.equal(receipt.environment.host.architecture, process.arch);
+      assert.equal(receipt.faces.length, FILM_FONTS.length);
+      assert.ok(
+        receipt.faces.every((face) => face.approved_sha256 === face.candidate_sha256)
+      );
+      for (const state of ["approved", "candidate"]) {
+        for (const script of ["latin", "arabic", "devanagari"]) {
+          assert.ok(readFileSync(join(output, `${state}-${script}.png`)).byteLength > 0);
+        }
+      }
+      assert.deepEqual(
+        receipt.comparisons.map((comparison) => comparison.script),
+        ["Latin", "Arabic", "Devanagari"]
+      );
+      assert.ok(receipt.comparisons.every((comparison) => comparison.changed_pixels === 1));
+      assert.ok(
+        receipt.comparisons.every(
+          (comparison) => JSON.stringify(comparison.bounds) === JSON.stringify({ x: 1, y: 0, width: 1, height: 1 })
+        )
+      );
+      for (const script of ["latin", "arabic", "devanagari"]) {
+        assert.ok(readFileSync(join(output, `difference-${script}.png`)).byteLength > 0);
+        for (const state of ["approved", "candidate", "difference"]) {
+          const detail = decodePng(readFileSync(join(output, `detail-${state}-${script}.png`)));
+          assert.equal(detail.width, 8);
+          assert.equal(detail.height, 4);
+        }
+      }
+      const sheet = readFileSync(join(output, "REVIEW.md"), "utf8");
+      assert.match(sheet, /- \[ \] Approved/);
+      assert.match(sheet, /Approved SHA-256.*Candidate SHA-256/);
+      assert.match(sheet, /Difference map/);
+      assert.match(sheet, /Devanagari.*1 \/ 2 \(50\.0000%\)/);
+      assert.match(sheet, /Playwright 1\.62\.0/);
+      assert.match(sheet, /Chromium 151\.0\.7922\.34 \(revision 1234\)/);
+      assert.match(sheet, new RegExp(`${process.platform} ${process.arch}`));
+      assert.match(sheet, /Devanagari · 4× nearest-neighbour/);
+      assert.match(sheet, /detail-candidate-devanagari\.png/);
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
   });
 });
 

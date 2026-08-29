@@ -21,14 +21,16 @@ export interface FontRole {
 export const FONTS: readonly FontRole[] = [
   {
     name: "display",
-    stack: '"Newsreader", "Iowan Old Style", Georgia, serif',
+    stack:
+      '"Newsreader", "Noto Naskh Arabic", "Noto Serif Devanagari", "Iowan Old Style", Georgia, serif',
     meaning:
       "A child's name, a year, a single sentence a parent said. Used rarely and large, the way a page in an album is titled.",
     webfont: { family: "Newsreader", axes: "ital,opsz,wght@0,6..72,300..600;1,6..72,300..500" },
   },
   {
     name: "body",
-    stack: '"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif',
+    stack:
+      '"IBM Plex Sans", "Noto Sans Arabic", "Noto Sans Devanagari", ui-sans-serif, system-ui, -apple-system, sans-serif',
     meaning: "Everything the app itself says. Plain, unhurried, and never the loudest thing.",
     webfont: { family: "IBM Plex Sans", axes: "wght@400;500;600" },
   },

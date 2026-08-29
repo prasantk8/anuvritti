@@ -34,6 +34,76 @@ docker run --rm -p 8000:8000 \
   anuvritti:local
 ```
 
+### Render a FilmExport
+
+Rendering is intentionally a development-machine job: the always-on family server and its
+production image carry neither Chromium nor FFmpeg. Compilation first emits a text-free
+`render-requirements.json`: it names only requested scripts and the exact approved world/font
+package versions. Send that small receipt to the render machine and prepare it **before**
+creating or moving the plaintext FilmExport:
+
+```bash
+make film-prepare REQUIREMENTS=/path/to/render-requirements.json
+```
+
+The preparation command refuses unknown scripts, changed versions, extra packages, and
+`latest`; only after that check does npm fetch the pinned bundle. It then hashes every
+installed WOFF2 file and refuses to declare the machine ready unless those bytes match the
+digests reviewed in `packages/world/scenes/fonts.ts`. A registry package with the expected
+name and version but changed font bytes is therefore not trusted. The compiler itself refuses
+unsupported text with the scene, rendered field, and Unicode codepoint, while the family
+material is still inside the archive. Once preparation succeeds, point the renderer at the
+folder containing `film.json`, `provenance.json`, `render-requirements.json`, and `media/`:
+
+```bash
+make film ARCHIVE=/path/to/FilmExport
+```
+
+Treat a font upgrade as a visual migration, not a package bump. Install candidate
+Fontsource packages into a disposable prefix without changing this repository's lock,
+then render the same Latin, Arabic and Devanagari frames from approved and candidate bytes:
+
+```bash
+npm install --prefix /tmp/anuvritti-font-candidate --no-save \
+  @fontsource/newsreader@5.4.0 @fontsource/ibm-plex-sans@5.4.0 \
+  @fontsource/noto-naskh-arabic@5.4.0 @fontsource/noto-sans-arabic@5.4.0 \
+  @fontsource/noto-serif-devanagari@5.4.0 @fontsource/noto-sans-devanagari@5.4.0
+make film-font-review \
+  CANDIDATE_FONTS=/tmp/anuvritti-font-candidate/node_modules CANDIDATE_VERSION=5.4.0
+```
+
+Open `var/film/font-review-5.4.0/REVIEW.md` and inspect the six full-size stills plus the
+three difference maps. A map keeps the approved frame quiet underneath, marks changed
+pixels in the world's indigo, and boxes their exact bounds. Every non-empty bound also gets
+approved, candidate and difference detail panels: twelve pixels of context, enlarged four
+times by repeating the source pixels exactly. No interpolated edge may make a glyph look
+smoother or rougher than Chromium drew it. The receipt records changed pixel count,
+fraction, mean and maximum RGB delta alongside every old/new WOFF2 digest and the detail
+filenames; an unchanged frame gets no invented panel.
+The receipt and review sheet also name the exact Playwright version, Chromium product
+version and revision, installation path, operating-system release and architecture. Compare
+pixel counts only when those fingerprints agree; different rasterisers are different
+evidence, not a regression. The measurements help a reviewer find a subtle shaping or matra
+change, but never approve or reject one automatically. Do not change a font package version
+or approved digest until a design reviewer signs the sheet; the whole review folder is
+ignored and must never contain family material or be committed.
+
+The render writes `var/film/film.mp4`, `var/film/film.manifest.json`, and the first
+inspection still. Keep the manifest with the MP4: it is the portable account of the exact
+FilmExport receipts, browser revision, FFmpeg version and arguments, and hashes for every
+held frame and scene video that made the final film.
+
+Film text is currently promised offline for Latin, Arabic, and Devanagari. The world bundle
+uses Newsreader and IBM Plex Sans for Latin, Noto Naskh/Sans Arabic, and Noto Serif/Sans
+Devanagari; the manifest records every face's package version and hash. Rendering stops if
+text uses an undeclared writing system or if Chromium reports that any visible glyph came
+from a host font. Add a writing system to `packages/world/scenes/fonts.ts` with both display
+and body faces before asking a family film to use it.
+
+The film lands at `var/film/film.mp4`; `var/film/still.png` is the first frame for visual
+inspection. The renderer rechecks every media hash and every provenance entry before it
+draws, and the export remains plaintext family material: delete it after the render.
+
 The image defaults to `ANUVRITTI_ENV=production`, which means it will **refuse to start**
 without `ANUVRITTI_MEDIA_KEY` and refuses `ANUVRITTI_TLS_REQUIRED=false`. That is deliberate
 (PRD §44). If it exits with code 78, read the message: it is a configuration error.

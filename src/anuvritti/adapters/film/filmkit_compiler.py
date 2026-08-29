@@ -26,12 +26,23 @@ fires when someone adds `from filmkit import render_scene` to this file.
 
 from __future__ import annotations
 
+import unicodedata
+from typing import Any
+
 from filmkit.captions import cues as caption_cues
 from filmkit.narration import RECORDED, SYNTHETIC, count_words
 from filmkit.narration import Narration as Track
 from filmkit.timeline import FrameEntry, SceneEntry, Timeline
 from filmkit.timing import BY_AUDIO, Beat, plan, visual_seconds
 
+from anuvritti.adapters.film._world_font_policy import (
+    COMMON_RANGES,
+    SCRIPT_ORDER,
+    SCRIPT_RANGES,
+    WORLD_BUNDLE_NAME,
+    WORLD_BUNDLE_VERSION,
+    WORLD_FONT_PACKAGES,
+)
 from anuvritti.domain.film import (
     CompiledFilm,
     CompiledScene,
@@ -106,6 +117,9 @@ class FilmkitFilmCompiler:
         refusal = _refuse(spec)
         if refusal is not None:
             return Err(refusal)
+        requirements = _render_requirements(spec)
+        if isinstance(requirements, DomainError):
+            return Err(requirements)
 
         beats = [_beat(scene) for scene in spec.scenes]
         tracks = [_track(scene) for scene in spec.scenes]
@@ -173,6 +187,8 @@ class FilmkitFilmCompiler:
             for scene, start, hold in zip(spec.scenes, starts, holds, strict=True)
         )
 
+        timeline_payload = timeline.to_json()
+        timeline_payload["render_requirements"] = requirements
         film = CompiledFilm(
             spec_id=spec.id,
             title=spec.title,
@@ -182,7 +198,7 @@ class FilmkitFilmCompiler:
                 for start, end, text in caption_cues(timeline)
                 if text.strip()
             ),
-            timeline=timeline.to_json(),
+            timeline=timeline_payload,
             timing=report.to_json(),
             notes=(),
         )
@@ -225,6 +241,64 @@ def _refuse(spec: FilmSpec) -> DomainError | None:
                 },
             )
     return None
+
+
+def _render_requirements(spec: FilmSpec) -> dict[str, Any] | DomainError:
+    requested: set[str] = set()
+    unsupported: list[dict[str, object]] = []
+    for scene in spec.scenes:
+        for field, text in (
+            ("heading", scene.heading),
+            ("body", scene.body),
+            ("narration", scene.voice.caption),
+        ):
+            refused: set[int] = set()
+            for character in unicodedata.normalize("NFC", text):
+                codepoint = ord(character)
+                category = unicodedata.category(character)
+                if _in_ranges(codepoint, COMMON_RANGES) and category[0] not in {"L", "M"}:
+                    continue
+                script = next(
+                    (name for name in SCRIPT_ORDER if _in_ranges(codepoint, SCRIPT_RANGES[name])),
+                    None,
+                )
+                if script is None:
+                    refused.add(codepoint)
+                else:
+                    requested.add(script)
+            if refused:
+                unsupported.append(
+                    {
+                        "scene_id": scene.id,
+                        "field": field,
+                        "codepoints": [_codepoint(value) for value in sorted(refused)],
+                    }
+                )
+    if unsupported:
+        first = unsupported[0]
+        return DomainError(
+            ErrorCode.FILM_NOT_COMPILABLE,
+            f"{first['scene_id']}.{first['field']} uses text the approved world bundle "
+            "cannot draw offline",
+            {"spec_id": spec.id, "unsupported_text": unsupported},
+        )
+    return {
+        "schema": "anuvritti.render-requirements.v1",
+        "scripts": [name for name in SCRIPT_ORDER if name in requested],
+        "world": {
+            "package": WORLD_BUNDLE_NAME,
+            "version": WORLD_BUNDLE_VERSION,
+            "font_packages": dict(WORLD_FONT_PACKAGES),
+        },
+    }
+
+
+def _in_ranges(codepoint: int, ranges: tuple[tuple[int, int], ...]) -> bool:
+    return any(first <= codepoint <= last for first, last in ranges)
+
+
+def _codepoint(value: int) -> str:
+    return f"U+{value:04X}"
 
 
 def _with_notes(film: CompiledFilm, over_target: bool, target_seconds: float) -> CompiledFilm:

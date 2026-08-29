@@ -9,8 +9,10 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from pathlib import Path
 from types import TracebackType
 
+from anuvritti.application.ports import RenderedFilm, RenderedFrame
 from anuvritti.domain.events import DomainEvent
 from anuvritti.domain.family import ChildProfile, Family, Member
 from anuvritti.domain.lexicon import FamilyLexicon
@@ -321,6 +323,23 @@ class NullTranscriber:
 
     def transcribe(self, media_id: MediaId) -> Result[Transcript | None, DomainError]:
         return Ok(None)
+
+
+class FakeFilmRenderer:
+    """Records the portable folder handed across the render port and draws no pixel."""
+
+    def __init__(self, result: RenderedFilm | None = None) -> None:
+        self.calls: list[tuple[Path, Path]] = []
+        self.result = result or RenderedFilm(
+            path=Path("film.mp4"),
+            manifest_path=Path("film.manifest.json"),
+            frames=(RenderedFrame("opening", Path("opening.png"), Path("opening.html")),),
+            duration_seconds=3.0,
+        )
+
+    def render(self, archive: Path, *, destination: Path) -> Result[RenderedFilm, DomainError]:
+        self.calls.append((archive, destination))
+        return Ok(self.result)
 
 
 class DeafTranscriber:

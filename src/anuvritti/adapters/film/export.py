@@ -42,6 +42,7 @@ from anuvritti.shared.result import Err, Ok, Result
 
 FILM_FILENAME = "film.json"
 MEDIA_DIRECTORY = "media"
+RENDER_REQUIREMENTS_FILENAME = "render-requirements.json"
 
 #: Deliberately a fixed table rather than `mimetypes`, whose answers depend on the machine's
 #: own configuration. An export must lay down the same filenames on every machine, because a
@@ -69,6 +70,7 @@ class FilmExport:
     directory: Path
     film_path: Path
     provenance_path: Path
+    requirements_path: Path
     media_paths: tuple[Path, ...]
     byte_size: int
 
@@ -90,6 +92,10 @@ class FilesystemFilmExporter:
                     {"directory": str(into)},
                 )
             )
+
+        requirements = _requirements(package)
+        if isinstance(requirements, DomainError):
+            return Err(requirements)
 
         media_dir = into / MEDIA_DIRECTORY
         media_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -126,15 +132,51 @@ class FilesystemFilmExporter:
             encoding="utf-8",
         )
 
+        requirements_path = into / RENDER_REQUIREMENTS_FILENAME
+        requirements_path.write_text(
+            json.dumps(requirements, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+
         return Ok(
             FilmExport(
                 directory=into,
                 film_path=film_path,
                 provenance_path=provenance_path,
+                requirements_path=requirements_path,
                 media_paths=tuple(written),
                 byte_size=total,
             )
         )
+
+
+def write_render_requirements(package: FilmPackage, *, to: Path) -> Result[Path, DomainError]:
+    """Write only setup metadata, before any photograph or saved sentence leaves home."""
+    if to.exists():
+        return Err(
+            DomainError(
+                ErrorCode.CONFLICT,
+                "render requirements already exist and will not be overwritten",
+                {"path": str(to)},
+            )
+        )
+    requirements = _requirements(package)
+    if isinstance(requirements, DomainError):
+        return Err(requirements)
+    to.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    to.write_text(json.dumps(requirements, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    to.chmod(0o600)
+    return Ok(to)
+
+
+def _requirements(package: FilmPackage) -> dict[str, object] | DomainError:
+    value = package.film.timeline.get("render_requirements")
+    if not isinstance(value, dict):
+        return DomainError(
+            ErrorCode.FILM_NOT_COMPILABLE,
+            "the compiled film does not declare the world bundle it needs",
+            {"spec_id": package.spec.id},
+        )
+    return value
 
 
 def _altered(media_id: MediaId) -> DomainError:
