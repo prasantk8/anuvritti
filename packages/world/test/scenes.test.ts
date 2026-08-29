@@ -187,6 +187,8 @@ describe("the film's offline writing systems", () => {
 
   test("approves the bytes of every bundled face, not only its package name", () => {
     const installed = Object.fromEntries(FILM_FONTS.map((face) => [face.file, face.sha256]));
+    const [first] = FILM_FONTS;
+    assert.ok(first, "a film with no bundled face cannot draw a frame");
 
     assert.doesNotThrow(() => assertInstalledFilmFontDigests(installed));
     assert.ok(FILM_FONTS.every((face) => /^[0-9a-f]{64}$/.test(face.sha256)));
@@ -194,9 +196,9 @@ describe("the film's offline writing systems", () => {
       () =>
         assertInstalledFilmFontDigests({
           ...installed,
-          [FILM_FONTS[0].file]: "0".repeat(64),
+          [first.file]: "0".repeat(64),
         }),
-      new RegExp(`installed font bytes are not approved: ${FILM_FONTS[0].file}`)
+      new RegExp(`installed font bytes are not approved: ${first.file}`)
     );
   });
 

@@ -31,7 +31,7 @@ const packages = Object.fromEntries(
     .map((face) => [face.package, face.version])
 );
 const fontFiles = Object.fromEntries(
-  FILM_FONTS.map((face) => [face.file, face.sha256]).sort(([left], [right]) =>
+  FILM_FONTS.map((face): [string, string] => [face.file, face.sha256]).sort(([left], [right]) =>
     left.localeCompare(right)
   )
 );

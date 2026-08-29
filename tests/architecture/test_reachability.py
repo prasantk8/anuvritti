@@ -38,6 +38,10 @@ PY_ENTRY_POINTS = (
 PY_SCRIPT_IMPORTS = (
     "anuvritti.adapters.backup",
     "anuvritti.infrastructure.release",
+    # `make film ARCHIVE=...` runs this as `python -m`. It is a front door with an
+    # argparse parser and a __main__ guard, not an orphan - the walk simply cannot see
+    # a Makefile. The font policy it imports comes with it.
+    "anuvritti.adapters.film.render",
 )
 
 #: Reached by nothing that runs. Each line is a debt with an owner, not an exemption.
@@ -45,6 +49,9 @@ NOT_IN_SERVICE: dict[str, str] = {
     "anuvritti.application.film": "TASK-706 - the compiler runs, no route composes a film yet",
     "anuvritti.application.provenance": "TASK-706 - reachable only through application.film",
     "anuvritti.adapters.film.filmkit_compiler": "TASK-706 - only via application.film",
+    "anuvritti.adapters.film._world_font_policy": (
+        "TASK-706 - only via adapters.film.filmkit_compiler, itself out of service"
+    ),
     "anuvritti.adapters.film.export": "TASK-706 - reachable only through application.film",
     "anuvritti.application.import_": "TASK-1102 - importer has no CLI and no route",
     "anuvritti.application.retention": "TASK-1108 reopened - crashes on GuardedConnection",
