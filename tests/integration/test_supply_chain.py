@@ -22,6 +22,7 @@ def test_python_components_contain_valid_hashes():
     for c in comps:
         assert c["type"] == "library"
         assert c["purl"].startswith("pkg:pypi/")
+        assert c["version"] != "pinned"
         assert len(c["hashes"]) > 0
         assert c["hashes"][0]["alg"] == "SHA-256"
         assert len(c["hashes"][0]["content"]) == 64
@@ -29,13 +30,13 @@ def test_python_components_contain_valid_hashes():
 
 def test_node_components_are_extracted_from_workspaces():
     comps = get_node_components()
-    assert len(comps) >= 10
+    assert len(comps) >= 100  # extracted across workspace lockfiles
     names = {c["name"] for c in comps}
-    assert "react" in names or "expo" in names
+    assert "react" in names or "expo" in names or "typescript" in names
     for c in comps:
         assert c["purl"].startswith("pkg:npm/")
         assert len(c["hashes"]) > 0
-        assert c["hashes"][0]["alg"] == "SHA-256"
+        assert c["hashes"][0]["alg"] in ("SHA-256", "SHA-512")
 
 
 def test_cyclonedx_sbom_structure():

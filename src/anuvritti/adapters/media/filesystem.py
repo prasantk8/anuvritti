@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Protocol
@@ -25,6 +26,26 @@ from anuvritti.domain.media import MediaKind, MediaObject
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import FamilyId, IdGenerator, MediaId
 from anuvritti.shared.result import Err, Ok, Result
+
+
+@dataclass(frozen=True, slots=True)
+class Rewrap:
+    """The outcome of a key rotation, as an operator has to read it.
+
+    HARDENING 5.5 promises zero-downtime rotation, and the dangerous half of that promise
+    is the step *after*: retiring the old key. That is safe only when every stored object
+    now opens with the new one, so the report says which files did not, and `retirable`
+    is the single question `scripts/rotate_keys.py` asks before telling anyone it is done.
+    """
+
+    inspected: int
+    rewrapped: int
+    failed: tuple[str, ...]
+
+    @property
+    def retirable(self) -> bool:
+        """True when no file was left behind, so historical keys can be dropped."""
+        return not self.failed
 
 
 class _Catalogue(Protocol):
@@ -181,6 +202,18 @@ class EncryptedFilesystemMediaStore:
 
         return Ok(self._catalogue.delete_for_family(family_id))
 
+    # ----------------------------------------------------------------- re-wrapping
+    def rewrap_all(self) -> Rewrap:
+        """Re-encrypt all stored media on disk under the active primary key.
+
+        Uses `KeyRing.rotate_payload()` so historical keys can eventually be retired -
+        and `Rewrap.retirable` is the answer to whether they can be. A count alone
+        cannot say that, which is why this does not return one.
+        """
+        if self._keyring is None:
+            return Rewrap(inspected=0, rewrapped=0, failed=())
+        return rewrap_directory(self._root, self._keyring)
+
     # -------------------------------------------------------------- internals
     def _encrypt(self, content: bytes) -> bytes:
         return self._keyring.encrypt(content) if self._keyring else content
@@ -191,3 +224,33 @@ class EncryptedFilesystemMediaStore:
         if self._keyring is None:
             raise InvalidToken
         return self._keyring.decrypt(stored)
+
+
+def rewrap_directory(root: Path, keyring: KeyRing) -> Rewrap:
+    """Re-encrypt every file under `root` with `keyring`'s active key.
+
+    Module-level because `scripts/rotate_keys.py` runs it against a media directory that
+    has no catalogue, no id generator and no upload limits to enforce - and a second
+    implementation of this walk living in the script is how the script and the
+    application would come to disagree about what a completed rotation means.
+    """
+    inspected = rewrapped = 0
+    failed: list[str] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        inspected += 1
+        raw = path.read_bytes()
+        try:
+            rotated = keyring.rotate_payload(raw)
+        except InvalidToken:
+            # No key in the ring opens this file. Skipping it silently is how a family
+            # loses media: the operator sees a count, believes the rotation was total,
+            # retires the old key, and the bytes become unreadable forever. It is named
+            # instead, and `retirable` goes false.
+            failed.append(path.relative_to(root).as_posix())
+            continue
+        if rotated != raw:
+            path.write_bytes(rotated)
+            rewrapped += 1
+    return Rewrap(inspected=inspected, rewrapped=rewrapped, failed=tuple(failed))

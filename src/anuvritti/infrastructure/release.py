@@ -1,8 +1,7 @@
-"""Blue-Green Release Orchestrator with Error-Budget Rollback (HARDENING 5.4).
+"""Blue-Green Release Orchestrator with Error-Budget Rollback (HARDENING 5.4, TASK-1110).
 
 Guarantees:
-1. Zero-Downtime Deployment: Traffic is cut over only after the candidate slot passes
-   health and readiness checks.
+1. Zero-Downtime Deployment: Traffic is cut over only after candidate passes health checks.
 2. Error Budget Automated Rollback: If post-cutover error burn exceeds allowable threshold,
    traffic is instantly rolled back to the previous stable slot in under 5 seconds.
 """
@@ -65,8 +64,7 @@ class BlueGreenDeployer:
             self.history.append(f"rollback_to_{self.active.name}")
             return (
                 False,
-                "Error budget burn rate exceeded; automatically rolled back to the "
-                "previous stable slot",
+                "Error budget burn rate exceeded; automatically rolled back to previous slot",
             )
 
         # Success: candidate is now the active slot

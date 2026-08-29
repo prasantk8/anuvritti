@@ -34,11 +34,15 @@ PY_ENTRY_POINTS = (
     "anuvritti.config.settings",
 )
 
-#: Shell entry points import Python by path, so they are named rather than parsed.
-PY_SCRIPT_IMPORTS = (
-    "anuvritti.adapters.backup",
-    "anuvritti.infrastructure.release",
-)
+#: Everything under `scripts/` is a front door - backup, restore, the SBOM, the image
+#: scan, key rotation, the retention cron, the release runner. They are parsed rather than
+#: listed, because a hand-maintained list is a second place to remember: `rotate_keys.py`
+#: and `retention_cron.py` arrived in TASK-1107 and TASK-1108, and the list did not know.
+SCRIPTS = ROOT / "scripts"
+
+#: The two shell scripts embed their Python in a `python3 -c` heredoc, which no parser
+#: walking `scripts/*.py` will ever see. `backup.sh` and `restore.sh` both call this.
+PY_SCRIPT_IMPORTS = ("anuvritti.adapters.backup",)
 
 #: Reached by nothing that runs. Each line is a debt with an owner, not an exemption.
 NOT_IN_SERVICE: dict[str, str] = {
@@ -47,11 +51,7 @@ NOT_IN_SERVICE: dict[str, str] = {
     "anuvritti.adapters.film.filmkit_compiler": "TASK-706 - only via application.film",
     "anuvritti.adapters.film.export": "TASK-706 - reachable only through application.film",
     "anuvritti.application.import_": "TASK-1102 - importer has no CLI and no route",
-    "anuvritti.application.retention": "TASK-1108 reopened - crashes on GuardedConnection",
     "anuvritti.adapters.persistence.migrations": "TASK-1101 - container calls schema.migrate()",
-    "anuvritti.interfaces.http.limits": "TASK-1105 reopened - install_rate_limiter has no caller",
-    "anuvritti.observability.slo": "TASK-1104 - burn rates computed, nothing consults them",
-    "anuvritti.config.secrets_guard": "TASK-1111 - guard is never invoked at boot",
 }
 
 
@@ -91,6 +91,8 @@ def _reachable_python() -> set[str]:
     modules = _all_python_modules()
     seen: set[str] = set()
     queue = [*PY_ENTRY_POINTS, *PY_SCRIPT_IMPORTS]
+    for script in sorted(SCRIPTS.glob("*.py")):
+        queue.extend(_imports_of(script))
     while queue:
         name = queue.pop()
         if name in seen or name not in modules:

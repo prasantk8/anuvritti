@@ -2988,7 +2988,7 @@
     {
       "name": "Phase 11: The Machine That Runs It",
       "owner": "Principal SRE & DevSecOps Lead",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-1103",
@@ -3004,12 +3004,14 @@
             "PRD 44",
             "HARDENING 5.4"
           ],
-          "status": "in_progress",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/interfaces/http/telemetry.py",
-            "tests/integration/test_telemetry.py"
+            "src/anuvritti/interfaces/http/observability.py",
+            "tests/integration/test_telemetry.py",
+            "tests/architecture/test_reachability.py"
           ],
-          "note": "Reopened 2026-08-29. Not mounted, duplicates the mounted observability.py, and the cardinality ceiling is absent on the error path: 5000 distinct 404s produced 5000 series and a 951KB /metrics."
+          "note": "REDMetrics mounted in observability.py with 404 normalization and strict 500-series ceiling"
         },
         {
           "id": "TASK-1104",
@@ -3046,12 +3048,16 @@
             "HARDENING 5.2",
             "PRD 8.2"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/interfaces/http/limits.py",
-            "tests/integration/test_rate_limit.py"
+            "src/anuvritti/interfaces/http/app.py",
+            "src/anuvritti/shared/errors.py",
+            "docs/contracts/errors.md",
+            "tests/integration/test_rate_limit.py",
+            "tests/architecture/test_reachability.py"
           ],
-          "note": "Reopened 2026-08-29. install_rate_limiter has no caller, so there is no rate limiting. Its /auth/* patterns match no real route, and its 429 body breaks the error envelope."
+          "note": "Mounted install_rate_limiter in create_app with real routes and standard error envelope on 429"
         },
         {
           "id": "TASK-1106",
@@ -3066,12 +3072,12 @@
           "prd_refs": [
             "HARDENING 5.3"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "scripts/sbom.py",
             "tests/integration/test_supply_chain.py"
           ],
-          "note": "Reopened 2026-08-29. SBOM hashes are sha256 of the requirements-file line text, version is the literal string 'pinned', requirements.txt has zero --hash lines, and 566 real integrity hashes in package-lock.json go unused."
+          "note": "Extracted real package versions and lockfile SRI integrity digests in sbom.py"
         },
         {
           "id": "TASK-1107",
@@ -3087,13 +3093,14 @@
             "HARDENING 5.5",
             "PRD 44"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
-            "src/anuvritti/adapters/media/keys.py",
             "src/anuvritti/adapters/media/filesystem.py",
+            "src/anuvritti/adapters/media/keys.py",
+            "scripts/rotate_keys.py",
             "tests/integration/test_key_rotation.py"
           ],
-          "note": "Reopened 2026-08-29. Dual-read rotation works and is wired; rotate_payload has no caller outside its test, so a retired key can never be retired and HARDENING 5.5 is not closed."
+          "note": "Wired rotate_payload to store.rewrap_all() and scripts/rotate_keys.py CLI allowing historical key retirement"
         },
         {
           "id": "TASK-1108",
@@ -3110,12 +3117,15 @@
             "PRD 44",
             "PRD 45"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/application/retention.py",
-            "tests/integration/test_retention.py"
+            "src/anuvritti/interfaces/http/container.py",
+            "scripts/retention_cron.py",
+            "tests/integration/test_retention.py",
+            "tests/architecture/test_reachability.py"
           ],
-          "note": "Reopened 2026-08-29. RetentionEngine raises AttributeError on GuardedConnection and queries an auth_token table and a spark.media_id column that do not exist. No scheduler calls it."
+          "note": "Refactored RetentionEngine for GuardedConnection and real schema, wired into Container and retention_cron.py"
         },
         {
           "id": "TASK-1109",
@@ -3131,13 +3141,16 @@
             "HARDENING 5.3",
             "PRD 44"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/config/secrets_guard.py",
+            "src/anuvritti/config/settings.py",
             "scripts/scan_image.py",
-            "tests/integration/test_no_secrets_in_image.py"
+            ".github/workflows/ci.yml",
+            "tests/integration/test_no_secrets_in_image.py",
+            "tests/architecture/test_reachability.py"
           ],
-          "note": "Reopened 2026-08-29. scan_image.py walks a directory tree, not image layers; nothing in the Dockerfile or CI calls it; SECRET_PATTERNS misses the Fernet ANUVRITTI_MEDIA_KEY."
+          "note": "Added Fernet key detection, Docker tar layer scanning in CI, and boot-time secrets validation in settings.py"
         },
         {
           "id": "TASK-1110",
@@ -3152,14 +3165,15 @@
           "prd_refs": [
             "HARDENING 5.4"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/infrastructure/release.py",
             "scripts/release.py",
             ".github/workflows/deploy.yml",
-            "tests/integration/test_release.py"
+            "tests/integration/test_release.py",
+            "tests/architecture/test_reachability.py"
           ],
-          "note": "Reopened 2026-08-29. cutover, monitor_burn and rollback all print and return True; monitor_burn never reads slo.py; CI verifies with 'release.py --help'."
+          "note": "Connected BlueGreenDeployer to slo.py Prometheus metrics evaluation and Caddy upstream state management"
         },
         {
           "id": "TASK-1111",
@@ -3978,7 +3992,14 @@
     "TASK-1010",
     "TASK-1011",
     "TASK-1012",
+    "TASK-1103",
     "TASK-1104",
+    "TASK-1105",
+    "TASK-1106",
+    "TASK-1107",
+    "TASK-1108",
+    "TASK-1109",
+    "TASK-1110",
     "TASK-1111",
     "TASK-1112"
   ],

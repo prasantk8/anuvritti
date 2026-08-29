@@ -63,7 +63,10 @@ def normalize_route(path: str) -> str:
 
 @dataclass
 class REDMetrics:
-    """Prometheus-compatible RED (Rate, Errors, Duration) metrics accumulator with cardinality ceiling."""
+    """Prometheus-compatible RED (Rate, Errors, Duration) metrics accumulator.
+
+    Enforces strict cardinality ceiling to protect against memory exhaustion.
+    """
 
     requests: dict[str, int] = field(default_factory=dict)
     errors: dict[str, int] = field(default_factory=dict)
@@ -144,7 +147,7 @@ class REDMetrics:
         lines.extend(
             [
                 "",
-                "# HELP anuvritti_http_requests_errors_total Total failed HTTP requests (4xx and 5xx).",
+                "# HELP anuvritti_http_requests_errors_total Total failed requests (4xx and 5xx).",
                 "# TYPE anuvritti_http_requests_errors_total counter",
             ]
         )
@@ -189,10 +192,10 @@ class REDMetrics:
                 f"anuvritti_intent_to_moment_ratio {_ratio(product):.4f}",
                 "",
                 "# --- anti-metrics (PRD 53): these are watched going DOWN ---",
-                "# HELP anuvritti_suggestions_emitted_total Times the product interrupted a family.",
+                "# HELP anuvritti_suggestions_emitted_total Interrupted suggestions.",
                 "# TYPE anuvritti_suggestions_emitted_total counter",
                 f"anuvritti_suggestions_emitted_total {product.get('SparkSuggested', 0)}",
-                "# HELP anuvritti_suggestions_declined_total Suggestions the family did not want.",
+                "# HELP anuvritti_suggestions_declined_total Declined suggestions.",
                 "# TYPE anuvritti_suggestions_declined_total counter",
                 f"anuvritti_suggestions_declined_total {product.get('SparkArchived', 0)}",
                 "",

@@ -47,6 +47,7 @@ from anuvritti.application.capture import (
 from anuvritti.application.moments import MarkAsDoneUseCase
 from anuvritti.application.presence import CaptureLittleThingUseCase, CaptureRightNowUseCase
 from anuvritti.application.privacy import DeleteFamilyDataUseCase, ExportFamilyDataUseCase
+from anuvritti.application.retention import RetentionEngine
 from anuvritti.application.returning import (
     GetWorthBringingBackUseCase,
     RespondToSuggestionUseCase,
@@ -112,6 +113,7 @@ class Container:
     authenticate_device: AuthenticateDeviceUseCase
     list_devices: ListDevicesUseCase
     revoke_device: RevokeDeviceUseCase
+    retention: RetentionEngine
 
     def close(self) -> None:
         self.connection.close()
@@ -307,4 +309,10 @@ def build_container(
         authenticate_device=AuthenticateDeviceUseCase(devices=devices, clock=clock),
         list_devices=ListDevicesUseCase(devices=devices),
         revoke_device=RevokeDeviceUseCase(devices=devices, events=events, clock=clock, uow=uow),
+        retention=RetentionEngine(
+            db=connection,
+            media_root=Path(settings.media_dir),
+            upload_spool_dir=Path(settings.media_dir) / "spool",
+            now_fn=clock.now,
+        ),
     )

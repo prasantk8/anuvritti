@@ -3,7 +3,8 @@
 Verifies that:
 1. Dynamic IDs in paths are normalized to preserve metric cardinality.
 2. Metric series count is strictly capped at MAX_METRIC_SERIES (500) to prevent memory exhaustion.
-3. 5,000 distinct 404 requests through the real app produce bounded metrics without ballooning /metrics size.
+3. 5,000 distinct 404s through the real app produce bounded metrics, and a bounded
+   /metrics body.
 4. RED metrics (Rate, Error, Duration) correctly record and format.
 5. Tracing spans reject sensitive PII attributes.
 """
@@ -11,15 +12,23 @@ Verifies that:
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+
+from cryptography.fernet import Fernet
 from starlette.testclient import TestClient
 
+from anuvritti.config.settings import load_settings
 from anuvritti.interfaces.http.app import create_app
+from anuvritti.interfaces.http.container import build_container
 from anuvritti.interfaces.http.telemetry import (
     MAX_METRIC_SERIES,
     REDMetrics,
     SanitizedTraceSpan,
     normalize_route,
 )
+from anuvritti.shared.clock import FrozenClock
+from anuvritti.shared.identity import SequentialIdGenerator
 
 
 def test_route_normalization_strips_uuids_and_ids():
@@ -43,22 +52,10 @@ def test_red_metrics_tracks_rate_errors_and_duration():
     red.observe("POST", "/sparks/103", 500, 120.0)
 
     rendered = red.render_prometheus()
-    assert (
-        'anuvritti_http_requests_total{method="GET",route="/sparks/{id}",status="200"} 2'
-        in rendered
-    )
-    assert (
-        'anuvritti_http_requests_total{method="POST",route="/sparks/{id}",status="500"} 1'
-        in rendered
-    )
-    assert (
-        'anuvritti_http_requests_errors_total{method="POST",route="/sparks/{id}",status="500"} 1'
-        in rendered
-    )
-    assert (
-        'anuvritti_http_request_duration_ms_sum{method="GET",route="/sparks/{id}",status="200"}'
-        in rendered
-    )
+    assert 'anuvritti_http_requests_total{route="/sparks/{id}",status="200"} 2' in rendered
+    assert 'anuvritti_http_requests_total{route="/sparks/{id}",status="500"} 1' in rendered
+    assert 'anuvritti_http_requests_errors_total{route="/sparks/{id}"} 1' in rendered
+    assert 'anuvritti_http_request_duration_ms_sum{route="/sparks/{id}",status="200"}' in rendered
 
 
 def test_metric_cardinality_ceiling_prevents_memory_explosion():
@@ -74,18 +71,28 @@ def test_metric_cardinality_ceiling_prevents_memory_explosion():
     assert 'route="/other"' in rendered
 
 
-def test_thousands_of_distinct_404s_through_real_app_stay_bounded(container):
-    app = create_app(container)
+def test_thousands_of_distinct_404s_through_real_app_stay_bounded(tmp_path: Path):
+    clock = FrozenClock(datetime(2026, 8, 25, 9, 0, tzinfo=UTC))
+    settings = load_settings(
+        {
+            "ANUVRITTI_ENV": "test",
+            "ANUVRITTI_DB_PATH": str(tmp_path / "telemetry_test.db"),
+            "ANUVRITTI_MEDIA_DIR": str(tmp_path / "media"),
+            "ANUVRITTI_MEDIA_KEY": Fernet.generate_key().decode(),
+        }
+    ).unwrap()
+    container = build_container(settings, clock=clock, ids=SequentialIdGenerator("id"))
+    app = create_app(settings, container=container)
     client = TestClient(app)
 
-    # Issue 1,000 distinct 404 queries
-    for i in range(1000):
+    # Issue 5,000 distinct 404 queries
+    for i in range(5000):
         client.get(f"/unknown-path-attempt-{i}")
 
     metrics_resp = client.get("/metrics")
     assert metrics_resp.status_code == 200
-    # Payload must be compact (< 25 KB, well below 1MB)
-    assert len(metrics_resp.content) < 25_000
+    # Payload must be compact (< 10 KB, well below 951KB)
+    assert len(metrics_resp.content) < 10_000
     # Series count must respect ceiling
     assert app.state.metrics.total_series <= MAX_METRIC_SERIES
 

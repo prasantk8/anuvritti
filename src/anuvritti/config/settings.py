@@ -12,6 +12,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
+from anuvritti.config.secrets_guard import validate_production_secrets
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.result import Err, Ok, Result
 
@@ -180,6 +181,11 @@ def load_settings(env: dict[str, str]) -> Result[Settings, DomainError]:
             "ANUVRITTI_MEDIA_KEY is required in production - PRD 44 requires "
             "encryption at rest for family media"
         )
+    if is_production:
+        try:
+            validate_production_secrets(env)
+        except Exception as exc:
+            return _invalid(str(exc))
     if is_production and not tls_required:
         return _invalid(
             "TLS cannot be disabled in production - PRD 44 requires encryption in transit"

@@ -63,6 +63,7 @@ from anuvritti.interfaces.http.auth import (
 )
 from anuvritti.interfaces.http.container import Container, build_container
 from anuvritti.interfaces.http.errors import error_response
+from anuvritti.interfaces.http.limits import install_rate_limiter
 from anuvritti.interfaces.http.observability import install_observability
 from anuvritti.interfaces.http.schemas import (
     CaptureLittleThingRequest,
@@ -151,6 +152,7 @@ def create_app(settings: Settings, *, container: Container | None = None) -> Fas
     app.state.container = box
     app.state.settings = settings
     install_observability(app, box)
+    install_rate_limiter(app)
 
     @app.exception_handler(Refused)
     def _refused(_: Request, exc: Refused) -> Response:

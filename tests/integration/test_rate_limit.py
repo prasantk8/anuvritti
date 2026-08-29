@@ -3,11 +3,21 @@
 Verifies that:
 1. Capture operations have generous headroom and never throttle a parent saving memories.
 2. Bulk egress and authentication endpoints are capped to prevent scraping or brute-force.
-3. Throttled responses return HTTP 429 with valid Retry-After headers.
+3. Throttled responses return HTTP 429 with valid Retry-After headers and strict error envelope.
+4. Active rate limiter is mounted in FastAPI pipeline and enforced on real requests.
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from pathlib import Path
+
+from cryptography.fernet import Fernet
+from starlette.testclient import TestClient
+
+from anuvritti.config.settings import load_settings
+from anuvritti.interfaces.http.app import create_app
+from anuvritti.interfaces.http.container import build_container
 from anuvritti.interfaces.http.limits import (
     TIER_AUTH_BRUTE_FORCE,
     TIER_BULK_EGRESS,
@@ -15,14 +25,19 @@ from anuvritti.interfaces.http.limits import (
     TokenBucketLimiter,
     classify_route_tier,
 )
+from anuvritti.shared.clock import FrozenClock
+from anuvritti.shared.identity import SequentialIdGenerator
 
 
 def test_classify_route_tiers():
-    assert classify_route_tier("POST", "/families/f1/sparks")[0] == "capture"
-    assert classify_route_tier("POST", "/families/f1/captures")[0] == "capture"
-    assert classify_route_tier("POST", "/families/f1/voice")[0] == "capture"
-    assert classify_route_tier("GET", "/families/f1/media/med-123")[0] == "bulk_egress"
-    assert classify_route_tier("POST", "/auth/pair")[0] == "auth"
+    assert classify_route_tier("POST", "/v1/sparks")[0] == "capture"
+    assert classify_route_tier("POST", "/v1/little-things")[0] == "capture"
+    assert classify_route_tier("POST", "/v1/right-now")[0] == "capture"
+    assert classify_route_tier("POST", "/v1/voice")[0] == "capture"
+    assert classify_route_tier("POST", "/v1/media")[0] == "capture"
+    assert classify_route_tier("GET", "/v1/media/med-123")[0] == "bulk_egress"
+    assert classify_route_tier("POST", "/v1/pairing/claim")[0] == "auth"
+    assert classify_route_tier("POST", "/v1/families")[0] == "auth"
     assert classify_route_tier("GET", "/health")[0] == "default"
 
 
@@ -84,3 +99,42 @@ def test_sliding_window_resets_after_elapsed_time():
     allowed, remaining, _ = limiter.is_allowed("token-1:bulk_egress", TIER_BULK_EGRESS)
     assert allowed is True
     assert remaining == TIER_BULK_EGRESS.max_requests - 1
+
+
+def test_mounted_rate_limiter_enforces_429_with_error_envelope(tmp_path: Path):
+    clock = FrozenClock(datetime(2026, 8, 25, 9, 0, tzinfo=UTC))
+    settings = load_settings(
+        {
+            "ANUVRITTI_ENV": "test",
+            "ANUVRITTI_DB_PATH": str(tmp_path / "ratelimit_test.db"),
+            "ANUVRITTI_MEDIA_DIR": str(tmp_path / "media"),
+            "ANUVRITTI_MEDIA_KEY": Fernet.generate_key().decode(),
+        }
+    ).unwrap()
+    container = build_container(settings, clock=clock, ids=SequentialIdGenerator("id"))
+    app = create_app(settings, container=container)
+    client = TestClient(app)
+
+    # Make 10 pairing claim attempts (the limit for auth tier)
+    for _ in range(10):
+        resp = client.post(
+            "/v1/pairing/claim",
+            json={"code": "BAD-CODE", "device_name": "attacker"},
+        )
+        assert "X-RateLimit-Remaining" in resp.headers
+
+    # 11th request must be throttled with HTTP 429
+    throttled = client.post(
+        "/v1/pairing/claim",
+        json={"code": "BAD-CODE", "device_name": "attacker"},
+    )
+    assert throttled.status_code == 429
+    assert "Retry-After" in throttled.headers
+    body = throttled.json()
+    assert body == {
+        "error": {
+            "code": "TOO_MANY_REQUESTS",
+            "message": "Rate limit exceeded. Please wait before retrying.",
+            "details": {"retry_after": int(throttled.headers["Retry-After"]), "tier": "auth"},
+        }
+    }

@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 
 log = get_logger("access")
 
+Metrics = REDMetrics
+
 
 def install_observability(app: FastAPI, box: Container) -> None:
     """Add request correlation, structured access logs, and the operational endpoints."""
@@ -43,8 +45,12 @@ def install_observability(app: FastAPI, box: Container) -> None:
             response = await call_next(request)
             duration_ms = (time.perf_counter() - started) * 1000
             route = request.scope.get("route")
-            route_path = getattr(route, "path", request.url.path)
-            normalized = normalize_route(route_path)
+            if route is not None and hasattr(route, "path"):
+                normalized = normalize_route(route.path)
+            elif response.status_code == 404:
+                normalized = "/unmatched"
+            else:
+                normalized = normalize_route(request.url.path)
             metrics.observe(request.method, normalized, response.status_code, duration_ms)
             # Path template, never the populated path: a URL with an id in it is data.
             log.info(

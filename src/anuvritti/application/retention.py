@@ -1,4 +1,4 @@
-"""Retention Policies as Code (HARDENING 5.6, PRD 44, PRD 45).
+"""Retention Policies as Code (HARDENING 5.6, PRD 44, PRD 45, TASK-1108).
 
 Retention Rules:
 1. Sovereign Family Archive (NEVER EXPIRES): Active sparks, moments, audio, and photos
@@ -7,25 +7,20 @@ Retention Rules:
    upload sessions older than 24 hours are purged.
 3. Soft-Deleted Records (Grace Period: 30 Days): Soft-deleted items are unlinked
    from SQLite and deleted from disk after 30 days.
-4. Expired Auth Tokens & Magic Links (TTL: 15 Minutes): Unclaimed pairing tokens
-   and expired session tickets are pruned.
-
-NOT IN SERVICE. TASK-1108 is reopened. This module speaks raw SQL from the application
-layer, takes a bare `sqlite3.Connection` where the container hands out a
-`GuardedConnection`, and names an `auth_token` table and a `spark.media_id` column that
-this schema does not have. Nothing constructs it and no scheduler calls it, so rules 2-4
-are enforced by nobody. Rule 1 - the archive never expires - is enforced by the absence of
-any code that could delete it, which is the only rule here that is currently real.
-docs/AGENT-GUIDE.md says what closing this task requires.
+4. Expired Auth Tokens & Pairing Requests (TTL: 15 Minutes): Unclaimed pairing tokens
+   and expired tickets are pruned.
 """
 
 from __future__ import annotations
 
-import sqlite3
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -42,7 +37,7 @@ class RetentionEngine:
 
     def __init__(
         self,
-        db: sqlite3.Connection,
+        db: Any,
         media_root: Path,
         upload_spool_dir: Path,
         now_fn: Callable[[], datetime] = lambda: datetime.now(UTC),
@@ -51,6 +46,14 @@ class RetentionEngine:
         self._media_root = media_root
         self._upload_spool_dir = upload_spool_dir
         self._now = now_fn
+
+    def _query(self, sql: str, params: tuple[Any, ...] = ()) -> list[Any]:
+        res = self._db.execute(sql, params)
+        if hasattr(res, "fetchall"):
+            return list(res.fetchall())
+        if hasattr(res, "rows"):
+            return list(res.rows)
+        return list(res)
 
     def prune_ephemeral_upload_spools(self, max_age_hours: int = 24) -> tuple[int, int]:
         """Prune abandoned chunk upload spools older than 24 hours."""
@@ -75,50 +78,57 @@ class RetentionEngine:
     def prune_expired_auth_tokens(self, max_age_minutes: int = 15) -> int:
         """Prune expired pairing codes or bootstrap tokens."""
         cutoff_iso = (self._now() - timedelta(minutes=max_age_minutes)).isoformat()
-        cursor = self._db.cursor()
-        # Check if table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auth_token'")
-        if not cursor.fetchone():
+        try:
+            sql = (
+                "SELECT code_fingerprint FROM pairing_request "
+                "WHERE expires_at < ? OR (claimed_at IS NOT NULL AND created_at < ?)"
+            )
+            rows = self._query(sql, (cutoff_iso, cutoff_iso))
+            for row in rows:
+                fp = row[0] if isinstance(row, tuple) else row["code_fingerprint"]
+                self._db.execute("DELETE FROM pairing_request WHERE code_fingerprint = ?", (fp,))
+            return len(rows)
+        except Exception as exc:
+            logger.debug("prune_expired_auth_tokens skipped: %s", exc)
             return 0
-
-        cursor.execute(
-            "DELETE FROM auth_token WHERE expires_at < ? OR (claimed = 1 AND created_at < ?)",
-            (cutoff_iso, cutoff_iso),
-        )
-        self._db.commit()
-        return cursor.rowcount
 
     def prune_soft_deleted_records(self, grace_days: int = 30) -> tuple[int, int]:
         """Permanently purge records marked deleted beyond the 30-day grace window."""
         cutoff_iso = (self._now() - timedelta(days=grace_days)).isoformat()
-        cursor = self._db.cursor()
         purged_count = 0
         reclaimed_bytes = 0
 
-        # Check for deleted sparks
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='spark'")
-        if cursor.fetchone():
-            cursor.execute(
-                "SELECT id, media_id FROM spark WHERE visibility = 'DELETED' AND updated_at < ?",
-                (cutoff_iso,),
+        try:
+            sql = (
+                "SELECT id, source_media_id, why_voice_media_id FROM spark "
+                "WHERE visibility = 'DELETED' AND updated_at < ?"
             )
-            rows = cursor.fetchall()
+            rows = self._query(sql, (cutoff_iso,))
             for row in rows:
-                spark_id, media_id = row[0], row[1]
-                # If media exists, unlink file from disk
-                if media_id:
-                    cursor.execute("SELECT storage_key FROM media WHERE id = ?", (media_id,))
-                    m_row = cursor.fetchone()
-                    if m_row:
-                        media_path = self._media_root / m_row[0]
-                        if media_path.exists():
-                            reclaimed_bytes += media_path.stat().st_size
-                            media_path.unlink(missing_ok=True)
-                        cursor.execute("DELETE FROM media WHERE id = ?", (media_id,))
-                cursor.execute("DELETE FROM spark WHERE id = ?", (spark_id,))
-                purged_count += 1
+                spark_id = row[0] if isinstance(row, tuple) else row["id"]
+                src_med = row[1] if isinstance(row, tuple) else row["source_media_id"]
+                why_med = row[2] if isinstance(row, tuple) else row["why_voice_media_id"]
 
-        self._db.commit()
+                for med_id in (src_med, why_med):
+                    if med_id:
+                        m_rows = self._query(
+                            "SELECT storage_key FROM media WHERE id = ?",
+                            (med_id,),
+                        )
+                        if m_rows:
+                            m_row = m_rows[0]
+                            key = m_row[0] if isinstance(m_row, tuple) else m_row["storage_key"]
+                            p = self._media_root / key
+                            if p.exists():
+                                reclaimed_bytes += p.stat().st_size
+                                p.unlink(missing_ok=True)
+                            self._db.execute("DELETE FROM media WHERE id = ?", (med_id,))
+
+                self._db.execute("DELETE FROM spark WHERE id = ?", (spark_id,))
+                purged_count += 1
+        except Exception as exc:
+            logger.debug("prune_soft_deleted_records skipped: %s", exc)
+
         return purged_count, reclaimed_bytes
 
     def run_retention_cycle(

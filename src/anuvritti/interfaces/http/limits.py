@@ -1,13 +1,12 @@
-"""Asymmetric Rate Limiting & Abuse Control (HARDENING 5.2, PRD 8.2).
+"""Asymmetric Rate Limiting & Abuse Control (HARDENING 5.2, PRD 8.2, TASK-1105).
 
 Asymmetric Rate Limiting Rules:
-1. Capture Invariant: Saving a moment (`POST /sparks`, `POST /captures`,
-   `POST /voice`, `POST /media`)
+1. Capture Invariant: Saving a moment (`POST /sparks`, `POST /little-things`, `POST /voice`)
    is NEVER throttled during normal family life (burst allowance >= 120/min).
-2. Bulk Egress Protection: High-frequency bulk media reads (`GET /media/*`) are capped
-   (30 requests/min) to prevent compromised device tokens from dumping an entire family archive.
-3. Authentication Brute-Force Guard: Token pairing and bootstrap attempts are strictly rate-limited
-   (10 attempts/min per IP) to prevent credential stuffing.
+2. Bulk Egress Protection: Bulk media reads (`GET /media/*`) are capped
+   (30 requests/min) to prevent compromised tokens from dumping an entire family archive.
+3. Authentication Brute-Force Guard: Token pairing and bootstrap attempts are strictly
+   rate-limited (10 attempts/min per IP) to prevent credential stuffing.
 """
 
 from __future__ import annotations
@@ -42,12 +41,26 @@ TIER_DEFAULT = RateLimitRule(max_requests=60, window_seconds=60, burst_capacity=
 def classify_route_tier(method: str, path: str) -> tuple[str, RateLimitRule]:
     method = method.upper()
     if method in ("POST", "PUT") and any(
-        kw in path for kw in ("/sparks", "/captures", "/voice", "/media", "/moments")
+        kw in path
+        for kw in (
+            "/sparks",
+            "/little-things",
+            "/right-now",
+            "/voice",
+            "/media",
+            "/why",
+            "/done",
+            "/override",
+            "/captures",
+        )
     ):
         return ("capture", TIER_CAPTURE)
     if method == "GET" and "/media/" in path:
         return ("bulk_egress", TIER_BULK_EGRESS)
-    if any(kw in path for kw in ("/auth/pair", "/auth/token", "/auth/claim")):
+    if (
+        method == "POST"
+        and any(kw in path for kw in ("/families", "/pairing/claim", "/pairing/codes"))
+    ) or any(kw in path for kw in ("/auth/pair", "/auth/token", "/auth/claim", "/pairing")):
         return ("auth", TIER_AUTH_BRUTE_FORCE)
     return ("default", TIER_DEFAULT)
 
@@ -96,6 +109,10 @@ def install_rate_limiter(
     async def rate_limit_middleware(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
+        exempt_paths = ("/metrics", "/ready", "/health", "/v1/openapi.json", "/openapi.json")
+        if request.url.path in exempt_paths:
+            return await call_next(request)
+
         # Determine client identifier (token hash or client IP)
         auth_header = request.headers.get("Authorization", "")
         token = auth_header.replace("Bearer ", "").strip()
@@ -115,9 +132,11 @@ def install_rate_limiter(
                 status_code=429,
                 headers={"Retry-After": str(retry_after)},
                 content={
-                    "code": "TOO_MANY_REQUESTS",
-                    "message": "Rate limit exceeded. Please wait before retrying.",
-                    "details": {"retry_after": retry_after, "tier": tier_name},
+                    "error": {
+                        "code": "TOO_MANY_REQUESTS",
+                        "message": "Rate limit exceeded. Please wait before retrying.",
+                        "details": {"retry_after": retry_after, "tier": tier_name},
+                    }
                 },
             )
 

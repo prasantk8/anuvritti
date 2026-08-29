@@ -30,6 +30,7 @@ class ErrorCode(StrEnum):
     MEDIA_KIND_UNSUPPORTED = "MEDIA_KIND_UNSUPPORTED"
     FILM_NOT_COMPILABLE = "FILM_NOT_COMPILABLE"
     CONFLICT = "CONFLICT"
+    TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS"
     #: Operational only. A backup or restore could not find a file the manifest
     #: promised. It never crosses the HTTP wire - `scripts/backup.sh` and
     #: `scripts/restore.sh` are the only readers (TASK-905).
