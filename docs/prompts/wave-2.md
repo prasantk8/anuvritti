@@ -171,11 +171,24 @@ device checklist went unstarted for it.
 
 Then take it to the device: `npx expo prebuild`, `npx expo run:ios`, and measure the ten
 seconds with a stopwatch rather than with `Date.now()`. Write what you measured, and the
-date, into docs/DEVICE.md — item 4 ("Ten seconds") is yours to close for iOS. If the founder
-is on a free Apple account, `accessGroup: "group.com.anuvritti.app"` will not provision;
-report that as a finding, keep the vault's App Group in the code, and say exactly what could
-not be proven on hardware rather than mocking it and calling it proven. Android stays open;
-say so.
+date, into docs/DEVICE.md — item 4 ("Ten seconds") is yours to close for iOS. Android stays
+open; say so.
+
+**Assume a free Apple account, and make that work.** Free personal-team provisioning signs
+and installs on a device you own — the profile expires after seven days and you re-run
+`expo run:ios`, which is friction and not a wall. What it will not sign is the App Group,
+and `device-vault.ts` asks for `accessGroup: APP_GROUP` in three places while
+`token-store.ts` asks in one. Dropping that option does not weaken the vault: the key stays
+in the Secure Enclave under `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, and all that is lost is
+sharing the keychain with a share extension. The storage layer already handles this —
+`spool-store.ts` and `queue-store.ts` reach for `Paths.appleSharedContainers?.[APP_GROUP]`
+inside a try/catch and fall back to the app's own directory.
+
+So make the App Group **conditional rather than absent**: with the entitlement, the shared
+container and the extension; without it, the app's own container and a per-app keychain.
+One flag, one product, and the camera path — which is what you are building — does not
+touch a shared container at all. Do not delete the App Group; do not require it either.
+Say in your report which path you exercised on the phone.
 
 ## Done means
 

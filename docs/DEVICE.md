@@ -15,6 +15,23 @@ is executable now, and it should be executed rather than left as a document. Eac
 a date and an observation when it is closed, and an item nobody has performed keeps saying
 so.
 
+**Free provisioning is enough for four and a half of the five (2026-08-29).** A free Apple
+ID signs and installs on a device you own; the profile expires every seven days and you
+re-run `npx expo run:ios`. Android needs no account at all — `npx expo run:android`, or a
+release APK installed by hand. What a free account cannot sign is the App Group, and the
+only thing that costs is the *share extension* half of item 1 and the cross-extension half
+of item 3. Everything else on this list — the camera, the ten seconds, the flip, the
+microphone, the queue surviving a force-quit, the keychain surviving a cold start — is
+free to prove today. A paid Apple Developer Program membership buys TestFlight, which is
+how the app reaches *someone else's* iPhone. It is not what makes this checklist runnable.
+
+**Item 1 without the entitlement.** The share sheet does not have to come from an
+extension. Declaring document types on the app itself (`CFBundleDocumentTypes`,
+`LSSupportsOpeningDocumentsInPlace`) puts Anuvritti in the share sheet as a destination,
+hands the file to the app's own Inbox, and needs no App Group and no membership. It is
+fewer moving parts than the extension, and it is the honest way to run item 1 on a free
+account rather than marking it unrunnable.
+
 **The entitlement, before anything else.** `apps/anuvritti/src/vault/device-vault.ts` asks
 the keychain for `accessGroup: "group.com.anuvritti.app"`, and `app.json` declares the same
 App Group for the `expo-sharing` extension. **iOS App Groups are not available under free
