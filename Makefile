@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types types-ts test cov cov-core check run tracker clean world client app design filmkit specimen film film-prepare film-font-review
+.PHONY: install lint format types types-ts test cov cov-core check run tracker clean world client app design filmkit specimen film film-prepare film-font-review teaser
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -64,6 +64,11 @@ film:
 	@test -n "$(ARCHIVE)" || (echo "usage: make film ARCHIVE=/path/to/FilmExport" && exit 2)
 	PYTHONPATH=src $(PY) -m anuvritti.adapters.film.render --archive "$(ARCHIVE)" \
 		--output "$(FILM_OUTPUT)" --still "$(FILM_STILL)" --workspace var/film/work
+
+# The seed is intentionally generated under ignored var/: it demonstrates the destination
+# without putting either demo media or a family's media in source control.
+teaser:
+	PYTHONPATH=src $(PY) scripts/teaser.py
 
 # `scripts/` is in scope because it is not scaffolding: backup, restore, the SBOM, the
 # image scan and the release runner are the operational surface, and for three phases they
