@@ -52,5 +52,11 @@ coverage.xml
 htmlcov/
 *.egg-info/
 
+# --- Worktrees. `git worktree add .claude/worktrees/task-NNN` puts a second checkout
+#     inside the first, and git will happily offer to commit that checkout's own
+#     .venv, .mypy_cache and .coverage into this one. One task per chat means these
+#     appear routinely; none of them is source.
+.claude/worktrees/
+
 # --- macOS
 .DS_Store

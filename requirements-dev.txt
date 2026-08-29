@@ -10,3 +10,11 @@ pyyaml>=6
 # family's always-on server never compiles a film, so the production image never
 # grows this - or, one dependency further on, a browser.
 -e packages/filmkit
+
+# The project itself. `pythonpath = ["src"]` in pyproject.toml puts the package on
+# pytest's path, which is why the whole suite passed for eleven phases while
+# `make run` died with ModuleNotFoundError - uvicorn is not pytest, and it reads
+# sys.path, not a test config. The container was never affected (the Dockerfile
+# runs `pip install .`), so the broken half was the one docs/CONTINUITY.md offers
+# to a parent whose Docker install has failed. Editable, because src is the truth.
+-e .
