@@ -37,7 +37,7 @@ class SandboxConfig:
     user: str = "10001:10001"
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
     tmpfs_mounts: tuple[str, ...] = (
-        "/tmp:rw,noexec,nosuid,size=512m",  # noqa: S108
+        "/tmp:rw,noexec,nosuid,size=512m",  # nosec B108 # noqa: S108
         "/workspace:rw,size=2g",
     )
 

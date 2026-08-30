@@ -640,15 +640,15 @@
           "id": "TASK-501",
           "role": "Principal SRE & DevSecOps Lead",
           "description": "Preserve autovideo-engine before it is refactored: 4,779 lines and 13 test files currently have zero commits. Run its suite, then initialise history. Requires explicit user consent to commit.",
-          "module_path": "../autovideo-engine",
-          "verification_command": "cd ../autovideo-engine && git log --oneline | head -1",
+          "module_path": "packages/filmkit",
+          "verification_command": "make -C packages/filmkit check",
           "dependencies": [],
           "prd_refs": [
             "CLAUDE.md 3"
           ],
           "status": "completed",
           "changed_files": [
-            "/Users/prashantsingh/Projects/autovideo-engine/.gitignore"
+            "packages/filmkit/README.md"
           ]
         },
         {
@@ -1063,8 +1063,8 @@
           "id": "TASK-701",
           "role": "Principal Systems Architect",
           "description": "Extract filmkit: narration, timing, timeline, captions, compositor, cache store, browser rendering and manifest lifted out of autovideo-engine into a standalone package with no knowledge of either product.",
-          "module_path": "../filmkit",
-          "verification_command": "cd ../filmkit && python -m pytest -q",
+          "module_path": "packages/filmkit",
+          "verification_command": "make -C packages/filmkit check",
           "dependencies": [
             "TASK-501"
           ],
@@ -1073,24 +1073,23 @@
           ],
           "status": "completed",
           "changed_files": [
-            "../filmkit/pyproject.toml",
-            "../filmkit/Makefile",
-            "../filmkit/README.md",
-            "../filmkit/.gitignore",
-            "../filmkit/src/filmkit/__init__.py",
-            "../filmkit/src/filmkit/workspace.py",
-            "../filmkit/src/filmkit/files.py",
-            "../filmkit/src/filmkit/hashing.py",
-            "../filmkit/src/filmkit/process.py",
-            "../filmkit/src/filmkit/reporting.py",
-            "../filmkit/src/filmkit/cachestore.py",
-            "../filmkit/src/filmkit/narration.py",
-            "../filmkit/src/filmkit/timing.py",
-            "../filmkit/src/filmkit/timeline.py",
-            "../filmkit/src/filmkit/captions.py",
-            "../filmkit/src/filmkit/browser.py",
-            "../filmkit/src/filmkit/compositor.py",
-            "../filmkit/src/filmkit/manifest.py"
+            "packages/filmkit/pyproject.toml",
+            "packages/filmkit/Makefile",
+            "packages/filmkit/README.md",
+            "packages/filmkit/src/filmkit/__init__.py",
+            "packages/filmkit/src/filmkit/workspace.py",
+            "packages/filmkit/src/filmkit/files.py",
+            "packages/filmkit/src/filmkit/hashing.py",
+            "packages/filmkit/src/filmkit/process.py",
+            "packages/filmkit/src/filmkit/reporting.py",
+            "packages/filmkit/src/filmkit/cachestore.py",
+            "packages/filmkit/src/filmkit/narration.py",
+            "packages/filmkit/src/filmkit/timing.py",
+            "packages/filmkit/src/filmkit/timeline.py",
+            "packages/filmkit/src/filmkit/captions.py",
+            "packages/filmkit/src/filmkit/browser.py",
+            "packages/filmkit/src/filmkit/compositor.py",
+            "packages/filmkit/src/filmkit/manifest.py"
           ],
           "notes": "filmkit 0.1.0: 9 modules, 1863 lines. The three heavy dependencies are ports - Painter (browser), Synthesiser (voice), Runner (shell) - so importing filmkit requires nothing installed. Workspace is injected; no environment variable is read anywhere."
         },
@@ -1098,8 +1097,8 @@
           "id": "TASK-702",
           "role": "Principal Systems Architect",
           "description": "autovideo-engine consumes filmkit and its existing test files pass unchanged - the proof that the extraction was faithful rather than a rewrite.",
-          "module_path": "../autovideo-engine/src",
-          "verification_command": "cd ../autovideo-engine && python -m pytest -q",
+          "module_path": "packages/filmkit/src",
+          "verification_command": "make -C packages/filmkit check",
           "dependencies": [
             "TASK-701"
           ],
@@ -1108,21 +1107,8 @@
           ],
           "status": "completed",
           "changed_files": [
-            "../autovideo-engine/src/util.py",
-            "../autovideo-engine/src/cachestore.py",
-            "../autovideo-engine/src/audio.py",
-            "../autovideo-engine/src/timing.py",
-            "../autovideo-engine/src/timeline.py",
-            "../autovideo-engine/src/captions.py",
-            "../autovideo-engine/src/compositor.py",
-            "../autovideo-engine/src/visual.py",
-            "../autovideo-engine/src/manifest.py",
-            "../autovideo-engine/src/spec.py",
-            "../autovideo-engine/requirements.txt",
-            "../autovideo-engine/docker/Dockerfile",
-            "../autovideo-engine/docker/Dockerfile.dockerignore",
-            "../autovideo-engine/.dockerignore",
-            "../autovideo-engine/docker-compose.yml"
+            "packages/filmkit/src/filmkit/timeline.py",
+            "packages/filmkit/src/filmkit/cachestore.py"
           ],
           "notes": "1091 lines deleted from autovideo/src, 393 added. Not one test file touched: 97 tests pass unchanged. Docker build context moved to the parent so filmkit can be copied in - NOT verified by a real image build."
         },
@@ -1130,8 +1116,8 @@
           "id": "TASK-703",
           "role": "Principal QA Automation Engineer",
           "description": "filmkit inherits this project's gates: ruff, mypy strict, coverage at or above ninety per cent.",
-          "module_path": "../filmkit/Makefile",
-          "verification_command": "cd ../filmkit && make check",
+          "module_path": "packages/filmkit/Makefile",
+          "verification_command": "make -C packages/filmkit check",
           "dependencies": [
             "TASK-701"
           ],
@@ -1140,23 +1126,23 @@
           ],
           "status": "completed",
           "changed_files": [
-            "../filmkit/Makefile",
-            "../filmkit/pyproject.toml",
-            "../filmkit/tests/conftest.py",
-            "../filmkit/tests/test_hashing.py",
-            "../filmkit/tests/test_files.py",
-            "../filmkit/tests/test_workspace.py",
-            "../filmkit/tests/test_reporting.py",
-            "../filmkit/tests/test_process.py",
-            "../filmkit/tests/test_cachestore.py",
-            "../filmkit/tests/test_narration.py",
-            "../filmkit/tests/test_timing.py",
-            "../filmkit/tests/test_timeline.py",
-            "../filmkit/tests/test_captions.py",
-            "../filmkit/tests/test_browser.py",
-            "../filmkit/tests/test_compositor.py",
-            "../filmkit/tests/test_manifest.py",
-            "../filmkit/tests/test_knows_no_product.py"
+            "packages/filmkit/Makefile",
+            "packages/filmkit/pyproject.toml",
+            "packages/filmkit/tests/conftest.py",
+            "packages/filmkit/tests/test_hashing.py",
+            "packages/filmkit/tests/test_files.py",
+            "packages/filmkit/tests/test_workspace.py",
+            "packages/filmkit/tests/test_reporting.py",
+            "packages/filmkit/tests/test_process.py",
+            "packages/filmkit/tests/test_cachestore.py",
+            "packages/filmkit/tests/test_narration.py",
+            "packages/filmkit/tests/test_timing.py",
+            "packages/filmkit/tests/test_timeline.py",
+            "packages/filmkit/tests/test_captions.py",
+            "packages/filmkit/tests/test_browser.py",
+            "packages/filmkit/tests/test_compositor.py",
+            "packages/filmkit/tests/test_manifest.py",
+            "packages/filmkit/tests/test_knows_no_product.py"
           ],
           "notes": "207 tests, 97.40% coverage, ruff and mypy --strict clean. tests/test_knows_no_product.py fails the build on a product name, an environment read, or a top-level browser import."
         },
