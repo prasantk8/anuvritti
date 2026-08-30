@@ -58,5 +58,5 @@ jobs:
 
       - name: Verify blue-green deployment & automated rollback contract (HARDENING 5.4)
         run: |
-          python3 scripts/release.py --help > /dev/null
+          PYTHONPATH=src python3 scripts/release.py --help > /dev/null
           echo "Production deployment image published: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"

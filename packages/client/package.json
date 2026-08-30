@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "build": "python3 codegen/generate.py --check",
     "generate": "python3 codegen/generate.py",
     "check": "python3 codegen/generate.py --check",
     "test": "node --test \"test/**/*.test.ts\""
