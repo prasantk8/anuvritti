@@ -61,6 +61,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: pip install -r requirements-dev.txt
+      - name: Install ffmpeg for film rendering
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install the locked JavaScript workspace
         run: npm ci
       # pytest collects tests/design too. `make check` builds this ignored output before
@@ -117,6 +119,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: pip install -r requirements-dev.txt
+      - name: Install the locked JavaScript workspace
+        run: npm ci
       - name: Build the shared visual world
         run: npm --prefix packages/world run build --silent
       - name: Verify the design contract
@@ -168,7 +172,8 @@ jobs:
       - name: Dependency audit
         run: |
           pip install pip-audit
-          pip-audit --requirement requirements.txt --strict
+          grep -v "^-e " requirements.txt > /tmp/req.txt
+          pip-audit --requirement /tmp/req.txt --strict
 
       - name: Static application security testing
         run: |
