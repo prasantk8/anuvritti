@@ -332,6 +332,12 @@ class InMemoryMediaStore:
             self._bytes.pop(key, None)
         return Ok(len(doomed))
 
+    def restore(self, media_id: MediaId, *, content: bytes) -> Result[None, DomainError]:
+        if str(media_id) not in self._meta:
+            return Err(DomainError(ErrorCode.MEDIA_NOT_FOUND, str(media_id)))
+        self._bytes[str(media_id)] = content
+        return Ok(None)
+
 
 class RecordingEventPublisher:
     """Captures everything published so tests can assert the audit trail."""

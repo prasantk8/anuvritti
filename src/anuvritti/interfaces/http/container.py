@@ -46,8 +46,12 @@ from anuvritti.application.capture import (
     OverrideFieldUseCase,
     RecordWhyUseCase,
 )
+from anuvritti.application.export import ExportArchiveUseCase
+from anuvritti.application.fixity import FixityEngine
 from anuvritti.application.moments import MarkAsDoneUseCase
 from anuvritti.application.presence import CaptureLittleThingUseCase, CaptureRightNowUseCase
+from anuvritti.application.preserve import PreserveUrlUseCase
+from anuvritti.application.print_artifact import GeneratePrintArtifactUseCase
 from anuvritti.application.privacy import DeleteFamilyDataUseCase, ExportFamilyDataUseCase
 from anuvritti.application.render_jobs import (
     CancelRenderJobUseCase,
@@ -114,6 +118,9 @@ class Container:
     list_voice_notes: ListVoiceNotesUseCase
     get_voice_note: GetVoiceNoteUseCase
     export_family: ExportFamilyDataUseCase
+    export_archive: ExportArchiveUseCase
+    generate_print_artifact: GeneratePrintArtifactUseCase
+    preserve_url: PreserveUrlUseCase
     delete_family: DeleteFamilyDataUseCase
     pair_device: PairDeviceUseCase
     open_pairing: OpenPairingUseCase
@@ -122,6 +129,7 @@ class Container:
     list_devices: ListDevicesUseCase
     revoke_device: RevokeDeviceUseCase
     retention: RetentionEngine
+    fixity: FixityEngine
     submit_render_job: SubmitRenderJobUseCase
     get_render_job: GetRenderJobUseCase
     cancel_render_job: CancelRenderJobUseCase
@@ -296,6 +304,18 @@ def build_container(
             events=events,
             clock=clock,
         ),
+        export_archive=ExportArchiveUseCase(
+            families=families,
+            sparks=sparks,
+            moments=moments,
+            voice_notes=voice_notes,
+            little_things=little_things,
+            lexicons=lexicon,
+            media=media,
+            clock=clock,
+        ),
+        generate_print_artifact=GeneratePrintArtifactUseCase(),
+        preserve_url=PreserveUrlUseCase(media=media, clock=clock),
         delete_family=DeleteFamilyDataUseCase(
             families=families,
             sparks=sparks,
@@ -330,6 +350,7 @@ def build_container(
             render_artifacts_dir=Path("var/film"),
             now_fn=clock.now,
         ),
+        fixity=FixityEngine(media=media, clock=clock),
         submit_render_job=SubmitRenderJobUseCase(jobs=render_jobs, clock=clock, ids=ids, uow=uow),
         get_render_job=GetRenderJobUseCase(jobs=render_jobs),
         cancel_render_job=CancelRenderJobUseCase(jobs=render_jobs, uow=uow),

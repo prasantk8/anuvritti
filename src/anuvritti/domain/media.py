@@ -20,9 +20,10 @@ class MediaKind(StrEnum):
 
     @classmethod
     def for_mime_type(cls, mime_type: str) -> MediaKind | None:
-        if mime_type.startswith("image/"):
+        normalised = mime_type.split(";")[0].strip().lower()
+        if normalised.startswith("image/"):
             return cls.IMAGE
-        if mime_type.startswith("audio/"):
+        if normalised.startswith("audio/"):
             return cls.AUDIO
         return None
 

@@ -52,7 +52,9 @@ from enum import StrEnum
 from typing import Any
 
 from anuvritti.domain.media import MediaKind
+from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import ChildId, FamilyId, MediaId
+from anuvritti.shared.result import Err, Ok, Result
 
 #: Silence before the first word of a scene. Long enough that a picture has arrived before a
 #: voice starts, short enough that it never reads as a gap. A taste decision, which is why it
@@ -349,6 +351,7 @@ class FilmSpec:
     family_id: FamilyId
     title: str
     scenes: tuple[FilmScene, ...]
+    spec_version: str = "1.0"
     child_id: ChildId | None = None
     fps: int = _FPS
     width: int = _FRAME_WIDTH
@@ -367,6 +370,7 @@ class FilmSpec:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "spec_version": self.spec_version,
             "id": self.id,
             "family_id": str(self.family_id),
             "title": self.title,
@@ -378,6 +382,10 @@ class FilmSpec:
                     "body": scene.body,
                     "voice": scene.voice.to_dict(),
                     "cites": [c.to_dict() for c in scene.cites],
+                    "lead_in_seconds": scene.lead_in_seconds,
+                    "tail_seconds": scene.tail_seconds,
+                    "min_seconds": scene.min_seconds,
+                    "max_seconds": scene.max_seconds,
                 }
                 for scene in self.scenes
             ],
@@ -388,6 +396,95 @@ class FilmSpec:
             "target_seconds": self.target_seconds,
             "tolerance_seconds": self.tolerance_seconds,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Result[FilmSpec, DomainError]:
+        version = data.get("spec_version", "1.0")
+        try:
+            major = int(str(version).split(".")[0])
+        except Exception:
+            return Err(
+                DomainError(
+                    ErrorCode.FILM_NOT_COMPILABLE,
+                    f"invalid filmspec version string '{version}'",
+                    {"version": str(version)},
+                )
+            )
+
+        if major > 1:
+            return Err(
+                DomainError(
+                    ErrorCode.FILM_NOT_COMPILABLE,
+                    f"unsupported future FilmSpec version '{version}' - requires newer compiler",
+                    {"spec_version": str(version)},
+                )
+            )
+
+        try:
+            scenes = []
+            for s in data.get("scenes", []):
+                kind = SceneKind(s["kind"])
+                v_data = s.get("voice", {})
+                origin = NarrationOrigin(v_data.get("origin", "SILENT"))
+                sec = float(v_data.get("seconds", 0.0))
+                text = v_data.get("text", "")
+                mid = MediaId(v_data["media_id"]) if v_data.get("media_id") else None
+                line = ConnectiveLine(v_data["line"]) if v_data.get("line") else None
+
+                if origin is NarrationOrigin.RECORDED and mid:
+                    voice = SceneVoice.recorded(media_id=mid, seconds=sec, text=text)
+                elif origin is NarrationOrigin.SYNTHETIC and line and mid:
+                    voice = SceneVoice.synthetic(line=line, media_id=mid, seconds=sec)
+                else:
+                    voice = SceneVoice.silent(seconds=sec)
+
+                cites = tuple(
+                    Citation(
+                        kind=CitationKind(c["kind"]),
+                        id=c["id"],
+                    )
+                    for c in s.get("cites", [])
+                )
+
+                scenes.append(
+                    FilmScene(
+                        id=s["id"],
+                        kind=kind,
+                        heading=s.get("heading", ""),
+                        voice=voice,
+                        body=s.get("body", ""),
+                        cites=cites,
+                        lead_in_seconds=float(s.get("lead_in_seconds", DEFAULT_LEAD_IN_SECONDS)),
+                        tail_seconds=float(s.get("tail_seconds", DEFAULT_TAIL_SECONDS)),
+                        min_seconds=float(s.get("min_seconds", 0.0)),
+                        max_seconds=(
+                            float(s["max_seconds"]) if s.get("max_seconds") is not None else None
+                        ),
+                    )
+                )
+
+            spec = cls(
+                id=data["id"],
+                family_id=FamilyId(data["family_id"]),
+                title=data["title"],
+                scenes=tuple(scenes),
+                spec_version=str(version),
+                child_id=ChildId(data["child_id"]) if data.get("child_id") else None,
+                fps=int(data.get("fps", _FPS)),
+                width=int(data.get("width", _FRAME_WIDTH)),
+                height=int(data.get("height", _FRAME_HEIGHT)),
+                target_seconds=float(data.get("target_seconds", DEFAULT_TARGET_SECONDS)),
+                tolerance_seconds=float(data.get("tolerance_seconds", DEFAULT_TOLERANCE_SECONDS)),
+            )
+            return Ok(spec)
+        except Exception as exc:
+            return Err(
+                DomainError(
+                    ErrorCode.FILM_NOT_COMPILABLE,
+                    f"failed to parse FilmSpec: {exc}",
+                    {"details": str(exc)},
+                )
+            )
 
 
 @dataclass(frozen=True, slots=True)

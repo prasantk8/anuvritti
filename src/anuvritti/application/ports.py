@@ -135,6 +135,8 @@ class MediaStore(Protocol):
 
     def delete_for_family(self, family_id: FamilyId) -> Result[int, DomainError]: ...
 
+    def restore(self, media_id: MediaId, *, content: bytes) -> Result[None, DomainError]: ...
+
 
 @runtime_checkable
 class AudioDurationMeasurer(Protocol):

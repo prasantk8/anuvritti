@@ -276,7 +276,7 @@ class ComposeFilmUseCase:
         voice = SceneVoice.silent(0.0)
         kind = SceneKind.MOMENT
         if moment.audio_media_id is not None:
-            heard = self._voice(MediaId(moment.audio_media_id), moment, family_id)
+            heard = self._voice(MediaId(str(moment.audio_media_id)), moment, family_id)
             if heard.is_err():
                 return Err(heard.unwrap_err())
             note = heard.unwrap()
@@ -289,7 +289,7 @@ class ComposeFilmUseCase:
             cites.append(Citation(CitationKind.VOICE_NOTE, str(note.media_id)))
 
         if moment.photo_media_id is not None:
-            cites.append(Citation(CitationKind.MEDIA, moment.photo_media_id))
+            cites.append(Citation(CitationKind.MEDIA, str(moment.photo_media_id)))
 
         return Ok(
             FilmScene(

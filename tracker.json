@@ -3469,7 +3469,7 @@
     {
       "name": "Phase 13: The Long Now",
       "owner": "Principal Systems Architect",
-      "status": "pending",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-1301",
@@ -3485,8 +3485,11 @@
             "PRD 52",
             "PRD 37"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "docs/contracts/archive.md"
+          ],
+          "note": "The archive format written down as a versioned, human-readable specification"
         },
         {
           "id": "TASK-1302",
@@ -3503,8 +3506,11 @@
             "PRD 24",
             "PRD 44"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/export.py"
+          ],
+          "note": "One command produces the whole archive as ordinary files a person can open in twenty years"
         },
         {
           "id": "TASK-1303",
@@ -3519,8 +3525,11 @@
             "PRD 8.6",
             "PRD 52"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "tests/contracts/test_archive_compat.py"
+          ],
+          "note": "Forward compatibility against a corpus: every archive version ever shipped is opened by today's reader"
         },
         {
           "id": "TASK-1304",
@@ -3536,8 +3545,11 @@
             "PRD 8.6",
             "PRD 8.7"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/film.py"
+          ],
+          "note": "A filmspec from an older version compiles on today's compiler or is refused out loud"
         },
         {
           "id": "TASK-1305",
@@ -3552,8 +3564,11 @@
             "PRD 52",
             "PRD 34"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/film.py"
+          ],
+          "note": "The time-travel test: an archive captured now, compiled against a clock set eighteen years forward, and still correct in every date it says out loud"
         },
         {
           "id": "TASK-1306",
@@ -3569,8 +3584,11 @@
             "PRD 45",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "docs/CONTINUITY.md"
+          ],
+          "note": "What happens if we stop existing: keys escrowed to the family, the format published, and the reader already in their hands"
         },
         {
           "id": "TASK-1307",
@@ -3587,8 +3605,11 @@
             "PRD 56",
             "PRD 24"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "packages/world/reader/index.html"
+          ],
+          "note": "The offline reader: one HTML file that opens an exported archive with no server, no account and no network"
         },
         {
           "id": "TASK-1308",
@@ -3603,8 +3624,11 @@
             "PRD 36",
             "PRD 56"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "packages/world/print/index.ts"
+          ],
+          "note": "The year as an object you can hold: a print-ready artifact generated from the same spec that makes the film"
         },
         {
           "id": "TASK-1309",
@@ -3619,8 +3643,11 @@
             "PRD 37",
             "PRD 45"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/artifact.py"
+          ],
+          "note": "The Family Artifact Protocol made real: a signed, self-describing bundle a family can hand to another generation"
         },
         {
           "id": "TASK-1310",
@@ -3635,8 +3662,11 @@
             "PRD 43",
             "PRD 19"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/preserve.py"
+          ],
+          "note": "Link rot answered: what was saved from the internet is kept as content with its own provenance"
         },
         {
           "id": "TASK-1311",
@@ -3651,8 +3681,11 @@
             "PRD 8.6",
             "HARDENING 5.4"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/fixity.py"
+          ],
+          "note": "Fixity over decades: a scheduled check that re-hashes the whole archive, and a repair path for the day one file comes back wrong"
         },
         {
           "id": "TASK-1312",
@@ -3668,8 +3701,11 @@
             "PRD 52",
             "PRD 60"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "tests/e2e/test_eighteen_years.py"
+          ],
+          "note": "Eighteen simulated years: captured, compiled, exported and reopened by the offline reader in one test that stands for the whole promise"
         }
       ]
     },
@@ -4096,7 +4132,19 @@
     "TASK-1209",
     "TASK-1210",
     "TASK-1211",
-    "TASK-1212"
+    "TASK-1212",
+    "TASK-1301",
+    "TASK-1302",
+    "TASK-1303",
+    "TASK-1304",
+    "TASK-1305",
+    "TASK-1306",
+    "TASK-1307",
+    "TASK-1308",
+    "TASK-1309",
+    "TASK-1310",
+    "TASK-1311",
+    "TASK-1312"
   ],
   "blocked_tasks": []
 }

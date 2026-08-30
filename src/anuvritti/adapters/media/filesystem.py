@@ -202,6 +202,16 @@ class EncryptedFilesystemMediaStore:
 
         return Ok(self._catalogue.delete_for_family(family_id))
 
+    def restore(self, media_id: MediaId, *, content: bytes) -> Result[None, DomainError]:
+        """Restores or repairs a media file payload on disk."""
+        found = self._catalogue.find(media_id)
+        if found is None:
+            return Err(DomainError(ErrorCode.MEDIA_NOT_FOUND, f"no media {media_id}"))
+        target = self._root / found.storage_key
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(self._encrypt(content))
+        return Ok(None)
+
     # ----------------------------------------------------------------- re-wrapping
     def rewrap_all(self) -> Rewrap:
         """Re-encrypt all stored media on disk under the active primary key.

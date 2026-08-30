@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anuvritti Family Archive Reader</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --w-color-ground: #EFEDE4;
+  --w-color-ground-sunk: #E3E0D3;
+  --w-color-surface: #F9F8F3;
+  --w-color-surface-lifted: #FFFFFF;
+  --w-color-ink: #131B2A;
+  --w-color-ink-quiet: #4C5665;
+  --w-color-ink-faint: #6B7280;
+  --w-color-thread: #DCD8CA;
+  --w-color-thread-strong: #C4BDA9;
+  --w-color-indigo: #2E4A8C;
+  --w-color-indigo-wash: #DFE5F3;
+  --w-color-saffron: #8A5B18;
+  --w-color-saffron-wash: #F5EBD8;
+  --w-color-unmade: #8F2E2E;
+
+  --w-font-display: "Newsreader", "Noto Naskh Arabic", "Noto Serif Devanagari", "Iowan Old Style", Georgia, serif;
+  --w-font-body: "IBM Plex Sans", "Noto Sans Arabic", "Noto Sans Devanagari", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --w-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --w-size-micro: 0.75rem;
+  --w-size-fine: 0.875rem;
+  --w-size-body: 1rem;
+  --w-size-lead: 1.125rem;
+  --w-size-title: 1.375rem;
+  --w-size-chapter: 1.6875rem;
+  --w-size-year: 2.125rem;
+  --w-size-name: 2.625rem;
+
+  --w-leading-tight: 1.16;
+  --w-leading-read: 1.55;
+  --w-leading-open: 1.7;
+
+  --w-tracking-name: -0.02em;
+  --w-tracking-normal: 0;
+  --w-tracking-label: 0.08em;
+
+  --w-weight-regular: 400;
+  --w-weight-medium: 500;
+  --w-weight-semibold: 600;
+
+  --w-space-0: 0px;
+  --w-space-1: 4px;
+  --w-space-2: 8px;
+  --w-space-3: 12px;
+  --w-space-4: 16px;
+  --w-space-5: 24px;
+  --w-space-6: 32px;
+  --w-space-7: 48px;
+  --w-space-8: 64px;
+  --w-space-9: 96px;
+
+  --w-radius-edge: 4px;
+  --w-radius-cut: 8px;
+  --w-radius-object: 14px;
+
+  --w-elevation-resting: 0 1px 2px rgba(19, 27, 42, 0.06), 0 1px 1px rgba(19, 27, 42, 0.04);
+  --w-elevation-lifted: 0 2px 6px rgba(19, 27, 42, 0.08), 0 6px 16px rgba(19, 27, 42, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --w-color-ground: #0D121D;
+    --w-color-ground-sunk: #080C14;
+    --w-color-surface: #151D2C;
+    --w-color-surface-lifted: #1C273B;
+    --w-color-ink: #ECEFF4;
+    --w-color-ink-quiet: #9BA5B4;
+    --w-color-ink-faint: #6D7888;
+    --w-color-thread: #222C3E;
+    --w-color-thread-strong: #334057;
+    --w-color-indigo: #8EA8E8;
+    --w-color-indigo-wash: #172445;
+    --w-color-saffron: #E2B268;
+    --w-color-saffron-wash: #3B2A0F;
+    --w-color-unmade: #E57373;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--w-font-body);
+  background-color: var(--w-color-ground);
+  color: var(--w-color-ink);
+  line-height: var(--w-leading-read);
+  font-size: var(--w-size-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background-color: var(--w-color-surface);
+  border-bottom: 1px solid var(--w-color-thread);
+  padding: var(--w-space-5) var(--w-space-6);
+}
+
+.header-container {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--w-space-3);
+}
+
+h1 {
+  font-family: var(--w-font-display);
+  font-size: var(--w-size-year);
+  font-weight: var(--w-weight-semibold);
+  letter-spacing: var(--w-tracking-name);
+  color: var(--w-color-ink);
+}
+
+.tagline {
+  font-size: var(--w-size-fine);
+  color: var(--w-color-ink-quiet);
+  margin-top: var(--w-space-1);
+}
+
+nav {
+  display: flex;
+  gap: var(--w-space-2);
+  margin-top: var(--w-space-4);
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+.nav-btn {
+  background: var(--w-color-surface-lifted);
+  border: 1px solid var(--w-color-thread);
+  color: var(--w-color-ink-quiet);
+  font-family: var(--w-font-body);
+  font-size: var(--w-size-fine);
+  font-weight: var(--w-weight-medium);
+  padding: var(--w-space-2) var(--w-space-4);
+  border-radius: var(--w-radius-cut);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nav-btn:hover {
+  background: var(--w-color-ground-sunk);
+  color: var(--w-color-ink);
+}
+
+.nav-btn.active {
+  background: var(--w-color-indigo);
+  color: #FFFFFF;
+  border-color: var(--w-color-indigo);
+}
+
+main {
+  max-width: 1080px;
+  width: 100%;
+  margin: var(--w-space-6) auto;
+  padding: 0 var(--w-space-6);
+  flex: 1;
+}
+
+.archive-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--w-space-4);
+  margin-bottom: var(--w-space-6);
+}
+
+.stat-card {
+  background: var(--w-color-surface);
+  border: 1px solid var(--w-color-thread);
+  border-radius: var(--w-radius-object);
+  padding: var(--w-space-4);
+  box-shadow: var(--w-elevation-resting);
+}
+
+.stat-value {
+  font-family: var(--w-font-display);
+  font-size: var(--w-size-chapter);
+  font-weight: var(--w-weight-semibold);
+  color: var(--w-color-indigo);
+}
+
+.stat-label {
+  font-size: var(--w-size-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--w-tracking-label);
+  color: var(--w-color-ink-faint);
+  margin-top: var(--w-space-1);
+}
+
+.content-section {
+  display: none;
+}
+.content-section.active {
+  display: block;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--w-space-5);
+}
+
+.memory-card {
+  background: var(--w-color-surface);
+  border: 1px solid var(--w-color-thread);
+  border-radius: var(--w-radius-object);
+  padding: var(--w-space-5);
+  box-shadow: var(--w-elevation-resting);
+  display: flex;
+  flex-direction: column;
+  gap: var(--w-space-3);
+}
+
+.memory-card:hover {
+  box-shadow: var(--w-elevation-lifted);
+}
+
+.memory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--w-space-2);
+}
+
+.memory-title {
+  font-family: var(--w-font-display);
+  font-size: var(--w-size-title);
+  font-weight: var(--w-weight-medium);
+  color: var(--w-color-ink);
+}
+
+.memory-date {
+  font-family: var(--w-font-mono);
+  font-size: var(--w-size-micro);
+  color: var(--w-color-ink-faint);
+  white-space: nowrap;
+}
+
+.memory-body {
+  color: var(--w-color-ink-quiet);
+  font-size: var(--w-size-fine);
+  line-height: var(--w-leading-read);
+}
+
+.badge {
+  display: inline-block;
+  font-size: var(--w-size-micro);
+  padding: var(--w-space-1) var(--w-space-2);
+  border-radius: var(--w-radius-edge);
+  background: var(--w-color-indigo-wash);
+  color: var(--w-color-indigo);
+  font-weight: var(--w-weight-medium);
+}
+
+.audio-player {
+  width: 100%;
+  margin-top: var(--w-space-2);
+}
+
+img.memory-photo {
+  max-width: 100%;
+  border-radius: var(--w-radius-cut);
+  border: 1px solid var(--w-color-thread);
+  margin-top: var(--w-space-2);
+}
+
+footer {
+  border-top: 1px solid var(--w-color-thread);
+  padding: var(--w-space-5) var(--w-space-6);
+  text-align: center;
+  font-size: var(--w-size-fine);
+  color: var(--w-color-ink-faint);
+  margin-top: auto;
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-container">
+    <div>
+      <h1 id="family-title">Family Archive</h1>
+      <p class="tagline" id="archive-meta">Zero-network standalone reader • 100% offline</p>
+    </div>
+  </div>
+  <nav id="nav-tabs">
+    <button class="nav-btn active" data-tab="overview">Overview</button>
+    <button class="nav-btn" data-tab="sparks">Sparks</button>
+    <button class="nav-btn" data-tab="moments">Moments</button>
+    <button class="nav-btn" data-tab="voice">Voice Notes</button>
+    <button class="nav-btn" data-tab="words">Little Things</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-overview" class="content-section active">
+    <div class="archive-stats" id="stats-container">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-sparks">0</div>
+        <div class="stat-label">Sparks</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-moments">0</div>
+        <div class="stat-label">Moments</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-voice">0</div>
+        <div class="stat-label">Voice Notes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-little">0</div>
+        <div class="stat-label">Little Things</div>
+      </div>
+    </div>
+    <div class="memory-card">
+      <h2 class="memory-title">Open Long-Term Custody</h2>
+      <p class="memory-body">
+        This reader runs completely inside your browser with no network connection, no external fonts, and no cookies.
+        All photos, recordings, and writings are stored as ordinary open JSON and media files on this computer.
+      </p>
+    </div>
+  </section>
+
+  <section id="tab-sparks" class="content-section">
+    <div class="card-grid" id="sparks-grid"></div>
+  </section>
+
+  <section id="tab-moments" class="content-section">
+    <div class="card-grid" id="moments-grid"></div>
+  </section>
+
+  <section id="tab-voice" class="content-section">
+    <div class="card-grid" id="voice-grid"></div>
+  </section>
+
+  <section id="tab-words" class="content-section">
+    <div class="card-grid" id="words-grid"></div>
+  </section>
+</main>
+
+<footer>
+  <p>Everything here happened. Nothing here was invented.</p>
+</footer>
+
+<script>
+(function() {
+  // Offline Data Loader
+  async function loadData() {
+    try {
+      const [arcRes, spkRes, momRes, vncRes, ltRes] = await Promise.all([
+        fetch('archive.json').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('sparks.json').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('moments.json').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('voice_notes.json').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('little_things.json').then(r => r.ok ? r.json() : []).catch(() => []),
+      ]);
+
+      if (arcRes && arcRes.family) {
+        document.getElementById('family-title').textContent = arcRes.family.name || 'Family Archive';
+        document.getElementById('archive-meta').textContent = `Exported ${new Date(arcRes.exported_at || Date.now()).toLocaleDateString()} • Format ${arcRes.format_version || '1.0'}`;
+      }
+
+      const sparks = spkRes || [];
+      const moments = momRes || [];
+      const voice = vncRes || [];
+      const little = ltRes || [];
+
+      document.getElementById('stat-sparks').textContent = sparks.length;
+      document.getElementById('stat-moments').textContent = moments.length;
+      document.getElementById('stat-voice').textContent = voice.length;
+      document.getElementById('stat-little').textContent = little.length;
+
+      // Render Sparks
+      const sparksGrid = document.getElementById('sparks-grid');
+      sparksGrid.innerHTML = sparks.map(s => `
+        <div class="memory-card">
+          <div class="memory-header">
+            <span class="memory-title">${escapeHtml(s.title || 'Untitled Spark')}</span>
+            <span class="badge">${escapeHtml(s.category?.value || s.category || 'NOTE')}</span>
+          </div>
+          <p class="memory-body">${escapeHtml(s.note || '')}</p>
+          <span class="memory-date">${s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}</span>
+        </div>
+      `).join('');
+
+      // Render Moments
+      const momentsGrid = document.getElementById('moments-grid');
+      momentsGrid.innerHTML = moments.map(m => `
+        <div class="memory-card">
+          <div class="memory-header">
+            <span class="memory-title">${escapeHtml(m.reflection || 'Memory')}</span>
+            <span class="memory-date">${escapeHtml(m.happened_on || '')}</span>
+          </div>
+          ${m.photo_media_id ? `<img class="memory-photo" src="media/${encodeURIComponent(m.photo_media_id)}.jpg" alt="Moment photo" onerror="this.style.display='none'">` : ''}
+          ${m.audio_media_id ? `<audio class="audio-player" controls src="media/${encodeURIComponent(m.audio_media_id)}.wav"></audio>` : ''}
+        </div>
+      `).join('');
+
+      // Render Voice Notes
+      const voiceGrid = document.getElementById('voice-grid');
+      voiceGrid.innerHTML = voice.map(v => `
+        <div class="memory-card">
+          <div class="memory-header">
+            <span class="memory-title">Voice Recording</span>
+            <span class="memory-date">${v.duration_seconds ? Math.round(v.duration_seconds) + 's' : ''}</span>
+          </div>
+          <p class="memory-body"><em>"${escapeHtml(v.transcript?.text || v.transcript || '')}"</em></p>
+          ${v.media_id ? `<audio class="audio-player" controls src="media/${encodeURIComponent(v.media_id)}.wav"></audio>` : ''}
+        </div>
+      `).join('');
+
+      // Render Little Things
+      const wordsGrid = document.getElementById('words-grid');
+      wordsGrid.innerHTML = little.map(w => `
+        <div class="memory-card">
+          <div class="memory-header">
+            <span class="memory-title">${escapeHtml(w.text || '')}</span>
+            <span class="badge">Word</span>
+          </div>
+          <span class="memory-date">${w.created_at ? new Date(w.created_at).toLocaleDateString() : ''}</span>
+        </div>
+      `).join('');
+
+    } catch (e) {
+      console.warn('Offline loader notice:', e);
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, function(m) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+
+  // Tab navigation
+  document.getElementById('nav-tabs').addEventListener('click', (e) => {
+    if (!e.target.classList.contains('nav-btn')) return;
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+    e.target.classList.add('active');
+    const tabId = 'tab-' + e.target.getAttribute('data-tab');
+    const targetSection = document.getElementById(tabId);
+    if (targetSection) targetSection.classList.add('active');
+  });
+
+  loadData();
+})();
+</script>
+</body>
+</html>
