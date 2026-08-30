@@ -23,8 +23,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt ./
 COPY packages/filmkit ./packages/filmkit
-RUN pip install --require-hashes --no-deps -r requirements.txt 2>/dev/null \
-    || pip install -r requirements.txt
+RUN grep -v "^-e " requirements.txt > /tmp/req.txt \
+    && (pip install --require-hashes --no-deps -r /tmp/req.txt 2>/dev/null || pip install -r /tmp/req.txt) \
+    && pip install --no-deps ./packages/filmkit
 
 COPY pyproject.toml ./
 COPY src ./src
