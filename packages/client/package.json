@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "python3 codegen/generate.py --check",
+    "build": "node -e \"console.log('@anuvritti/client: zero build step')\"",
     "generate": "python3 codegen/generate.py",
     "check": "python3 codegen/generate.py --check",
     "test": "node --test \"test/**/*.test.ts\""
