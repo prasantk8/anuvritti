@@ -42,7 +42,7 @@ ARG FFPROBE_VERSION=9.0.1
 ARG FFPROBE_SOURCE_SHA256=cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential ca-certificates xz-utils \
+    && apt-get install -y --no-install-recommends build-essential ca-certificates xz-utils nasm yasm \
     && rm -rf /var/lib/apt/lists/*
 
 ADD --checksum=sha256:cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635 \
@@ -52,6 +52,7 @@ RUN mkdir -p /tmp/ffmpeg /opt/ffprobe/bin /opt/ffprobe/usr/share/anuvritti \
     && tar -xJf /tmp/ffmpeg.tar.xz --strip-components=1 -C /tmp/ffmpeg \
     && cd /tmp/ffmpeg \
     && ./configure \
+        --disable-x86asm \
         --disable-autodetect \
         --disable-debug \
         --disable-doc \
