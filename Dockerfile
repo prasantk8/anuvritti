@@ -76,9 +76,9 @@ RUN mkdir -p /tmp/ffmpeg /opt/ffprobe/bin /opt/ffprobe/usr/share/anuvritti \
     && make install \
     && strip /opt/ffprobe/bin/ffprobe /opt/ffprobe/lib/*.so.* \
     && mkdir -p /opt/ffprobe/runtime-lib \
-    && cp -a /opt/ffprobe/lib/libavformat.so.63* /opt/ffprobe/runtime-lib/ \
-    && cp -a /opt/ffprobe/lib/libavcodec.so.63* /opt/ffprobe/runtime-lib/ \
-    && cp -a /opt/ffprobe/lib/libavutil.so.61* /opt/ffprobe/runtime-lib/ \
+    && cp -a /opt/ffprobe/lib/libavformat.so* /opt/ffprobe/runtime-lib/ \
+    && cp -a /opt/ffprobe/lib/libavcodec.so* /opt/ffprobe/runtime-lib/ \
+    && cp -a /opt/ffprobe/lib/libavutil.so* /opt/ffprobe/runtime-lib/ \
     && mkdir -p /opt/ffprobe/usr/share/licenses/ffprobe \
     && install -m 0644 COPYING.LGPLv2.1 /opt/ffprobe/usr/share/licenses/ffprobe/COPYING.LGPLv2.1 \
     && { \
