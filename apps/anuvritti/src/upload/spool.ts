@@ -48,6 +48,8 @@ import { backoffMs, isRetryable } from "@anuvritti/client";
 
 import type { MediaFromShare } from "../capture/incoming.ts";
 import { captureForMedia } from "../capture/incoming.ts";
+import { DeviceResourceBudget } from "../sync/budget.ts";
+import { ResumableMediaUploader } from "../sync/uploader.ts";
 
 /** What the spooled bytes become, once the archive has them. */
 export type Follow =

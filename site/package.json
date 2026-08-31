@@ -1,0 +1,14 @@
+{
+  "name": "@anuvritti/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@anuvritti/world": "*",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

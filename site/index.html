@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memtara — A Quiet Archive for Your Family</title>
+  <link rel="stylesheet" href="../packages/world/world.css">
+  <style>
+    :root {
+      --font-display: "Newsreader", serif;
+      --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: "IBM Plex Mono", monospace;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--ground, #FBF8F3);
+      color: var(--ink, #1F1B18);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+    header h1 {
+      font-family: var(--font-display);
+      font-size: 44px;
+      font-weight: normal;
+      line-height: 1.2;
+      margin: 0 0 16px 0;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      font-size: 20px;
+      color: var(--ink-secondary, #6E675F);
+      margin-bottom: 48px;
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: normal;
+      margin-top: 48px;
+      margin-bottom: 16px;
+    }
+    ul.refusals {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0;
+    }
+    ul.refusals li {
+      margin-bottom: 16px;
+      padding-left: 28px;
+      position: relative;
+    }
+    ul.refusals li::before {
+      content: "—";
+      position: absolute;
+      left: 0;
+      color: var(--ink-secondary, #6E675F);
+    }
+    .callout {
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 32px 0;
+    }
+    footer {
+      margin-top: 64px;
+      font-size: 14px;
+      color: var(--ink-secondary, #6E675F);
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      padding-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Memtara</h1>
+      <p class="subtitle">A quiet, encrypted family archive that helps you notice childhood while it is happening.</p>
+    </header>
+
+    <main>
+      <section>
+        <h2>Our Refusals</h2>
+        <p>Most software is designed to capture your attention and keep you looking at a screen. We built Memtara with the opposite principles:</p>
+        <ul class="refusals">
+          <li><strong>No streaks or gamification:</strong> A family is not a game to be scored. You will never see badges, counters, or daily goals.</li>
+          <li><strong>No nagging notifications:</strong> We send at most one quiet suggestion a day, and it can be silenced forever in a single tap.</li>
+          <li><strong>No third-party trackers or ads:</strong> Zero ad networks, tracking pixels, or data brokers. Your memories are never analyzed for advertising.</li>
+          <li><strong>Never held hostage:</strong> If you ever stop paying, you keep the right to read, search, and export everything you saved.</li>
+          <li><strong>Complete export sovereignty:</strong> Download your entire archive anytime as open, versioned JSON and standard media files.</li>
+        </ul>
+      </section>
+
+      <section class="callout">
+        <h2>How It Works</h2>
+        <p>Memtara operates on your family's own private server and offline devices. Audio recordings and photos are encrypted on device before upload and stored safely under hardware-backed keys.</p>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Memtara. Purely for families.</p>
+    </footer>
+  </div>
+</body>
+</html>

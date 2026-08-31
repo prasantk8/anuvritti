@@ -25,6 +25,7 @@ import { documentCustody, sqliteSpoolStore } from "./storage/spool-store.ts";
 import { secureTokenStore } from "./storage/token-store.ts";
 import type { Outbox, Spooled } from "./upload/spool.ts";
 import { createOutbox } from "./upload/spool.ts";
+import { HardwareDeviceVault, encryptedQueueStore } from "./vault/device-vault.ts";
 
 /**
  * `expo-crypto`, and nothing else.
@@ -85,7 +86,9 @@ export async function wire(baseUrl: string, wiring: Wiring = {}): Promise<Wired>
       ? noticingRevocation(globalThis.fetch, wiring.onRevoked)
       : undefined,
   });
-  const store = await sqliteQueueStore();
+  const rawStore = await sqliteQueueStore();
+  const vault = new HardwareDeviceVault();
+  const store = encryptedQueueStore(rawStore, vault);
 
   const send = (entry: QueuedCapture): Promise<Result<unknown>> => {
     const options = { idempotencyKey: entry.id };

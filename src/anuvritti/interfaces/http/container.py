@@ -18,7 +18,8 @@ from anuvritti.adapters.intent.spoken import SpokenIntentEngine
 from anuvritti.adapters.media.filesystem import EncryptedFilesystemMediaStore
 from anuvritti.adapters.media.measure import FfprobeAudioDurationMeasurer
 from anuvritti.adapters.persistence.inbox import AtomicEncryptedFutureInboxStore
-from anuvritti.adapters.persistence.schema import GuardedConnection, connect, migrate
+from anuvritti.adapters.persistence.migrations import migrate_to, rehearse_and_migrate
+from anuvritti.adapters.persistence.schema import SCHEMA_VERSION, GuardedConnection, connect
 from anuvritti.adapters.persistence.sqlite import (
     SqliteDeviceRepository,
     SqliteEventPublisher,
@@ -54,6 +55,7 @@ from anuvritti.application.capture import (
 )
 from anuvritti.application.export import ExportArchiveUseCase
 from anuvritti.application.fixity import FixityEngine
+from anuvritti.application.import_ import ImportUseCase
 from anuvritti.application.invitations import InvitationUseCase
 from anuvritti.application.messaging import QuietMessagingUseCase
 from anuvritti.application.moments import MarkAsDoneUseCase
@@ -153,6 +155,7 @@ class Container:
     blind_analytics: BlindAnalyticsUseCase
     quiet_messaging: QuietMessagingUseCase
     support: BlindSupportUseCase
+    importer: ImportUseCase
 
     def close(self) -> None:
         self.connection.close()
@@ -186,8 +189,11 @@ def build_container(
     db_path = settings.db_path
     if str(db_path) != ":memory:":
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    connection = connect(str(db_path))
-    migrate(connection)
+        rehearse_and_migrate(Path(db_path)).unwrap()
+        connection = connect(str(db_path))
+    else:
+        connection = connect(str(db_path))
+        migrate_to(connection, SCHEMA_VERSION).unwrap()
 
     families = SqliteFamilyRepository(connection)
     sparks = SqliteSparkRepository(connection)
@@ -416,4 +422,15 @@ def build_container(
         blind_analytics=BlindAnalyticsUseCase(clock=clock),
         quiet_messaging=QuietMessagingUseCase(clock=clock),
         support=BlindSupportUseCase(families=families, clock=clock),
+        importer=ImportUseCase(
+            families=families,
+            sparks=sparks,
+            moments=moments,
+            little_things=little_things,
+            media=media,
+            events=events,
+            ids=ids,
+            clock=clock,
+            uow=uow,
+        ),
     )

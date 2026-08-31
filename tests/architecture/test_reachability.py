@@ -51,12 +51,7 @@ _MAKE_MODULE = re.compile(r"-m\s+(anuvritti(?:\.[A-Za-z_][A-Za-z0-9_]*)+)")
 PY_SCRIPT_IMPORTS = ("anuvritti.adapters.backup",)
 
 #: Reached by nothing that runs. Each line is a debt with an owner, not an exemption.
-NOT_IN_SERVICE: dict[str, str] = {
-    "anuvritti.application.import_": "TASK-908 - the importer has no CLI and no route",
-    "anuvritti.adapters.persistence.migrations": (
-        "TASK-1101 - the container calls schema.migrate(), so rehearse-before-apply never runs"
-    ),
-}
+NOT_IN_SERVICE: dict[str, str] = {}
 
 
 def _module_name(path: Path) -> str:
@@ -231,17 +226,7 @@ def test_every_excuse_names_a_task_that_is_still_open():
 #: Expo Router turns every file under `app/` into a screen. That is the entry set.
 TS_ENTRY_GLOB = "app/**/*.tsx"
 
-#: The app's own source that no screen reaches. Same rule, same shrinking list.
-TS_NOT_IN_SERVICE: dict[str, str] = {
-    "src/capture/native.ts": "TASK-1003 - the in-app camera has no screen",
-    "src/sync/budget.ts": "TASK-1008 - metering has no caller",
-    "src/sync/uploader.ts": "TASK-1002 - resumable upload has no caller",
-    "src/vault/device-vault.ts": (
-        "TASK-1001 - its only importer is capture/native.ts, which is itself dark under TASK-1003"
-    ),
-    "src/widgets/index.ts": "TASK-1005 - barrel over the widget",
-    "src/widgets/right-now-widget.ts": "TASK-1005 - no native widget extension consumes it",
-}
+TS_NOT_IN_SERVICE: dict[str, str] = {}
 
 _TS_IMPORT = re.compile(r"""from\s+["'](\.[^"']+)["']""")
 

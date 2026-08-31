@@ -20,7 +20,9 @@ import type { CaptureQueue } from "@anuvritti/client";
 
 import type { Wired } from "./api.ts";
 import { wire } from "./api.ts";
+import { NativeCaptureManager } from "./capture/native.ts";
 import { readShares } from "./capture/incoming.ts";
+import { buildRightNowWidgetPayload } from "./widgets/index.ts";
 import type { MediaSource } from "./media.ts";
 import { mediaSource } from "./media.ts";
 import type { ThresholdMarker } from "./model/threshold.ts";

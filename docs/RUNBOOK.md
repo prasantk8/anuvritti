@@ -117,3 +117,16 @@ triggers automatic rollback to the previous stable slot.
 
 If service interruption occurs, send a plain, honest notification without marketing spin:
 "Your encrypted vault remains safe. No data was lost."
+
+---
+
+## 7. External Ingress & Domain Routing (TASK-1501)
+
+The production server is reachable via TLS over Cloudflare Tunnel / Tailscale at `https://family.memtara.com`.
+
+Verified external reachability:
+```bash
+curl -fsS https://family.memtara.com/ready
+# Returns: {"ready":true,"encryption_at_rest":"on","schema_version":6}
+# Verified: 2026-08-31
+```

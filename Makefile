@@ -113,6 +113,9 @@ family-key-inventory:
 teaser:
 	PYTHONPATH=src $(PY) scripts/teaser.py
 
+restore-drill:
+	PYTHONPATH=src $(PY) scripts/restore_drill.py $(ARGS)
+
 # `scripts/` is in scope because it is not scaffolding: backup, restore, the SBOM, the
 # image scan and the release runner are the operational surface, and for three phases they
 # were the only Python in the repo that no gate ever read.

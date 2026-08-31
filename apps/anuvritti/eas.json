@@ -11,7 +11,7 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_ANUVRITTI_URL": "https://family.anuvritti.internal"
+        "EXPO_PUBLIC_ANUVRITTI_URL": "https://family.memtara.com"
       }
     },
     "preview": {
@@ -24,7 +24,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_ANUVRITTI_URL": "https://family.anuvritti.internal"
+        "EXPO_PUBLIC_ANUVRITTI_URL": "https://family.memtara.com"
       }
     },
     "production": {
@@ -36,7 +36,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_ANUVRITTI_URL": "https://family.anuvritti.internal"
+        "EXPO_PUBLIC_ANUVRITTI_URL": "https://family.memtara.com"
       }
     }
   },

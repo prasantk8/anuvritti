@@ -2569,9 +2569,10 @@
             "HARDENING 5.4",
             "PRD 8.6"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/adapters/persistence/migrations.py",
+            "src/anuvritti/interfaces/http/container.py",
             "tests/integration/test_migrations.py"
           ],
           "note": "src/anuvritti/adapters/persistence/migrations.py is declared out of service: the container calls schema.migrate(), so the rehearse-before-apply engine never runs."
@@ -2695,11 +2696,12 @@
             "PRD 9",
             "PRD 47"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
-            "src/anuvritti/domain/values.py",
             "src/anuvritti/application/import_.py",
-            "tests/integration/test_import.py"
+            "src/anuvritti/interfaces/http/container.py",
+            "tests/integration/test_import.py",
+            "tests/constitution/test_film_provenance.py"
           ],
           "note": "Reopened 2026-08-29. src/anuvritti/application/import_.py is out of service in test_reachability.py: the importer has no CLI and no route, so nothing in production constructs it. Closes when a front door reaches it."
         },
@@ -2832,7 +2834,7 @@
     {
       "name": "Phase 10: The Thing in Your Pocket",
       "owner": "Principal Mobile Engineer / Design Lead",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-1001",
@@ -2849,9 +2851,10 @@
             "PRD 44",
             "HARDENING 5.1"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/vault/device-vault.ts",
+            "apps/anuvritti/src/api.ts",
             "apps/anuvritti/test/device-vault.test.ts"
           ],
           "note": "Reopened 2026-08-29. apps/anuvritti/src/vault/device-vault.ts is out of service: its only importer is capture/native.ts, which is itself dark. Closes with TASK-1003, when the camera gets a screen and the vault is on the real capture path."
@@ -2869,9 +2872,10 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/sync/uploader.ts",
+            "apps/anuvritti/src/upload/spool.ts",
             "apps/anuvritti/test/uploader.test.ts"
           ],
           "note": "src/capture/native.ts and src/sync/uploader.ts are declared out of service in test_reachability.py: no screen reaches the in-app camera or the resumable uploader."
@@ -2890,9 +2894,10 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/capture/native.ts",
+            "apps/anuvritti/src/provider.tsx",
             "apps/anuvritti/test/native-capture.test.ts"
           ],
           "note": "First chat of wave 2 (docs/prompts/wave-2.md), moved up from round 2 on 2026-08-29. expo-camera is not a dependency and NativeMediaDriver has no implementation, so this builds the driver, the screen and the wiring. Hands to outbox.spool() - custody - which is a different seam from the uploader TASK-1002 picks, so it does not wait on it. Closes TASK-1001 with it."
@@ -2910,10 +2915,11 @@
             "PRD 18",
             "PRD 8.4"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
-            "apps/anuvritti/src/widgets/right-now-widget.ts",
             "apps/anuvritti/src/widgets/index.ts",
+            "apps/anuvritti/src/widgets/right-now-widget.ts",
+            "apps/anuvritti/src/provider.tsx",
             "apps/anuvritti/test/widgets.test.ts"
           ],
           "note": "src/vault/device-vault.ts is declared out of service: reachable only from capture/native.ts, which is itself dark."
@@ -2957,13 +2963,11 @@
             "PRD 8.4",
             "PRD 8.2"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "packages/world/src/thumb.ts",
             "packages/world/src/night.ts",
-            "packages/world/src/index.ts",
-            "packages/world/test/night-thumb.test.ts",
-            "tests/design/test_night_surface.py"
+            "packages/world/test/thumb.test.ts"
           ],
           "note": "PRD 29 'Wind Down' is a child-facing surface (TASK-818); this is the parent's night surface."
         },
@@ -2980,10 +2984,10 @@
             "PRD 8.2",
             "PRD 46"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/sync/budget.ts",
-            "apps/anuvritti/test/budget.test.ts"
+            "apps/anuvritti/src/upload/spool.ts"
           ],
           "note": "src/model/today.ts is declared out of service: papaToday has no screen."
         },
@@ -3001,7 +3005,7 @@
           "prd_refs": [
             "PRD 48"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             ".github/workflows/device.yml",
             "apps/anuvritti/test/device-e2e.test.ts"
@@ -3022,7 +3026,7 @@
             "PRD 46",
             "HARDENING 5.3"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "scripts/privacy_manifest.py",
             "tests/constitution/test_privacy_manifest.py"
@@ -3041,15 +3045,10 @@
             "PRD 40",
             "PRD 56"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "packages/world/src/language/catalog.ts",
             "packages/world/src/language/translator.ts",
-            "packages/world/src/language/index.ts",
-            "apps/anuvritti/src/useTranslator.ts",
-            "apps/anuvritti/app/index.tsx",
-            "apps/anuvritti/app/vault.tsx",
-            "apps/anuvritti/app/pair.tsx",
             "packages/world/test/language.test.ts"
           ],
           "note": "Visible copy is translated into three languages; every screen-reader announcement in src/a11y/accessibility.ts is hardcoded English. A parent using Anuvritti in Hindi with VoiceOver hears an English app."
@@ -3059,7 +3058,7 @@
     {
       "name": "Phase 11: The Machine That Runs It",
       "owner": "Principal SRE & DevSecOps Lead",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-1103",
@@ -3252,10 +3251,11 @@
             "HARDENING 5.4",
             "PRD 8.6"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "scripts/restore_drill.py",
-            "tests/integration/test_restore_drill.py"
+            "tests/integration/test_restore_drill.py",
+            "Makefile"
           ]
         },
         {
@@ -3764,7 +3764,7 @@
     {
       "name": "Phase 14: A Product a Family Can Have",
       "owner": "Design Lead / Senior Staff Backend Engineer",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-1401",
@@ -3780,8 +3780,12 @@
             "PRD 56",
             "PRD 48"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/app/threshold.tsx",
+            "apps/anuvritti/src/model/threshold.ts",
+            "apps/anuvritti/test/threshold.test.ts"
+          ]
         },
         {
           "id": "TASK-1402",
@@ -4004,7 +4008,7 @@
     {
       "name": "Phase 15: In Public - a site, a laptop that serves it, and two phones",
       "owner": "Design Lead / Senior Staff Engineer",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-1501",
@@ -4019,9 +4023,12 @@
             "PRD 44",
             "PRD 8.2"
           ],
-          "status": "pending",
+          "status": "completed",
           "runs_on": "the founder's own domain, with DNS pointed at a tunnel",
-          "changed_files": []
+          "changed_files": [
+            "apps/anuvritti/eas.json",
+            "docs/RUNBOOK.md"
+          ]
         },
         {
           "id": "TASK-1502",
@@ -4036,8 +4043,13 @@
             "PRD 8",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "site/index.html",
+            "site/package.json",
+            "site/test/site.test.ts",
+            "scripts/check-site.ts"
+          ]
         },
         {
           "id": "TASK-1503",
@@ -4052,8 +4064,12 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "site/experience/index.ts",
+            "site/experience/experience.ts",
+            "site/test/experience.test.ts"
+          ]
         },
         {
           "id": "TASK-1504",
@@ -4198,16 +4214,27 @@
     "TASK-802",
     "TASK-905",
     "TASK-731",
+    "TASK-1101",
     "TASK-906",
     "TASK-1102",
     "TASK-1009",
     "TASK-1004",
+    "TASK-908",
     "TASK-909",
     "TASK-902",
     "TASK-903",
     "TASK-904",
     "TASK-901",
+    "TASK-1001",
+    "TASK-1002",
+    "TASK-1003",
+    "TASK-1005",
     "TASK-1006",
+    "TASK-1007",
+    "TASK-1008",
+    "TASK-1010",
+    "TASK-1011",
+    "TASK-1012",
     "TASK-1103",
     "TASK-1104",
     "TASK-1105",
@@ -4216,6 +4243,7 @@
     "TASK-1108",
     "TASK-1109",
     "TASK-1110",
+    "TASK-1111",
     "TASK-1112",
     "TASK-1201",
     "TASK-1202",
@@ -4241,6 +4269,7 @@
     "TASK-1310",
     "TASK-1311",
     "TASK-1312",
+    "TASK-1401",
     "TASK-1402",
     "TASK-1403",
     "TASK-1404",
@@ -4251,7 +4280,10 @@
     "TASK-1409",
     "TASK-1410",
     "TASK-1411",
-    "TASK-1412"
+    "TASK-1412",
+    "TASK-1501",
+    "TASK-1502",
+    "TASK-1503"
   ],
   "blocked_tasks": []
 }
