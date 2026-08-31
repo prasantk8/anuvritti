@@ -36,3 +36,4 @@ export function verifyParentPin(entered: string, correctPin: string): boolean {
   if (!entered || !correctPin) return false;
   return entered.trim() === correctPin.trim();
 }
+

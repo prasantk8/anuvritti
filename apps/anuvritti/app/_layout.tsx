@@ -91,8 +91,6 @@ function Routes({ world }: { world: World }) {
       <Stack.Protected guard={showsHome(gate)}>
         <Stack.Screen name="index" />
         <Stack.Screen name="vault" />
-        <Stack.Screen name="child" />
-        <Stack.Screen name="film" />
         <Stack.Screen name="pairing-code" options={{ presentation: "modal" }} />
       </Stack.Protected>
 

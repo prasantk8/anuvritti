@@ -54,3 +54,4 @@ describe("TASK-818 — Child View Bedtime Stillness", () => {
     assert.equal(verifyParentPin("", "1234"), false);
   });
 });
+

@@ -2569,7 +2569,7 @@
             "HARDENING 5.4",
             "PRD 8.6"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "src/anuvritti/adapters/persistence/migrations.py",
             "tests/integration/test_migrations.py"
@@ -2674,7 +2674,7 @@
             "PRD 8.3",
             "PRD 8.5"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/return/notifications.ts",
             "apps/anuvritti/test/notifications.test.ts"
@@ -2848,7 +2848,7 @@
             "PRD 44",
             "HARDENING 5.1"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/vault/device-vault.ts",
             "apps/anuvritti/test/device-vault.test.ts"
@@ -2868,7 +2868,7 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/sync/uploader.ts",
             "apps/anuvritti/test/uploader.test.ts"
@@ -2889,7 +2889,7 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/capture/native.ts",
             "apps/anuvritti/test/native-capture.test.ts"
@@ -2909,7 +2909,7 @@
             "PRD 18",
             "PRD 8.4"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "apps/anuvritti/src/widgets/right-now-widget.ts",
             "apps/anuvritti/src/widgets/index.ts",
@@ -2956,7 +2956,7 @@
             "PRD 8.4",
             "PRD 8.2"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "packages/world/src/thumb.ts",
             "packages/world/src/night.ts",
@@ -3021,7 +3021,7 @@
             "PRD 46",
             "HARDENING 5.3"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "scripts/privacy_manifest.py",
             "tests/constitution/test_privacy_manifest.py"
@@ -3058,7 +3058,7 @@
     {
       "name": "Phase 11: The Machine That Runs It",
       "owner": "Principal SRE & DevSecOps Lead",
-      "status": "completed",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-1103",
@@ -3251,7 +3251,7 @@
             "HARDENING 5.4",
             "PRD 8.6"
           ],
-          "status": "completed",
+          "status": "pending",
           "changed_files": [
             "scripts/restore_drill.py",
             "tests/integration/test_restore_drill.py"
@@ -4167,23 +4167,15 @@
     "TASK-802",
     "TASK-905",
     "TASK-731",
-    "TASK-1101",
     "TASK-906",
     "TASK-1102",
     "TASK-1009",
-    "TASK-1004",
     "TASK-909",
     "TASK-902",
     "TASK-903",
     "TASK-904",
     "TASK-901",
-    "TASK-1001",
-    "TASK-1002",
-    "TASK-1003",
-    "TASK-1005",
     "TASK-1006",
-    "TASK-1007",
-    "TASK-1011",
     "TASK-1103",
     "TASK-1104",
     "TASK-1105",
@@ -4192,7 +4184,6 @@
     "TASK-1108",
     "TASK-1109",
     "TASK-1110",
-    "TASK-1111",
     "TASK-1112",
     "TASK-1201",
     "TASK-1202",
