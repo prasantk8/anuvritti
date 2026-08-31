@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 .DEFAULT_GOAL := check
 
-.PHONY: install lint format types types-ts test cov cov-core check run tracker clean world client app design filmkit specimen film film-prepare film-font-review teaser film-anchor film-verify inbox-anchor inbox-verify family-key-backup family-key-recover family-key-rotate family-key-inventory
+.PHONY: install lint format types types-ts test cov cov-core check run tracker clean world client app design filmkit specimen site film film-prepare film-font-review teaser film-anchor film-verify inbox-anchor inbox-verify family-key-backup family-key-recover family-key-rotate family-key-inventory
 
 install:
 	$(PY) -m pip install -q -r requirements-dev.txt
@@ -43,6 +43,11 @@ filmkit:
 specimen: world
 	@echo "serving packages/world/specimen at http://127.0.0.1:8765/specimen/"
 	@cd packages/world && python3 -m http.server 8765 --bind 127.0.0.1
+
+site: world
+	npm --prefix site run build
+	@echo "Serving memtara.com website at http://127.0.0.1:8766/"
+	@cd site/dist && python3 -m http.server 8766 --bind 127.0.0.1
 
 # A FilmExport is already plaintext family material. Its browser workspace and the
 # founder's inspection still therefore stay under ignored var/, beside the finished film.
