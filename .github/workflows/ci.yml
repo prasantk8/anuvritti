@@ -133,6 +133,10 @@ jobs:
         run: npm --prefix packages/client test --silent
       - name: Test apps/anuvritti
         run: npm --prefix apps/anuvritti test --silent
+      - name: Test memtara.com site
+        run: npm --prefix site test --silent
+      - name: Verify site constitution
+        run: npx tsx scripts/check-site.ts
 
   # ----------------------------------------------------- the memory compiler package
   filmkit:

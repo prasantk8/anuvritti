@@ -33,6 +33,7 @@ design: world
 	$(PY) packages/client/codegen/generate.py --check
 	npm --prefix packages/client test --silent
 	npm --prefix apps/anuvritti test --silent
+	npm --prefix site test --silent
 
 # filmkit is source in this monorepo, not an opaque dependency. Its own strict package
 # gate stays authoritative, including the compiler's branch-coverage promise.

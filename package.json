@@ -5,14 +5,15 @@
   "description": "Anuvritti. The Python server, the design language, the typed client and the app, in one tree.",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "site"
   ],
   "scripts": {
     "postinstall": "node scripts/patch-xcode-uuid.mjs",
     "world": "npm --prefix packages/world run build",
     "client": "python3 packages/client/codegen/generate.py",
     "audit": "node scripts/audit-javascript.mjs",
-    "test": "npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test",
+    "test": "npm --prefix packages/world test && npm --prefix packages/client test && npm --prefix apps/anuvritti test && npm --prefix site test",
     "typecheck": "tsc -p packages/client/tsconfig.json --noEmit && tsc -p packages/world/tsconfig.json --noEmit && tsc -p apps/anuvritti/tsconfig.json --noEmit && tsc -p apps/anuvritti/tsconfig.test.json --noEmit"
   },
   "engines": {
