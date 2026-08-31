@@ -22,10 +22,14 @@ let html = readFileSync(join(SITE_DIR, "index.html"), "utf8");
 html = html.replace('../packages/world/dist/world.css', './world.css');
 writeFileSync(join(DIST_DIR, "index.html"), html, "utf8");
 
-// Copy headers and redirects if present
+// Copy headers, redirects, and CNAME if present
 const headersSrc = join(SITE_DIR, "_headers");
 if (existsSync(headersSrc)) {
   cpSync(headersSrc, join(DIST_DIR, "_headers"));
 }
+const cnameSrc = join(SITE_DIR, "CNAME");
+if (existsSync(cnameSrc)) {
+  cpSync(cnameSrc, join(DIST_DIR, "CNAME"));
+}
 
-console.log("Built site/dist successfully for Cloudflare Pages deployment.");
+console.log("Built site/dist successfully for Pages deployment.");

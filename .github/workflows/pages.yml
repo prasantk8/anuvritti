@@ -1,4 +1,4 @@
-name: Deploy Cloudflare Pages
+name: Deploy Pages
 
 on:
   push:
@@ -6,19 +6,23 @@ on:
     paths:
       - 'site/**'
       - 'packages/world/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
-  deployments: write
+  pages: write
+  id-token: write
 
+# Allow one concurrent deployment
 concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build & Deploy to Cloudflare Pages
+  build:
+    name: Build Website
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -36,15 +40,19 @@ jobs:
       - name: Build site distribution
         run: npm --prefix site run build
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: memtara
-          directory: site/dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          path: site/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
