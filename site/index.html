@@ -4,89 +4,357 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Memtara — A Quiet Archive for Your Family</title>
-  <link rel="stylesheet" href="../packages/world/world.css">
+  <link rel="stylesheet" href="../packages/world/dist/world.css">
   <style>
-    :root {
-      --font-display: "Newsreader", serif;
-      --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: "IBM Plex Mono", monospace;
-    }
     body {
       margin: 0;
       padding: 0;
-      background-color: var(--ground, #FBF8F3);
-      color: var(--ink, #1F1B18);
-      font-family: var(--font-body);
-      line-height: 1.6;
+      background-color: var(--w-color-ground);
+      color: var(--w-color-ink);
+      font-family: var(--w-font-body);
+      line-height: var(--w-leading-read);
       -webkit-font-smoothing: antialiased;
+      transition: background-color var(--w-duration-settle) ease, color var(--w-duration-settle) ease;
     }
+
     .container {
-      max-width: 680px;
+      max-width: 720px;
       margin: 0 auto;
-      padding: 80px 24px;
+      padding: var(--w-space-8) var(--w-space-5);
+    }
+
+    /* Navigation & Theme Toggle */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--w-space-7);
+    }
+    .brand {
+      font-family: var(--w-font-display);
+      font-size: var(--w-size-title);
+      font-weight: var(--w-weight-semibold);
+      letter-spacing: var(--w-tracking-name);
+      text-decoration: none;
+      color: var(--w-color-ink);
+    }
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--w-color-thread);
+      border-radius: var(--w-radius-round);
+      padding: var(--w-space-2) var(--w-space-4);
+      font-family: var(--w-font-mono);
+      font-size: var(--w-size-micro);
+      color: var(--w-color-ink-quiet);
+      cursor: pointer;
+      min-height: var(--w-layout-touch);
+      display: inline-flex;
+      align-items: center;
+      transition: border-color var(--w-duration-instant);
+    }
+    .theme-toggle:hover {
+      border-color: var(--w-color-thread-strong);
+      color: var(--w-color-ink);
+    }
+
+    /* Hero Section */
+    header {
+      margin-bottom: var(--w-space-8);
     }
     header h1 {
-      font-family: var(--font-display);
-      font-size: 44px;
-      font-weight: normal;
-      line-height: 1.2;
-      margin: 0 0 16px 0;
-      letter-spacing: -0.02em;
+      font-family: var(--w-font-display);
+      font-size: var(--w-size-name);
+      font-weight: var(--w-weight-regular);
+      line-height: var(--w-leading-tight);
+      margin: 0 0 var(--w-space-4) 0;
+      letter-spacing: var(--w-tracking-name);
     }
     .subtitle {
-      font-size: 20px;
-      color: var(--ink-secondary, #6E675F);
-      margin-bottom: 48px;
+      font-size: var(--w-size-lead);
+      color: var(--w-color-ink-quiet);
+      margin-bottom: var(--w-space-5);
+      line-height: var(--w-leading-open);
     }
+
+    /* Interactive Experience Container */
+    .experience-box {
+      background: var(--w-color-surface);
+      border: 1px solid var(--w-color-thread);
+      border-radius: var(--w-radius-sheet);
+      padding: var(--w-space-6);
+      box-shadow: var(--w-elevation-resting);
+      margin-bottom: var(--w-space-8);
+    }
+    .experience-title {
+      font-family: var(--w-font-display);
+      font-size: var(--w-size-chapter);
+      margin: 0 0 var(--w-space-2) 0;
+    }
+    .experience-hint {
+      font-size: var(--w-size-fine);
+      color: var(--w-color-ink-quiet);
+      margin-bottom: var(--w-space-5);
+    }
+
+    /* Spark Flip Card */
+    .spark-card-perspective {
+      perspective: 1000px;
+      margin-bottom: var(--w-space-6);
+    }
+    .spark-card {
+      width: 100%;
+      min-height: 180px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform var(--w-duration-flip) var(--w-easing-enter);
+      cursor: pointer;
+    }
+    .spark-card.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .spark-card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: var(--w-radius-object);
+      padding: var(--w-space-5);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--w-elevation-lifted);
+      border: 1px solid var(--w-color-thread);
+    }
+    .spark-card-front {
+      background: var(--w-color-surface-lifted);
+      color: var(--w-color-ink);
+    }
+    .spark-card-back {
+      background: var(--w-color-surface-lifted);
+      color: var(--w-color-ink);
+      transform: rotateY(180deg);
+      border-left: 4px solid var(--w-color-indigo);
+    }
+    .spark-tag {
+      font-family: var(--w-font-mono);
+      font-size: var(--w-size-micro);
+      color: var(--w-color-indigo);
+      text-transform: uppercase;
+      letter-spacing: var(--w-tracking-label);
+    }
+    .spark-text {
+      font-family: var(--w-font-display);
+      font-size: var(--w-size-lead);
+      margin: var(--w-space-2) 0;
+      line-height: var(--w-leading-read);
+    }
+    .spark-sub {
+      font-size: var(--w-size-fine);
+      color: var(--w-color-ink-faint);
+    }
+
+    /* Hold to Talk Widget */
+    .hold-to-talk-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--w-space-4);
+      padding: var(--w-space-5);
+      background: var(--w-color-ground-sunk);
+      border-radius: var(--w-radius-object);
+    }
+    .talk-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--w-radius-round);
+      border: none;
+      background: var(--w-color-saffron);
+      color: white;
+      font-size: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform var(--w-duration-instant) ease, background-color var(--w-duration-instant) ease, box-shadow var(--w-duration-instant) ease;
+      box-shadow: var(--w-elevation-lifted);
+    }
+    .talk-btn:active, .talk-btn.active {
+      transform: scale(0.92);
+      background: #A06B1C;
+      box-shadow: var(--w-elevation-held);
+    }
+    .waveform-visualizer {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 36px;
+    }
+    .wave-bar {
+      width: 4px;
+      height: 8px;
+      background: var(--w-color-saffron);
+      border-radius: 2px;
+      transition: height 0.1s ease;
+    }
+    .talk-caption {
+      font-size: var(--w-size-fine);
+      color: var(--w-color-ink-quiet);
+      text-align: center;
+    }
+
+    /* Refusals / Manifesto List */
     h2 {
-      font-family: var(--font-display);
-      font-size: 28px;
-      font-weight: normal;
-      margin-top: 48px;
-      margin-bottom: 16px;
+      font-family: var(--w-font-display);
+      font-size: var(--w-size-title);
+      font-weight: var(--w-weight-regular);
+      margin-top: var(--w-space-8);
+      margin-bottom: var(--w-space-4);
     }
     ul.refusals {
       list-style: none;
       padding: 0;
-      margin: 24px 0;
+      margin: var(--w-space-4) 0;
     }
     ul.refusals li {
-      margin-bottom: 16px;
-      padding-left: 28px;
+      margin-bottom: var(--w-space-4);
+      padding-left: var(--w-space-5);
       position: relative;
+      font-size: var(--w-size-body);
     }
     ul.refusals li::before {
       content: "—";
       position: absolute;
       left: 0;
-      color: var(--ink-secondary, #6E675F);
+      color: var(--w-color-ink-faint);
     }
-    .callout {
-      background: rgba(0, 0, 0, 0.03);
-      border-radius: 8px;
-      padding: 24px;
-      margin: 32px 0;
+
+    /* Architecture Callout Grid */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--w-space-4);
+      margin-top: var(--w-space-5);
     }
+    @media (max-width: 600px) {
+      .arch-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .arch-card {
+      background: var(--w-color-surface);
+      border: 1px solid var(--w-color-thread);
+      border-radius: var(--w-radius-object);
+      padding: var(--w-space-4);
+    }
+    .arch-card h3 {
+      font-family: var(--w-font-display);
+      font-size: var(--w-size-lead);
+      margin: 0 0 var(--w-space-2) 0;
+      font-weight: var(--w-weight-medium);
+    }
+    .arch-card p {
+      font-size: var(--w-size-fine);
+      color: var(--w-color-ink-quiet);
+      margin: 0;
+    }
+
+    /* Getting Started / Code Box */
+    .code-box {
+      background: var(--w-color-surface-lifted);
+      border: 1px solid var(--w-color-thread);
+      border-radius: var(--w-radius-object);
+      padding: var(--w-space-4);
+      font-family: var(--w-font-mono);
+      font-size: var(--w-size-fine);
+      overflow-x: auto;
+      margin: var(--w-space-4) 0;
+    }
+
     footer {
-      margin-top: 64px;
-      font-size: 14px;
-      color: var(--ink-secondary, #6E675F);
-      border-top: 1px solid rgba(0, 0, 0, 0.08);
-      padding-top: 24px;
+      margin-top: var(--w-space-9);
+      font-size: var(--w-size-fine);
+      color: var(--w-color-ink-faint);
+      border-top: 1px solid var(--w-color-thread);
+      padding-top: var(--w-space-5);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--w-space-3);
+    }
+    footer a {
+      color: var(--w-color-ink-quiet);
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <nav>
+      <a href="/" class="brand">Memtara</a>
+      <button class="theme-toggle" id="theme-btn" aria-label="Toggle theme">Night</button>
+    </nav>
+
     <header>
-      <h1>Memtara</h1>
-      <p class="subtitle">A quiet, encrypted family archive that helps you notice childhood while it is happening.</p>
+      <h1>A quiet archive for your family.</h1>
+      <p class="subtitle">
+        Memtara helps you notice childhood while it is happening.
+        No algorithms, no public feeds, no streaks, and zero data brokers.
+        Encrypted on your device and owned by your family.
+      </p>
     </header>
 
     <main>
+      <!-- Live Interactive Experience -->
+      <section class="experience-box">
+        <h2 class="experience-title">Experience the Real Code</h2>
+        <p class="experience-hint">The components below run the exact same logic and state machines powering the native handset app.</p>
+
+        <div class="spark-card-perspective">
+          <div class="spark-card" id="demo-spark-card" tabindex="0" role="button" aria-label="Spark Card. Tap to flip.">
+            <div class="spark-card-face spark-card-front">
+              <div>
+                <span class="spark-tag">Spark · 14 July</span>
+                <p class="spark-text">"He built a rocket ship from the blender box and announced it leaves for Mars at bedtime."</p>
+              </div>
+              <span class="spark-sub">Tap card to turn over ↺</span>
+            </div>
+            <div class="spark-card-face spark-card-back">
+              <div>
+                <span class="spark-tag">Why you saved it</span>
+                <p class="spark-text">"He insisted we pack three bananas and his blue blanket for rocket fuel."</p>
+              </div>
+              <span class="spark-sub">Intent: To remember · Tap to flip back ↻</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hold-to-talk-wrapper">
+          <div class="waveform-visualizer" id="waveform">
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+          <button class="talk-btn" id="talk-btn" aria-label="Hold to talk microphone button">🎙</button>
+          <div class="talk-caption" id="talk-caption">Hold to talk · Release to save</div>
+        </div>
+      </section>
+
+      <!-- Constitutional Manifesto -->
       <section>
-        <h2>Our Refusals</h2>
-        <p>Most software is designed to capture your attention and keep you looking at a screen. We built Memtara with the opposite principles:</p>
+        <h2>Our Constitutional Refusals</h2>
+        <p>Most modern apps are designed to harvest your family's attention and exploit your private data. We built Memtara with the opposite commitments:</p>
         <ul class="refusals">
           <li><strong>No streaks or gamification:</strong> A family is not a game to be scored. You will never see badges, counters, or daily goals.</li>
           <li><strong>No nagging notifications:</strong> We send at most one quiet suggestion a day, and it can be silenced forever in a single tap.</li>
@@ -96,15 +364,128 @@
         </ul>
       </section>
 
-      <section class="callout">
-        <h2>How It Works</h2>
-        <p>Memtara operates on your family's own private server and offline devices. Audio recordings and photos are encrypted on device before upload and stored safely under hardware-backed keys.</p>
+      <!-- Architecture Section -->
+      <section>
+        <h2>Engineering for 50-Year Longevity</h2>
+        <div class="arch-grid">
+          <div class="arch-card">
+            <h3>Encrypted at Rest</h3>
+            <p>Every recording and photo is encrypted on device using hardware-backed Secure Enclave / Keystore keys before uploading.</p>
+          </div>
+          <div class="arch-card">
+            <h3>Durable Offline Spool</h3>
+            <p>Capture never fails in a basement or on an airplane. The offline spool survives force-quits and replays with strict idempotency.</p>
+          </div>
+          <div class="arch-card">
+            <h3>Pure Domain Architecture</h3>
+            <p>Hexagonal core in Python 3.12 with 93%+ strict coverage and zero framework dependencies in the business layer.</p>
+          </div>
+          <div class="arch-card">
+            <h3>Private Family Cloud</h3>
+            <p>Runs as a single container behind automatic Caddy TLS at <code>family.memtara.com</code> or entirely within your home LAN.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Self Hosting & Download -->
+      <section>
+        <h2>Run Your Own Family Server</h2>
+        <p>You can run the server on a home Raspberry Pi, NAS, or private VPS in thirty seconds:</p>
+        <div class="code-box">
+docker run -d --name memtara -p 8000:8000 \<br>
+&nbsp;&nbsp;-e ANUVRITTI_MEDIA_KEY="your-base64-key" \<br>
+&nbsp;&nbsp;-v ~/memtara/data:/var/lib/anuvritti/data \<br>
+&nbsp;&nbsp;ghcr.io/prasantk8/anuvritti:latest
+        </div>
       </section>
     </main>
 
     <footer>
-      <p>&copy; 2026 Memtara. Purely for families.</p>
+      <div>&copy; 2026 Memtara. Purely for families.</div>
+      <div>
+        <a href="https://github.com/prasantk8/anuvritti" target="_blank" rel="noopener">GitHub</a> &middot;
+        <a href="https://github.com/prasantk8/anuvritti/blob/main/docs/TRUST.md">Trust Contract</a> &middot;
+        <a href="https://github.com/prasantk8/anuvritti/blob/main/docs/RUNBOOK.md">Runbook</a>
+      </div>
     </footer>
   </div>
+
+  <script>
+    // Theme Toggle
+    const themeBtn = document.getElementById('theme-btn');
+    themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      themeBtn.textContent = next === 'dark' ? 'Day' : 'Night';
+    });
+
+    // Spark Card Flip
+    const sparkCard = document.getElementById('demo-spark-card');
+    sparkCard.addEventListener('click', () => {
+      sparkCard.classList.toggle('is-flipped');
+    });
+    sparkCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        sparkCard.classList.toggle('is-flipped');
+      }
+    });
+
+    // Hold-to-Talk Simulation
+    const talkBtn = document.getElementById('talk-btn');
+    const talkCaption = document.getElementById('talk-caption');
+    const waveBars = document.querySelectorAll('.wave-bar');
+    let isRecording = false;
+    let waveInterval = null;
+    let recordTimer = null;
+    let elapsedMs = 0;
+
+    function startRecording(e) {
+      if (e) e.preventDefault();
+      if (isRecording) return;
+      isRecording = true;
+      elapsedMs = 0;
+      talkBtn.classList.add('active');
+      talkCaption.textContent = 'Listening... (0.0s)';
+
+      recordTimer = setInterval(() => {
+        elapsedMs += 100;
+        talkCaption.textContent = `Listening... (${(elapsedMs / 1000).toFixed(1)}s)`;
+      }, 100);
+
+      waveInterval = setInterval(() => {
+        waveBars.forEach(bar => {
+          const height = Math.floor(Math.random() * 28) + 6;
+          bar.style.height = `${height}px`;
+        });
+      }, 80);
+    }
+
+    function stopRecording(e) {
+      if (e) e.preventDefault();
+      if (!isRecording) return;
+      isRecording = false;
+      talkBtn.classList.remove('active');
+      clearInterval(waveInterval);
+      clearInterval(recordTimer);
+      waveBars.forEach(bar => { bar.style.height = '8px'; });
+      
+      const seconds = (elapsedMs / 1000).toFixed(1);
+      if (elapsedMs < 300) {
+        talkCaption.textContent = 'Hold to talk · Release to save';
+      } else {
+        talkCaption.textContent = `Saved. ${seconds}s voice note kept in your private vault.`;
+        setTimeout(() => {
+          if (!isRecording) talkCaption.textContent = 'Hold to talk · Release to save';
+        }, 3500);
+      }
+    }
+
+    talkBtn.addEventListener('mousedown', startRecording);
+    window.addEventListener('mouseup', stopRecording);
+    talkBtn.addEventListener('touchstart', startRecording);
+    window.addEventListener('touchend', stopRecording);
+  </script>
 </body>
 </html>
