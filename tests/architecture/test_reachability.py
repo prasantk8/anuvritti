@@ -234,7 +234,6 @@ TS_ENTRY_GLOB = "app/**/*.tsx"
 #: The app's own source that no screen reaches. Same rule, same shrinking list.
 TS_NOT_IN_SERVICE: dict[str, str] = {
     "src/capture/native.ts": "TASK-1003 - the in-app camera has no screen",
-    "src/return/notifications.ts": "TASK-1004 - no screen registers the scheduler",
     "src/sync/budget.ts": "TASK-1008 - metering has no caller",
     "src/sync/uploader.ts": "TASK-1002 - resumable upload has no caller",
     "src/vault/device-vault.ts": (

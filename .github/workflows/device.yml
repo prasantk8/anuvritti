@@ -20,7 +20,7 @@ jobs:
   # ---------------------------------------------------------------------- iOS
   ios-e2e:
     name: iOS Build & Subsystem Matrix (PRD 48)
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

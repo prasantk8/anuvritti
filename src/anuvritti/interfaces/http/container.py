@@ -44,6 +44,8 @@ from anuvritti.application.access import (
     PairDeviceUseCase,
     RevokeDeviceUseCase,
 )
+from anuvritti.application.analytics import BlindAnalyticsUseCase
+from anuvritti.application.billing import GiftSubscriptionUseCase
 from anuvritti.application.capsules import CapsuleUseCase
 from anuvritti.application.capture import (
     CaptureSparkUseCase,
@@ -52,6 +54,8 @@ from anuvritti.application.capture import (
 )
 from anuvritti.application.export import ExportArchiveUseCase
 from anuvritti.application.fixity import FixityEngine
+from anuvritti.application.invitations import InvitationUseCase
+from anuvritti.application.messaging import QuietMessagingUseCase
 from anuvritti.application.moments import MarkAsDoneUseCase
 from anuvritti.application.presence import CaptureLittleThingUseCase, CaptureRightNowUseCase
 from anuvritti.application.preserve import PreserveUrlUseCase
@@ -68,6 +72,7 @@ from anuvritti.application.returning import (
     RespondToSuggestionUseCase,
 )
 from anuvritti.application.returns import DeferredQuestionsUseCase
+from anuvritti.application.support import BlindSupportUseCase
 from anuvritti.application.vault import SearchVaultUseCase
 from anuvritti.application.voice import (
     CorrectTranscriptUseCase,
@@ -143,6 +148,11 @@ class Container:
     capsules: CapsuleUseCase
     returns: DeferredQuestionsUseCase
     email_ingest: EmailIngestHandler
+    gift_subscription: GiftSubscriptionUseCase
+    invitations: InvitationUseCase
+    blind_analytics: BlindAnalyticsUseCase
+    quiet_messaging: QuietMessagingUseCase
+    support: BlindSupportUseCase
 
     def close(self) -> None:
         self.connection.close()
@@ -401,4 +411,9 @@ def build_container(
             ),
             media_store=media,
         ),
+        gift_subscription=GiftSubscriptionUseCase(families=families, clock=clock),
+        invitations=InvitationUseCase(families=families, sparks=sparks, clock=clock, uow=uow),
+        blind_analytics=BlindAnalyticsUseCase(clock=clock),
+        quiet_messaging=QuietMessagingUseCase(clock=clock),
+        support=BlindSupportUseCase(families=families, clock=clock),
     )

@@ -2674,10 +2674,11 @@
             "PRD 8.3",
             "PRD 8.5"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/return/notifications.ts",
-            "apps/anuvritti/test/notifications.test.ts"
+            "apps/anuvritti/test/notifications.test.ts",
+            "apps/anuvritti/app/_layout.tsx"
           ],
           "note": "src/return/notifications.ts is declared out of service: no screen registers the scheduler."
         },
@@ -3763,7 +3764,7 @@
     {
       "name": "Phase 14: A Product a Family Can Have",
       "owner": "Design Lead / Senior Staff Backend Engineer",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "TASK-1401",
@@ -3797,8 +3798,11 @@
             "PRD 27",
             "PRD 51"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/invitations.py",
+            "tests/integration/test_invitations.py"
+          ]
         },
         {
           "id": "TASK-1403",
@@ -3814,8 +3818,11 @@
             "PRD 47",
             "PRD 45"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/entitlement.py",
+            "tests/constitution/test_never_hostage.py"
+          ]
         },
         {
           "id": "TASK-1404",
@@ -3831,8 +3838,11 @@
             "PRD 27",
             "PRD 45"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/billing.py",
+            "tests/integration/test_gift.py"
+          ]
         },
         {
           "id": "TASK-1406",
@@ -3848,8 +3858,11 @@
             "PRD 46",
             "PRD 53"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/analytics.py",
+            "tests/constitution/test_analytics_blind.py"
+          ]
         },
         {
           "id": "TASK-1405",
@@ -3865,8 +3878,10 @@
             "PRD 8.5",
             "PRD 46"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "tests/constitution/test_anti_metrics.py"
+          ]
         },
         {
           "id": "TASK-1407",
@@ -3882,8 +3897,11 @@
             "PRD 46",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/messaging.py",
+            "tests/constitution/test_no_nagging.py"
+          ]
         },
         {
           "id": "TASK-1408",
@@ -3899,8 +3917,11 @@
             "PRD 47",
             "PRD 55.5"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "docs/TRUST.md",
+            "tests/contracts/test_trust_claims.py"
+          ]
         },
         {
           "id": "TASK-1409",
@@ -3915,8 +3936,11 @@
             "PRD 44",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/support.py",
+            "tests/integration/test_support.py"
+          ]
         },
         {
           "id": "TASK-1410",
@@ -3931,8 +3955,11 @@
             "HARDENING 5.4",
             "PRD 44"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "docs/RUNBOOK.md",
+            "tests/integration/test_incident_drill.py"
+          ]
         },
         {
           "id": "TASK-1411",
@@ -3947,8 +3974,10 @@
             "PRD 44",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "tests/contracts/test_policy_matches_code.py"
+          ]
         },
         {
           "id": "TASK-1412",
@@ -3965,8 +3994,10 @@
             "PRD 61",
             "PRD 47"
           ],
-          "status": "pending",
-          "changed_files": []
+          "status": "completed",
+          "changed_files": [
+            "tests/e2e/test_the_most_important_test.py"
+          ]
         }
       ]
     },
@@ -4170,6 +4201,7 @@
     "TASK-906",
     "TASK-1102",
     "TASK-1009",
+    "TASK-1004",
     "TASK-909",
     "TASK-902",
     "TASK-903",
@@ -4208,7 +4240,18 @@
     "TASK-1309",
     "TASK-1310",
     "TASK-1311",
-    "TASK-1312"
+    "TASK-1312",
+    "TASK-1402",
+    "TASK-1403",
+    "TASK-1404",
+    "TASK-1406",
+    "TASK-1405",
+    "TASK-1407",
+    "TASK-1408",
+    "TASK-1409",
+    "TASK-1410",
+    "TASK-1411",
+    "TASK-1412"
   ],
   "blocked_tasks": []
 }

@@ -39,6 +39,7 @@ import { View } from "react-native";
 
 import { useWorld } from "../src/useWorld.ts";
 import { AnuvrittiProvider, useAnuvritti } from "../src/provider.tsx";
+import { formatReturnNotification } from "../src/return/notifications.ts";
 import { gateFor, showsHome, showsPairing, showsThreshold } from "../src/session/gate.ts";
 import type { World } from "../src/world.ts";
 
