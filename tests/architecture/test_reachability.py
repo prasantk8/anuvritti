@@ -53,9 +53,6 @@ PY_SCRIPT_IMPORTS = ("anuvritti.adapters.backup",)
 #: Reached by nothing that runs. Each line is a debt with an owner, not an exemption.
 NOT_IN_SERVICE: dict[str, str] = {
     "anuvritti.application.import_": "TASK-908 - the importer has no CLI and no route",
-    "anuvritti.adapters.persistence.inbox": (
-        "TASK-819 - the Future Inbox store is built and the container does not hold it"
-    ),
     "anuvritti.adapters.persistence.migrations": (
         "TASK-1101 - the container calls schema.migrate(), so rehearse-before-apply never runs"
     ),
@@ -237,7 +234,6 @@ TS_ENTRY_GLOB = "app/**/*.tsx"
 #: The app's own source that no screen reaches. Same rule, same shrinking list.
 TS_NOT_IN_SERVICE: dict[str, str] = {
     "src/capture/native.ts": "TASK-1003 - the in-app camera has no screen",
-    "src/model/today.ts": "TASK-807 - papaToday has no screen",
     "src/return/notifications.ts": "TASK-1004 - no screen registers the scheduler",
     "src/sync/budget.ts": "TASK-1008 - metering has no caller",
     "src/sync/uploader.ts": "TASK-1002 - resumable upload has no caller",

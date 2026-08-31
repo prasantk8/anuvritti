@@ -119,7 +119,7 @@ class TestCapture:
         assert set(intent) == {"value", "source", "confidence", "human_override"}
         assert intent["source"] == "AI"
 
-    def test_the_inferred_intent_is_always_one_of_the_six(self, api):
+    def test_the_inferred_intent_is_always_one_of_the_ten(self, api):
         assert api.capture().json()["intent"]["value"] in {
             "DO",
             "BUY",
@@ -127,6 +127,10 @@ class TestCapture:
             "READ",
             "TEACH",
             "REMEMBER",
+            "COOK",
+            "VISIT",
+            "TELL",
+            "LISTEN",
         }
 
     def test_a_text_capture_needs_no_url(self, api):
@@ -183,11 +187,11 @@ class TestWhyAndOverride:
         assert response.json()["intent"]["value"] == "BUY"
         assert response.json()["intent"]["human_override"] is True
 
-    def test_a_v1_only_intent_is_refused_at_the_boundary(self, api):
-        """PRD 48 F4 - the six are a product decision, enforced at the edge."""
+    def test_an_unknown_intent_is_refused_at_the_boundary(self, api):
+        """TASK-816: All 10 intents valid; non-existent intent refused."""
         spark_id = api.capture().json()["id"]
         response = api.client.post(
-            f"/v1/sparks/{spark_id}/override", json={"field": "intent", "value": "COOK"}
+            f"/v1/sparks/{spark_id}/override", json={"field": "intent", "value": "FLY"}
         )
         assert response.status_code == 422
 
@@ -237,7 +241,7 @@ class TestVault:
     def test_an_invalid_intent_filter_is_rejected(self, api):
         response = api.client.get(
             "/v1/sparks",
-            params={"family_id": api.family_id, "actor_id": api.papa_id, "intent": "COOK"},
+            params={"family_id": api.family_id, "actor_id": api.papa_id, "intent": "NOT_AN_INTENT"},
         )
         assert response.status_code == 422
 

@@ -69,6 +69,7 @@ from anuvritti.domain.film import (
     SceneKind,
     SceneVoice,
 )
+from anuvritti.domain.interview import AnnualInterview
 from anuvritti.domain.moment import Moment
 from anuvritti.domain.presence import LittleThing
 from anuvritti.domain.spark import Spark
@@ -218,6 +219,30 @@ class ComposeFilmUseCase:
             return Err(bundle.unwrap_err())
         return Ok(FilmDraft(spec=spec, bundle=bundle.unwrap()))
 
+    def compose_interview_scenes(self, interview: AnnualInterview) -> list[FilmScene]:
+        """TASK-810: Formats birthday interview answers into film scenes."""
+        scenes: list[FilmScene] = []
+        for idx, ans in enumerate(interview.answers):
+            body = ans.child_answer_text or ans.parent_answer_text
+            if body:
+                media_id = ans.child_audio_media_id or ans.parent_audio_media_id
+                voice = (
+                    SceneVoice.recorded(media_id=MediaId(media_id), seconds=5.0, text=body)
+                    if media_id
+                    else SceneVoice.silent(5.0)
+                )
+                scenes.append(
+                    FilmScene(
+                        id=f"interview-{idx}",
+                        kind=SceneKind.VOICE,
+                        heading=ans.question,
+                        voice=voice,
+                        body=body,
+                        cites=(Citation(kind=CitationKind.VOICE_NOTE, id=f"ans-{idx}"),),
+                    )
+                )
+        return scenes
+
     # ------------------------------------------------------------------ material
     def _material(
         self, command: ComposeFilmCommand
@@ -273,6 +298,41 @@ class ComposeFilmUseCase:
             Citation(CitationKind.SPARK, str(moment.spark_id)),
         ]
 
+        if moment.photo_media_id is not None:
+            cites.append(Citation(CitationKind.MEDIA, str(moment.photo_media_id)))
+
+        # TASK-809: Promise/Kept scene when both why recording and moment recording exist
+        if spark.why and spark.why.voice_media_id and moment.audio_media_id is not None:
+            why_heard = self._voice(MediaId(str(spark.why.voice_media_id)), moment, family_id)
+            trace_heard = self._voice(MediaId(str(moment.audio_media_id)), moment, family_id)
+            if why_heard.is_ok() and trace_heard.is_ok():
+                why_note = why_heard.unwrap()
+                trace_note = trace_heard.unwrap()
+                gap_days = (moment.happened_on - spark.created_at.date()).days
+                from anuvritti.domain.return_engine import describe_elapsed
+
+                gap_text = describe_elapsed(gap_days)
+                total_duration = why_note.duration_seconds + trace_note.duration_seconds
+                combined_caption = f"{_caption(why_note)} ({gap_text} later) {_caption(trace_note)}"
+                voice = SceneVoice.recorded(
+                    media_id=why_note.media_id,
+                    seconds=total_duration,
+                    text=combined_caption.strip(),
+                )
+                cites.append(Citation(CitationKind.VOICE_NOTE, str(why_note.media_id)))
+                cites.append(Citation(CitationKind.VOICE_NOTE, str(trace_note.media_id)))
+                return Ok(
+                    FilmScene(
+                        id=f"promise-kept-{moment.id}",
+                        kind=SceneKind.PROMISE_KEPT,
+                        heading=spark.title,
+                        body=moment.reflection or "",
+                        voice=voice,
+                        cites=tuple(cites),
+                        min_seconds=SILENT_HOLD_SECONDS,
+                    )
+                )
+
         voice = SceneVoice.silent(0.0)
         kind = SceneKind.MOMENT
         if moment.audio_media_id is not None:
@@ -287,9 +347,6 @@ class ComposeFilmUseCase:
             )
             kind = SceneKind.VOICE
             cites.append(Citation(CitationKind.VOICE_NOTE, str(note.media_id)))
-
-        if moment.photo_media_id is not None:
-            cites.append(Citation(CitationKind.MEDIA, str(moment.photo_media_id)))
 
         return Ok(
             FilmScene(
@@ -599,5 +656,8 @@ def _scene_day(
     if scene.kind is SceneKind.LITTLE_THING:
         item = next(item for item in little_things if scene.id == f"little-thing-{item.id}")
         return item.created_at.date(), scene.id
+    if scene.kind is SceneKind.PROMISE_KEPT:
+        moment = next(moment for moment, _ in moments if scene.id == f"promise-kept-{moment.id}")
+        return moment.happened_on, scene.id
     moment = next(moment for moment, _ in moments if scene.id == f"moment-{moment.id}")
     return moment.happened_on, scene.id

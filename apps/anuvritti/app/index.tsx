@@ -18,9 +18,11 @@ import type { Spark as SparkData, Suggestion } from "@anuvritti/client";
 import { INTENT_SAID, correctIntent, intentOf, newestFirst } from "@anuvritti/client";
 
 import { Spark } from "../src/components/Spark.tsx";
+import { papaToday } from "../src/model/today.ts";
 import type { Answer } from "../src/model/worth.ts";
 import { ACKNOWLEDGEMENT, ANSWERS, NOTHING_TODAY, whatToBringBack } from "../src/model/worth.ts";
 import { useAnuvritti } from "../src/provider.tsx";
+import { SAID } from "../src/said.ts";
 import type { World } from "../src/world.ts";
 import { useWorld } from "../src/useWorld.ts";
 import { useTranslator } from "../src/useTranslator.ts";
@@ -39,6 +41,9 @@ export default function Today() {
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [said, setSaid] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const dayOrdinal = Math.floor(Date.now() / 86400000);
+  const thought = papaToday({ dayOrdinal, recentSparks: sparks });
 
   const load = useCallback(async () => {
     const [worth, vault] = await Promise.all([
@@ -142,7 +147,14 @@ export default function Today() {
           </View>
         </View>
       ) : (
-        <Text style={styles.nothing}>{said ?? NOTHING_TODAY}</Text>
+        <View style={styles.quiet}>
+          <Text style={styles.nothing}>{said ?? NOTHING_TODAY}</Text>
+          {thought ? (
+            <View style={styles.todayThought}>
+              <Text style={styles.todayThoughtText}>{thought.text}</Text>
+            </View>
+          ) : null}
+        </View>
       )}
 
       {/*
@@ -165,6 +177,12 @@ export default function Today() {
       <Link href="/film" asChild>
         <Pressable accessibilityRole="link" style={styles.toVault}>
           <Text style={styles.toVaultText}>{t.catalog.today.thisYearsFilm}</Text>
+        </Pressable>
+      </Link>
+
+      <Link href="/child" asChild>
+        <Pressable accessibilityRole="link" style={styles.toVault}>
+          <Text style={styles.toVaultText}>{SAID.child.title}</Text>
         </Pressable>
       </Link>
 
@@ -259,6 +277,18 @@ function sheet(world: World) {
       fontSize: world.type.body,
       lineHeight: world.type.body * world.line.read,
       color: world.color["ink-faint"],
+    },
+    quiet: {
+      gap: world.space[4],
+    },
+    todayThought: {
+      paddingVertical: world.space[2],
+    },
+    todayThoughtText: {
+      fontFamily: world.font.display,
+      fontSize: world.type.lead,
+      lineHeight: world.type.lead * world.line.read,
+      color: world.color.ink,
     },
     vault: { gap: world.space[4] },
     slot: { minHeight: 200 },

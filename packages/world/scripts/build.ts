@@ -43,6 +43,13 @@ const SAMPLES: Record<string, SceneInput> = {
     // sits next to film.json. No stock photograph ships here to stand in for one.
     picture: "media/med-0001.jpg",
   },
+  PROMISE_KEPT: {
+    id: "promise-kept-1",
+    kind: "PROMISE_KEPT",
+    heading: "first time down the slide alone",
+    body: "He climbed back up before I could say anything.",
+    picture: "media/med-0001.jpg",
+  },
   VOICE: {
     id: "moment-mom-2",
     kind: "VOICE",

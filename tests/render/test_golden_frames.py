@@ -148,6 +148,13 @@ GOLDEN_SCENES = (
         "text_color": (19, 27, 42, 255),
     },
     {
+        "kind": SceneKind.PROMISE_KEPT,
+        "heading": "Promise Kept: In the Park",
+        "body": "Recorded why and lived moment",
+        "bg_color": (249, 248, 243, 255),
+        "text_color": (19, 27, 42, 255),
+    },
+    {
         "kind": SceneKind.CLOSING,
         "heading": "Everything here happened. Nothing here was invented.",
         "bg_color": (19, 27, 42, 255),  # Dark closing ground token

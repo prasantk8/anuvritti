@@ -11,10 +11,13 @@ from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 
+from cryptography.fernet import Fernet
+
 from anuvritti.adapters.intent.heuristic import HeuristicIntentEngine
 from anuvritti.adapters.intent.spoken import SpokenIntentEngine
 from anuvritti.adapters.media.filesystem import EncryptedFilesystemMediaStore
 from anuvritti.adapters.media.measure import FfprobeAudioDurationMeasurer
+from anuvritti.adapters.persistence.inbox import AtomicEncryptedFutureInboxStore
 from anuvritti.adapters.persistence.schema import GuardedConnection, connect, migrate
 from anuvritti.adapters.persistence.sqlite import (
     SqliteDeviceRepository,
@@ -41,6 +44,7 @@ from anuvritti.application.access import (
     PairDeviceUseCase,
     RevokeDeviceUseCase,
 )
+from anuvritti.application.capsules import CapsuleUseCase
 from anuvritti.application.capture import (
     CaptureSparkUseCase,
     OverrideFieldUseCase,
@@ -63,6 +67,7 @@ from anuvritti.application.returning import (
     GetWorthBringingBackUseCase,
     RespondToSuggestionUseCase,
 )
+from anuvritti.application.returns import DeferredQuestionsUseCase
 from anuvritti.application.vault import SearchVaultUseCase
 from anuvritti.application.voice import (
     CorrectTranscriptUseCase,
@@ -73,6 +78,7 @@ from anuvritti.application.voice import (
 from anuvritti.config.settings import Settings
 from anuvritti.domain.access import CODE_TTL
 from anuvritti.domain.return_engine import ReturnEngine
+from anuvritti.interfaces.ingest.email import EmailIngestHandler
 from anuvritti.shared.clock import Clock, SystemClock
 from anuvritti.shared.identity import IdGenerator, Uuid7IdGenerator
 from anuvritti.shared.randomness import RandomSource, SystemRandomSource
@@ -103,6 +109,7 @@ class Container:
     pairings: SqlitePairingRepository
     idempotency: SqliteIdempotencyStore
     render_jobs: SqliteRenderJobRepository
+    future_inbox: AtomicEncryptedFutureInboxStore
 
     capture_spark: CaptureSparkUseCase
     record_why: RecordWhyUseCase
@@ -133,6 +140,9 @@ class Container:
     submit_render_job: SubmitRenderJobUseCase
     get_render_job: GetRenderJobUseCase
     cancel_render_job: CancelRenderJobUseCase
+    capsules: CapsuleUseCase
+    returns: DeferredQuestionsUseCase
+    email_ingest: EmailIngestHandler
 
     def close(self) -> None:
         self.connection.close()
@@ -197,6 +207,12 @@ def build_container(
         devices=devices, events=events, clock=clock, ids=ids, random=random, uow=uow
     )
 
+    future_inbox = AtomicEncryptedFutureInboxStore(
+        root=Path(settings.media_dir) / "future_inbox",
+        connection=connection,
+        encryption_key=settings.media_key or Fernet.generate_key().decode(),
+    )
+
     return Container(
         settings=settings,
         connection=connection,
@@ -218,6 +234,7 @@ def build_container(
         pairings=pairings,
         idempotency=idempotency,
         render_jobs=render_jobs,
+        future_inbox=future_inbox,
         capture_spark=CaptureSparkUseCase(
             families=families,
             sparks=sparks,
@@ -354,4 +371,34 @@ def build_container(
         submit_render_job=SubmitRenderJobUseCase(jobs=render_jobs, clock=clock, ids=ids, uow=uow),
         get_render_job=GetRenderJobUseCase(jobs=render_jobs),
         cancel_render_job=CancelRenderJobUseCase(jobs=render_jobs, uow=uow),
+        capsules=CapsuleUseCase(
+            families=families,
+            sparks=sparks,
+            events=events,
+            clock=clock,
+            ids=ids,
+            uow=uow,
+        ),
+        returns=DeferredQuestionsUseCase(
+            families=families,
+            sparks=sparks,
+            moments=moments,
+            events=events,
+            clock=clock,
+            ids=ids,
+            uow=uow,
+        ),
+        email_ingest=EmailIngestHandler(
+            capture_spark=CaptureSparkUseCase(
+                families=families,
+                sparks=sparks,
+                intent_engine=SpokenIntentEngine(HeuristicIntentEngine()),
+                events=events,
+                clock=clock,
+                ids=ids,
+                uow=uow,
+                lexicon=lexicon,
+            ),
+            media_store=media,
+        ),
     )

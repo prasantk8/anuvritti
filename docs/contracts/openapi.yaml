@@ -316,8 +316,8 @@ components:
 
     IntentType:
       type: string
-      description: V0 ships six (PRD §48 F4). Others exist in the model but are gated off.
-      enum: [DO, BUY, WATCH, READ, TEACH, REMEMBER]
+      description: All 10 intents available (TASK-816, PRD 13, PRD 50).
+      enum: [DO, BUY, WATCH, READ, TEACH, REMEMBER, COOK, VISIT, TELL, LISTEN]
 
     SparkStatus:
       type: string

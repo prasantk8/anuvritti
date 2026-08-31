@@ -36,6 +36,7 @@ export const SCENE_KINDS = [
   "OPENING",
   "SPARK",
   "MOMENT",
+  "PROMISE_KEPT",
   "VOICE",
   "LITTLE_THING",
   "CLOSING",

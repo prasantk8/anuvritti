@@ -1,0 +1,92 @@
+[
+  {
+    "id": "act-blanket-fort",
+    "title": "Living Room Blanket Mountain",
+    "duration_minutes": 15,
+    "environment": "rainy_day",
+    "energy": "playful",
+    "author": "Content & Family Experience Lead",
+    "date": "2026-08-25",
+    "steps": [
+      "Gather two chairs, a bedsheet, and three couch cushions.",
+      "Drape the sheet over the chairs to make a secret tunnel.",
+      "Crawl inside with a flashlight and tell one terrible monster joke."
+    ],
+    "closing": "Phone goes away now."
+  },
+  {
+    "id": "act-shadow-animals",
+    "title": "Wall Shadow Puppets",
+    "duration_minutes": 10,
+    "environment": "bedtime",
+    "energy": "calm",
+    "author": "Content & Family Experience Lead",
+    "date": "2026-08-25",
+    "steps": [
+      "Turn off the bedroom light and aim the bedside lamp at a bare wall.",
+      "Make a barking dog with your fingers: thumb down, four fingers up.",
+      "Have the shadow dog give them a goodnight lick on the nose."
+    ],
+    "closing": "Phone goes away now."
+  },
+  {
+    "id": "act-cloud-safari",
+    "title": "Five-Minute Cloud Safari",
+    "duration_minutes": 10,
+    "environment": "outdoor",
+    "energy": "calm",
+    "author": "Content & Family Experience Lead",
+    "date": "2026-08-25",
+    "steps": [
+      "Lie flat on your backs on a blanket or grass.",
+      "Look straight up and find the first animal hiding in the clouds.",
+      "Take three deep breaths of fresh air together."
+    ],
+    "closing": "Phone goes away now."
+  },
+  {
+    "id": "act-kitchen-drums",
+    "title": "Pots and Spoons Parade",
+    "duration_minutes": 15,
+    "environment": "indoor",
+    "energy": "playful",
+    "author": "Content & Family Experience Lead",
+    "date": "2026-08-25",
+    "steps": [
+      "Hand them a wooden spoon and an upside-down steel pot.",
+      "Tap a slow heartbeat rhythm together: 1 - 2, 1 - 2.",
+      "March around the kitchen table in a two-person parade."
+    ],
+    "closing": "Phone goes away now."
+  },
+  {
+    "id": "act-puddle-jump",
+    "title": "Rain Boots Puddle Splash",
+    "duration_minutes": 15,
+    "environment": "rainy_day",
+    "energy": "playful",
+    "author": "Content & Family Experience Lead",
+    "date": "2026-08-25",
+    "steps": [
+      "Put on rain boots and jackets.",
+      "Step outside to find the biggest puddle on the sidewalk.",
+      "Count to three and jump into the center with both feet."
+    ],
+    "closing": "Phone goes away now."
+  },
+  {
+    "id": "act-whisper-story",
+    "title": "Two-Sentence Whisper Story",
+    "duration_minutes": 5,
+    "environment": "bedtime",
+    "energy": "calm",
+    "author": "Content & Family Experience Lead",
+    "date": "2026-08-25",
+    "steps": [
+      "Tuck the blankets up to their chin.",
+      "Whisper sentence one: 'Once upon a time there was a tiny owl who loved bedtime.'",
+      "Ask them to whisper sentence two before closing their eyes."
+    ],
+    "closing": "Phone goes away now."
+  }
+]

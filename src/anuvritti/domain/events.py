@@ -184,3 +184,14 @@ class VoiceNoteIndexed(DomainEvent):
 
     def payload(self) -> dict[str, Any]:
         return {"engine": self.engine, "source": self.source}
+
+
+@dataclass(frozen=True, slots=True)
+class DeferredQuestionAnswered(DomainEvent):
+    """TASK-811: A parent recorded an answer to a question the child asked years earlier."""
+
+    spark_id: str
+    child_id: str
+
+    def payload(self) -> dict[str, Any]:
+        return {"spark_id": self.spark_id, "child_id": self.child_id}

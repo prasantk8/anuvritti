@@ -80,4 +80,17 @@ export const SAID = {
     screenshot: "that screenshot",
     photo: "that photo",
   },
+  child: {
+    title: "Bedtime",
+    goodnight: "Goodnight.",
+    holdToExit: "Hold to exit",
+    listen: "Listen",
+    playing: "Playing...",
+    parentExit: "Parent Exit",
+    parentPasscode: "Parent Passcode",
+    enterPin: "Enter PIN",
+    incorrectPin: "Incorrect passcode",
+    cancel: "Cancel",
+    unlock: "Unlock",
+  },
 } as const;

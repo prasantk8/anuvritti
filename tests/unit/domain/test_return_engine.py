@@ -175,14 +175,7 @@ class TestScoring:
     def test_the_breakdown_names_every_weighted_signal(self):
         """An engine that decides when to interrupt a family must be auditable."""
         breakdown = ENGINE.score(_spark(), _ctx()).breakdown
-        assert set(breakdown) == {
-            "age_fit",
-            "maturation",
-            "occasion_fit",
-            "intent_actionability",
-            "why_present",
-            "novelty",
-        }
+        assert set(breakdown) == set(ENGINE.WEIGHTS.keys())
 
     def test_the_weights_sum_to_one(self):
         assert sum(ReturnEngine.WEIGHTS.values()) == pytest.approx(1.0)
@@ -386,3 +379,130 @@ class TestQuietPeriod:
     def test_it_can_be_disabled_for_a_family_that_wants_it_off(self):
         spark = _spark(captured_at=SATURDAY)
         assert ENGINE.is_eligible(spark, _ctx(min_days_before_return=0)) is True
+
+
+class TestExtendedReturnSignals:
+    """TASK-815: season, birthday, child interests, and parent-approved events."""
+
+    def test_seasonal_fit_rewards_current_season(self):
+        winter_spark = Spark.capture(
+            spark_id=SparkId("spk-snow"),
+            family_id=FamilyId("fam-1"),
+            owner_id=MemberId("mem-papa"),
+            subject_child_id=ChildId("ch-1"),
+            source=SourceRef.from_text("Building a snow fort in winter"),
+            at=SATURDAY - timedelta(days=100),
+        ).apply_inference(
+            Inference(
+                title="Building a snow fort",
+                intent=IntentType.DO,
+                intent_confidence=Confidence(0.8),
+                category="winter-activity",
+                category_confidence=Confidence(0.7),
+                tags=("winter", "snow", "cold"),
+            )
+        )
+        ctx_winter = _ctx(now=datetime(2026, 12, 15, tzinfo=UTC), season="winter")
+        ctx_summer = _ctx(now=datetime(2026, 7, 15, tzinfo=UTC), season="summer")
+
+        winter_score = ENGINE.score(winter_spark, ctx_winter)
+        summer_score = ENGINE.score(winter_spark, ctx_summer)
+        assert winter_score.breakdown["season_fit"] == 1.0
+        assert summer_score.breakdown["season_fit"] == 0.2
+        assert winter_score.total > summer_score.total
+
+    def test_birthday_fit_when_birthday_is_this_month(self):
+        gift_spark = Spark.capture(
+            spark_id=SparkId("spk-gift"),
+            family_id=FamilyId("fam-1"),
+            owner_id=MemberId("mem-papa"),
+            subject_child_id=ChildId("ch-1"),
+            source=SourceRef.from_text("Telescope for birthday present"),
+            at=SATURDAY - timedelta(days=100),
+        ).apply_inference(
+            Inference(
+                title="Telescope birthday gift",
+                intent=IntentType.BUY,
+                intent_confidence=Confidence(0.8),
+                category="toy",
+                category_confidence=Confidence(0.7),
+                tags=("birthday", "gift", "space"),
+            )
+        )
+        ctx_bday = _ctx(
+            now=datetime(2026, 8, 15, tzinfo=UTC),
+            child_birthdays={"ch-1": 8},
+        )
+        ctx_no_bday = _ctx(
+            now=datetime(2026, 8, 15, tzinfo=UTC),
+            child_birthdays={"ch-1": 2},
+        )
+        score_bday = ENGINE.score(gift_spark, ctx_bday)
+        score_no_bday = ENGINE.score(gift_spark, ctx_no_bday)
+        assert score_bday.breakdown["birthday_fit"] == 1.0
+        assert score_no_bday.breakdown["birthday_fit"] == 0.5
+        assert score_bday.total > score_no_bday.total
+
+    def test_interest_fit_matches_child_current_interests(self):
+        dino_spark = Spark.capture(
+            spark_id=SparkId("spk-dino"),
+            family_id=FamilyId("fam-1"),
+            owner_id=MemberId("mem-papa"),
+            subject_child_id=ChildId("ch-1"),
+            source=SourceRef.from_text("Fossil dig kit"),
+            at=SATURDAY - timedelta(days=100),
+        ).apply_inference(
+            Inference(
+                title="Fossil dig kit",
+                intent=IntentType.DO,
+                intent_confidence=Confidence(0.8),
+                category="science",
+                category_confidence=Confidence(0.7),
+                tags=("dinosaurs", "fossils"),
+            )
+        )
+        ctx_dino = _ctx(
+            now=SATURDAY,
+            child_interests={"ch-1": ("dinosaurs", "space")},
+        )
+        ctx_art = _ctx(
+            now=SATURDAY,
+            child_interests={"ch-1": ("painting", "music")},
+        )
+        score_dino = ENGINE.score(dino_spark, ctx_dino)
+        score_art = ENGINE.score(dino_spark, ctx_art)
+        assert score_dino.breakdown["interest_fit"] == 1.0
+        assert score_art.breakdown["interest_fit"] == 0.5
+        assert score_dino.total > score_art.total
+
+    def test_parent_approved_event_fit(self):
+        rainy_spark = Spark.capture(
+            spark_id=SparkId("spk-rain"),
+            family_id=FamilyId("fam-1"),
+            owner_id=MemberId("mem-papa"),
+            subject_child_id=ChildId("ch-1"),
+            source=SourceRef.from_text("Indoor pillow fort for rainy days"),
+            at=SATURDAY - timedelta(days=100),
+        ).apply_inference(
+            Inference(
+                title="Indoor pillow fort",
+                intent=IntentType.DO,
+                intent_confidence=Confidence(0.8),
+                category="craft",
+                category_confidence=Confidence(0.7),
+                tags=("rainy_day", "indoor"),
+            )
+        )
+        ctx_rain = _ctx(
+            now=SATURDAY,
+            upcoming_events=("rainy_day",),
+        )
+        ctx_sunny = _ctx(
+            now=SATURDAY,
+            upcoming_events=(),
+        )
+        score_rain = ENGINE.score(rainy_spark, ctx_rain)
+        score_sunny = ENGINE.score(rainy_spark, ctx_sunny)
+        assert score_rain.breakdown["event_fit"] == 1.0
+        assert score_sunny.breakdown["event_fit"] == 0.5
+        assert score_rain.total > score_sunny.total

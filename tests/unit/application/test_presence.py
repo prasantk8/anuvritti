@@ -10,9 +10,12 @@ from anuvritti.application.presence import (
     CaptureLittleThingCommand,
     CaptureLittleThingUseCase,
     CaptureRightNowCommand,
+    CaptureRightNowMilestoneCommand,
+    CaptureRightNowMilestoneUseCase,
     CaptureRightNowUseCase,
 )
 from anuvritti.domain.presence import RIGHT_NOW_PROMPTS
+from anuvritti.domain.values import IntentType
 from anuvritti.shared.clock import FrozenClock
 from anuvritti.shared.errors import ErrorCode
 from anuvritti.shared.identity import ChildId, FamilyId, MemberId, SequentialIdGenerator
@@ -23,6 +26,7 @@ from tests.support.fakes import (
     InMemoryFamilyRepository,
     InMemoryLittleThingRepository,
     InMemoryRightNowRepository,
+    InMemorySparkRepository,
     NullUnitOfWork,
     RecordingEventPublisher,
     build_family,
@@ -39,6 +43,7 @@ def harness():
             self.events = RecordingEventPublisher()
             self.little_things = InMemoryLittleThingRepository()
             self.right_now_repo = InMemoryRightNowRepository()
+            self.sparks = InMemorySparkRepository()
             families = InMemoryFamilyRepository(build_family())
             self.little = CaptureLittleThingUseCase(
                 families=families,
@@ -54,6 +59,15 @@ def harness():
                 events=self.events,
                 clock=self.clock,
                 ids=SequentialIdGenerator("rn"),
+                uow=NullUnitOfWork(),
+                sparks=self.sparks,
+            )
+            self.milestones = CaptureRightNowMilestoneUseCase(
+                families=families,
+                right_now=self.right_now_repo,
+                events=self.events,
+                clock=self.clock,
+                ids=SequentialIdGenerator("rnm"),
                 uow=NullUnitOfWork(),
             )
 
@@ -171,6 +185,53 @@ class TestRightNow:
                 CaptureRightNowCommand(family_id=FAMILY, child_id=CHILD, answer=answer)
             ).unwrap()
         assert len(harness.right_now_repo.list_for_family(FAMILY).unwrap()) == 3
+
+
+class TestAskPapaLater:
+    """TASK-811: 'What question did he ask that you could not answer?' -> TELL Spark."""
+
+    def test_unanswerable_question_prompt_creates_tell_spark(self, harness):
+        harness.right_now.execute(
+            CaptureRightNowCommand(
+                family_id=FAMILY,
+                child_id=CHILD,
+                prompt="What question did he ask that you could not answer?",
+                answer="Why is the sky blue and where does the dark go?",
+                author_id=PAPA,
+            )
+        ).unwrap()
+
+        sparks = harness.sparks.list_for_family(FAMILY).unwrap()
+        assert len(sparks) == 1
+        spark = sparks[0]
+        assert spark.intent.value == IntentType.TELL
+        assert "Why is the sky blue" in spark.source.title
+        assert spark.subject_child_id == CHILD
+        assert spark.owner_id == PAPA
+
+
+class TestMilestoneSnapshots:
+    """TASK-817: Multi-field snapshot cadence every few months."""
+
+    def test_captures_multi_field_milestone(self, harness):
+        milestone = harness.milestones.execute(
+            CaptureRightNowMilestoneCommand(
+                family_id=FAMILY,
+                child_id=CHILD,
+                obsessions="Construction trucks and excavators",
+                funny_words="Alligator for elevator",
+                favorite_things="Blue blanket",
+                interests=("dinosaurs", "space"),
+                difficult_questions="How do stars not fall?",
+                notes="Loves climbing stairs independently",
+            )
+        ).unwrap()
+
+        assert milestone.obsessions == "Construction trucks and excavators"
+        assert milestone.funny_words == "Alligator for elevator"
+        assert milestone.interests == ("dinosaurs", "space")
+        assert not milestone.is_due(NOW)  # Just captured, not due
+        assert milestone.is_due(NOW.replace(year=2026, month=11))  # Due after months
 
 
 class TestNoStreaks:

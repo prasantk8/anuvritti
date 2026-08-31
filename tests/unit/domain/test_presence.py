@@ -67,6 +67,38 @@ class TestLittleThing:
             _little().unwrap().text = "edited"  # type: ignore[misc]
 
 
+class TestDictionaryOfUs:
+    """TASK-812: 'The Dictionary of Us' - invented words in child's own voice."""
+
+    def test_captures_invented_word_with_meaning(self):
+        word = LittleThing.capture_word(
+            little_thing_id=LittleThingId("lt-w1"),
+            family_id=FamilyId("fam-1"),
+            author_id=MemberId("mem-papa"),
+            word="Alligator",
+            meaning="The elevator in the apartment building",
+            at=T0,
+            subject_child_id=ChildId("ch-1"),
+            audio_media_id="med-voice-1",
+        ).unwrap()
+
+        assert word.text == "Alligator"
+        assert word.meaning == "The elevator in the apartment building"
+        assert word.audio_media_id == "med-voice-1"
+        assert word.kind.value == "WORD"
+
+    def test_blank_word_is_rejected(self):
+        res = LittleThing.capture_word(
+            little_thing_id=LittleThingId("lt-w2"),
+            family_id=FamilyId("fam-1"),
+            author_id=MemberId("mem-papa"),
+            word="   ",
+            meaning="Something",
+            at=T0,
+        )
+        assert res.is_err()
+
+
 def _right_now(**kwargs):
     defaults = {
         "right_now_id": RightNowId("rn-1"),

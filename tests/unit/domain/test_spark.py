@@ -205,10 +205,11 @@ class TestHumanOverride:
         spark = _enriched().override_age_range(AgeRange(2, 3)).unwrap()
         assert spark.apply_inference(_inference()).age_range.value == AgeRange(2, 3)  # type: ignore[union-attr]
 
-    def test_a_v1_only_intent_cannot_be_selected_in_v0(self):
-        """PRD 48 F4 - six intents. The seventh is a V1 decision, not a runtime accident."""
-        err = _enriched().override_intent(IntentType.COOK).unwrap_err()
-        assert err.code is ErrorCode.VALIDATION_FAILED
+    def test_all_ten_intents_can_be_selected_in_v0(self):
+        """TASK-816: Lift the V0 gate - all 10 intents are available in V0."""
+        for intent in IntentType:
+            spark = _enriched().override_intent(intent).unwrap()
+            assert spark.intent.value is intent
 
     def test_overriding_category_is_accepted(self):
         assert _enriched().override_category("toy").unwrap().category.value == "toy"

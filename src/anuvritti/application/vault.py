@@ -12,9 +12,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Final
 
 from anuvritti.application.ports import FamilyRepository, LexiconRepository, SparkRepository
+from anuvritti.domain.constellation import Constellation, ConstellationClusterer
 from anuvritti.domain.lexicon import LexiconField
 from anuvritti.domain.spark import Spark
 from anuvritti.domain.values import IntentType, SparkStatus
@@ -112,3 +114,10 @@ class SearchVaultUseCase:
 
         # Visibility is enforced here, not in the query, so no adapter can forget it.
         return Ok([s for s in found.unwrap() if s.visibility.is_visible_to(actor.role)])
+
+    def cluster_constellations(
+        self, sparks: Sequence[Spark], *, at: datetime | None = None
+    ) -> list[Constellation]:
+        """TASK-802: Organically cluster sparks into emergent constellations."""
+        now = at if at is not None else self._clock.now()
+        return ConstellationClusterer.cluster(sparks, at=now)

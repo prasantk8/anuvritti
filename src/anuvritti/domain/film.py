@@ -93,6 +93,7 @@ class SceneKind(StrEnum):
     MOMENT = "MOMENT"
     VOICE = "VOICE"
     LITTLE_THING = "LITTLE_THING"
+    PROMISE_KEPT = "PROMISE_KEPT"
     CLOSING = "CLOSING"
 
     @property

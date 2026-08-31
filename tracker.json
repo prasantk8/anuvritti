@@ -2032,7 +2032,7 @@
     {
       "name": "Phase 8: Make It Magical",
       "owner": "Design Lead / Senior Staff Backend Engineer / Senior Staff Mobile Engineer",
-      "status": "in_progress",
+      "status": "completed",
       "tasks": [
         {
           "id": "TASK-801",
@@ -2081,7 +2081,10 @@
             "PRD 8.5",
             "PRD 8.8"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "tests/constitution/test_no_chores.py"
+          ]
         },
         {
           "id": "TASK-806",
@@ -2123,12 +2126,12 @@
             "PRD 8.4",
             "PRD 8.5"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/model/today.ts",
-            "apps/anuvritti/test/today.test.ts"
-          ],
-          "note": "Reopened 2026-08-29. apps/anuvritti/src/model/today.ts is out of service: papaToday has no screen. Closes when a route under app/ reaches it."
+            "apps/anuvritti/test/today.test.ts",
+            "apps/anuvritti/app/index.tsx"
+          ]
         },
         {
           "id": "TASK-808",
@@ -2144,7 +2147,11 @@
             "PRD 14",
             "PRD 56"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/components/Spark.tsx",
+            "apps/anuvritti/app/index.tsx"
+          ]
         },
         {
           "id": "TASK-809",
@@ -2160,7 +2167,11 @@
             "PRD 47",
             "PRD 8.7"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/film.py",
+            "src/anuvritti/domain/film.py"
+          ]
         },
         {
           "id": "TASK-810",
@@ -2177,7 +2188,11 @@
             "PRD 52",
             "PRD 24"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/interview.py",
+            "tests/unit/domain/test_interview.py"
+          ]
         },
         {
           "id": "TASK-811",
@@ -2193,7 +2208,13 @@
             "PRD 33",
             "PRD 17"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/application/returns.py",
+            "src/anuvritti/application/presence.py",
+            "tests/unit/application/test_deferred_answers.py",
+            "src/anuvritti/domain/events.py"
+          ]
         },
         {
           "id": "TASK-812",
@@ -2209,7 +2230,11 @@
             "PRD 24",
             "PRD 8.8"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/presence.py",
+            "tests/unit/domain/test_presence.py"
+          ]
         },
         {
           "id": "TASK-813",
@@ -2226,7 +2251,12 @@
             "PRD 8.5",
             "PRD 8.8"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/capsule.py",
+            "src/anuvritti/application/capsules.py",
+            "tests/unit/application/test_capsules.py"
+          ]
         },
         {
           "id": "TASK-814",
@@ -2242,7 +2272,11 @@
             "PRD 8.4",
             "PRD 63.6"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "content/activities/activities.json",
+            "tests/constitution/test_activities.py"
+          ]
         },
         {
           "id": "TASK-815",
@@ -2257,7 +2291,11 @@
             "PRD 14",
             "PRD 55.4"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/return_engine.py",
+            "tests/unit/domain/test_return_engine.py"
+          ]
         },
         {
           "id": "TASK-816",
@@ -2272,7 +2310,14 @@
             "PRD 13",
             "PRD 50"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/values.py",
+            "src/anuvritti/adapters/intent/heuristic.py",
+            "src/anuvritti/adapters/intent/spoken.py",
+            "tests/unit/domain/test_values.py",
+            "tests/unit/adapters/test_heuristic_voice.py"
+          ]
         },
         {
           "id": "TASK-817",
@@ -2288,7 +2333,12 @@
             "PRD 8.5",
             "PRD 53"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/presence.py",
+            "src/anuvritti/application/presence.py",
+            "tests/unit/application/test_presence.py"
+          ]
         },
         {
           "id": "TASK-818",
@@ -2304,7 +2354,14 @@
             "PRD 30",
             "PRD 8.4"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "apps/anuvritti/src/model/child.ts",
+            "apps/anuvritti/app/child.tsx",
+            "apps/anuvritti/test/child.test.ts",
+            "apps/anuvritti/app/_layout.tsx",
+            "apps/anuvritti/app/index.tsx"
+          ]
         },
         {
           "id": "TASK-819",
@@ -2321,17 +2378,17 @@
             "PRD 47",
             "PRD 52"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "docs/ARCHITECTURE.md",
             "src/anuvritti/adapters/persistence/inbox.py",
             "src/anuvritti/adapters/persistence/schema.py",
             "src/anuvritti/application/ports.py",
+            "src/anuvritti/interfaces/http/container.py",
             "tests/integration/test_inbox_persistence.py",
             "tests/support/fakes.py"
           ],
-          "commit": "eb56d95",
-          "note": "Reopened 2026-08-29. src/anuvritti/adapters/persistence/inbox.py is out of service: the Future Inbox store is built and the container does not hold it. Closes when the container wires it."
+          "commit": "eb56d95"
         },
         {
           "id": "TASK-820",
@@ -2403,7 +2460,11 @@
             "PRD 27",
             "PRD 11"
           ],
-          "status": "pending"
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/interfaces/ingest/email.py",
+            "tests/integration/test_email_ingest.py"
+          ]
         },
         {
           "id": "TASK-805",
@@ -2437,7 +2498,11 @@
             "PRD 40",
             "PRD 41"
           ],
-          "status": "pending",
+          "status": "completed",
+          "changed_files": [
+            "src/anuvritti/domain/constellation.py",
+            "tests/unit/domain/test_constellation.py"
+          ],
           "note": "PRD 40 calls constellations design research, not MVP scope. Last in this phase on purpose."
         }
       ]
@@ -2504,7 +2569,7 @@
             "HARDENING 5.4",
             "PRD 8.6"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "src/anuvritti/adapters/persistence/migrations.py",
             "tests/integration/test_migrations.py"
@@ -2609,7 +2674,7 @@
             "PRD 8.3",
             "PRD 8.5"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/return/notifications.ts",
             "apps/anuvritti/test/notifications.test.ts"
@@ -2783,7 +2848,7 @@
             "PRD 44",
             "HARDENING 5.1"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/vault/device-vault.ts",
             "apps/anuvritti/test/device-vault.test.ts"
@@ -2803,7 +2868,7 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/sync/uploader.ts",
             "apps/anuvritti/test/uploader.test.ts"
@@ -2824,7 +2889,7 @@
             "PRD 11",
             "PRD 8.2"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/capture/native.ts",
             "apps/anuvritti/test/native-capture.test.ts"
@@ -2844,7 +2909,7 @@
             "PRD 18",
             "PRD 8.4"
           ],
-          "status": "pending",
+          "status": "completed",
           "changed_files": [
             "apps/anuvritti/src/widgets/right-now-widget.ts",
             "apps/anuvritti/src/widgets/index.ts",
@@ -4080,20 +4145,42 @@
     "TASK-738",
     "TASK-741",
     "TASK-801",
+    "TASK-803",
     "TASK-806",
+    "TASK-807",
+    "TASK-808",
+    "TASK-809",
+    "TASK-810",
+    "TASK-811",
+    "TASK-812",
+    "TASK-813",
+    "TASK-814",
+    "TASK-815",
+    "TASK-816",
+    "TASK-817",
+    "TASK-818",
+    "TASK-819",
     "TASK-820",
     "TASK-823",
+    "TASK-804",
     "TASK-805",
+    "TASK-802",
     "TASK-905",
     "TASK-731",
+    "TASK-1101",
     "TASK-906",
     "TASK-1102",
     "TASK-1009",
+    "TASK-1004",
     "TASK-909",
     "TASK-902",
     "TASK-903",
     "TASK-904",
     "TASK-901",
+    "TASK-1001",
+    "TASK-1002",
+    "TASK-1003",
+    "TASK-1005",
     "TASK-1006",
     "TASK-1007",
     "TASK-1011",

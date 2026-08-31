@@ -35,6 +35,10 @@ class ReturnContext:
     now: datetime
     child_ages: Mapping[str, int]
     child_names: Mapping[str, str] = field(default_factory=dict)
+    child_birthdays: Mapping[str, int] = field(default_factory=dict)
+    child_interests: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    upcoming_events: tuple[str, ...] = field(default_factory=tuple)
+    season: str | None = None
     max_suggestions: int = 3
     threshold: float = 0.45
     maturation_horizon_days: int = 180
@@ -96,27 +100,23 @@ def describe_elapsed(days: int) -> str:
 class ReturnEngine:
     """Scores what may have become relevant, and says so without applying pressure."""
 
-    #: PRD 14 signals. Documented in docs/ARCHITECTURE.md section 4.
+    #: PRD 14 signals and TASK-815 seasonal, birthday, interest, and event signals.
     WEIGHTS: Final[Mapping[str, float]] = {
-        "age_fit": 0.35,
-        "maturation": 0.20,
-        "occasion_fit": 0.15,
-        "intent_actionability": 0.15,
-        "why_present": 0.10,
-        "novelty": 0.05,
+        "age_fit": 0.25,
+        "maturation": 0.15,
+        "occasion_fit": 0.10,
+        "season_fit": 0.15,
+        "birthday_fit": 0.10,
+        "interest_fit": 0.10,
+        "event_fit": 0.05,
+        "intent_actionability": 0.05,
+        "why_present": 0.03,
+        "novelty": 0.02,
     }
 
     # ------------------------------------------------------------ eligibility
     def is_eligible(self, spark: Spark, ctx: ReturnContext) -> bool:
-        """Hard rules, applied before any scoring.
-
-        The quiet period is the one people miss. Worth Bringing Back exists to return
-        things that were *forgotten* (PRD 14, 48 F6: "You saved this 3 months ago").
-        Something saved this morning has not been forgotten, and surfacing it the same
-        afternoon is the product talking to itself - exactly the manufactured engagement
-        PRD 8.5 and 47 rule out. Scoring alone cannot enforce this, because a
-        high-scoring fresh Spark would still clear the threshold.
-        """
+        """Hard rules, applied before any scoring."""
         if not spark.status.is_returnable:
             return False
         if spark.days_since_capture(ctx.now) < ctx.min_days_before_return:
@@ -132,45 +132,109 @@ class ReturnEngine:
             "age_fit": self._age_fit(spark, age),
             "maturation": self._maturation(days, ctx.maturation_horizon_days),
             "occasion_fit": self._occasion_fit(spark, ctx),
+            "season_fit": self._season_fit(spark, ctx),
+            "birthday_fit": self._birthday_fit(spark, ctx),
+            "interest_fit": self._interest_fit(spark, ctx),
+            "event_fit": self._event_fit(spark, ctx),
             "intent_actionability": 1.0 if spark.intent.value.is_immediately_actionable else 0.4,
             "why_present": 1.0 if spark.why else 0.0,
             "novelty": self._novelty(spark),
         }
         total = sum(self.WEIGHTS[name] * value for name, value in signals.items())
+        reason_key = self._reason_key(spark, age, days, signals)
         return Score(
             total=min(1.0, max(0.0, total)),
             breakdown=signals,
-            reason_key=self._reason_key(spark, age, days),
+            reason_key=reason_key,
         )
+
+    def _current_season(self, ctx: ReturnContext) -> str:
+        if ctx.season:
+            return ctx.season.lower()
+        month = ctx.now.month
+        if month in (12, 1, 2):
+            return "winter"
+        if month in (3, 4, 5):
+            return "spring"
+        if month in (6, 7, 8):
+            return "summer"
+        return "autumn"
+
+    def _spark_text_corpus(self, spark: Spark) -> str:
+        cat_val = (
+            spark.category.value if hasattr(spark.category, "value") else str(spark.category or "")
+        )
+        tags_str = " ".join(t.lower() for t in spark.tags)
+        return f"{spark.title.lower()} {tags_str} {str(cat_val).lower()}"
+
+    def _season_fit(self, spark: Spark, ctx: ReturnContext) -> float:
+        season = self._current_season(ctx)
+        season_keywords = {
+            "winter": ("winter", "snow", "cold", "cocoa", "holiday", "ice", "sled"),
+            "spring": ("spring", "bloom", "garden", "flower", "rain", "puddle"),
+            "summer": ("summer", "beach", "swim", "sunshine", "pool", "waterpark"),
+            "autumn": ("autumn", "fall", "leaves", "harvest", "pumpkin"),
+        }
+        text_corpus = self._spark_text_corpus(spark)
+        active_keywords = season_keywords.get(season, ())
+        if any(kw in text_corpus for kw in active_keywords):
+            return 1.0
+        for other_season, kws in season_keywords.items():
+            if other_season != season and any(kw in text_corpus for kw in kws):
+                return 0.2
+        return _NEUTRAL
+
+    def _birthday_fit(self, spark: Spark, ctx: ReturnContext) -> float:
+        child_id = str(spark.subject_child_id) if spark.subject_child_id else None
+        if not child_id or child_id not in ctx.child_birthdays:
+            return _NEUTRAL
+        birth_month = ctx.child_birthdays[child_id]
+        if ctx.now.month != birth_month:
+            return _NEUTRAL
+        text_corpus = self._spark_text_corpus(spark)
+        if any(kw in text_corpus for kw in ("birthday", "gift", "party", "turning", "present")):
+            return 1.0
+        return _NEUTRAL
+
+    def _interest_fit(self, spark: Spark, ctx: ReturnContext) -> float:
+        child_id = str(spark.subject_child_id) if spark.subject_child_id else None
+        if not child_id or child_id not in ctx.child_interests:
+            return _NEUTRAL
+        interests = [i.lower().strip() for i in ctx.child_interests[child_id] if i.strip()]
+        if not interests:
+            return _NEUTRAL
+        text_corpus = self._spark_text_corpus(spark)
+        if any(interest in text_corpus for interest in interests):
+            return 1.0
+        return _NEUTRAL
+
+    def _event_fit(self, spark: Spark, ctx: ReturnContext) -> float:
+        if not ctx.upcoming_events:
+            return _NEUTRAL
+        text_corpus = self._spark_text_corpus(spark)
+        for event in ctx.upcoming_events:
+            ev_clean = event.lower().replace("_", " ")
+            if ev_clean in text_corpus or any(part in text_corpus for part in ev_clean.split()):
+                return 1.0
+        return _NEUTRAL
 
     def _age_fit(self, spark: Spark, age: int | None) -> float:
         """The strongest signal: has this child grown into it yet? (PRD 14)"""
         if spark.age_range is None or age is None:
-            return _NEUTRAL  # unknown is neither a reason to surface nor to suppress
+            return _NEUTRAL
         window = spark.age_range.value
         if window.contains(age):
             return 1.0
         years_early = window.years_until(age)
         if years_early > 0:
-            # Still ahead of them. Approach gradually rather than jumping at the birthday.
             return max(0.0, 1.0 - (years_early * 0.35))
-        # Outgrown. Not worthless - the memory still matters - but no longer timely.
         years_late = age - window.max_years
         return max(0.1, 0.6 - (years_late * 0.1))
 
     def _maturation(self, days: int, horizon: int) -> float:
-        """Time alone makes something worth revisiting - but only up to a point.
-
-        Saturating, so the oldest Spark in the archive does not win every single week.
-        """
         return min(1.0, max(0, days) / horizon)
 
     def _occasion_fit(self, spark: Spark, ctx: ReturnContext) -> float:
-        """The weekend only matters for things you would actually do together.
-
-        Deliberately inert for BUY: a Saturday is not a reason to spend money
-        (PRD 53 anti-metric - unnecessary purchases).
-        """
         if spark.intent.value is IntentType.BUY:
             return _NEUTRAL
         if not spark.intent.value.is_immediately_actionable:
@@ -178,10 +242,24 @@ class ReturnEngine:
         return 1.0 if ctx.is_weekend else 0.4
 
     def _novelty(self, spark: Spark) -> float:
-        """Decay with every previous ask. Asking repeatedly is how a product starts nagging."""
         return 1.0 / (1.0 + spark.suggested_count)
 
-    def _reason_key(self, spark: Spark, age: int | None, days: int) -> str:
+    def _reason_key(
+        self,
+        spark: Spark,
+        age: int | None,
+        days: int,
+        signals: Mapping[str, float] | None = None,
+    ) -> str:
+        if signals:
+            if signals.get("event_fit", 0.0) >= 0.9:
+                return "event_fit"
+            if signals.get("birthday_fit", 0.0) >= 0.9:
+                return "birthday_coming"
+            if signals.get("interest_fit", 0.0) >= 0.9:
+                return "child_interest"
+            if signals.get("season_fit", 0.0) >= 0.9:
+                return "season_fit"
         if spark.age_range is not None and age is not None and spark.age_range.value.contains(age):
             return "grown_into_it"
         if days >= 60:
@@ -216,13 +294,6 @@ class ReturnEngine:
 
     # ------------------------------------------------------------------ copy
     def reason_for(self, spark: Spark, ctx: ReturnContext, reason_key: str) -> str:
-        """The words shown to the parent.
-
-        PRD 8.5 and 47: no guilt, no urgency, no counting how many times we have asked,
-        and no claim to know how the child will react. It states what is true - you saved
-        this, this long ago, here is why you said it mattered - and then it gets out of
-        the way. Every phrase here is covered by a test that forbids the alternative.
-        """
         elapsed = describe_elapsed(spark.days_since_capture(ctx.now))
         opening = "You saved this today." if elapsed == "today" else f"You saved this {elapsed}."
 
@@ -231,15 +302,17 @@ class ReturnEngine:
             parts.append(f"You said: “{spark.why.text}”")
         if reason_key == "grown_into_it":
             parts.append(self._readiness_line(spark, ctx))
+        elif reason_key == "birthday_coming":
+            parts.append("With their birthday coming up this month.")
+        elif reason_key == "child_interest":
+            parts.append("They have been into this lately.")
+        elif reason_key == "season_fit":
+            parts.append("Good for this time of year.")
+        elif reason_key == "event_fit":
+            parts.append("Look outside tonight or good for today.")
         return " ".join(parts)
 
     def _readiness_line(self, spark: Spark, ctx: ReturnContext) -> str:
-        """PRD 48 F6 phrases this as "He may be ready now" - written about one specific son.
-
-        As product code it serves whoever uses it, so the child is named when the family
-        told us their name, and referred to neutrally when they did not. Guessing a
-        pronoun from a name would misgender a real child on their own family's screen.
-        """
         child_id = str(spark.subject_child_id) if spark.subject_child_id else None
         name = ctx.name_of(child_id)
         return f"{name} may be ready now." if name else "They may be ready now."

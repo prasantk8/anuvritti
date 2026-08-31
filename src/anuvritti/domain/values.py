@@ -36,15 +36,16 @@ class IntentType(StrEnum):
 
     @classmethod
     def v0_set(cls) -> frozenset[IntentType]:
-        return frozenset({cls.DO, cls.BUY, cls.WATCH, cls.READ, cls.TEACH, cls.REMEMBER})
+        """All 10 intents active following TASK-816."""
+        return frozenset(cls)
 
     @property
     def is_available_in_v0(self) -> bool:
-        return self in IntentType.v0_set()
+        return True
 
     @property
     def is_immediately_actionable(self) -> bool:
-        """DO and TEACH can happen this weekend; BUY and REMEMBER can wait (PRD 13)."""
+        """DO, TEACH, COOK, VISIT happen this weekend; BUY, REMEMBER, TELL, LISTEN wait (PRD 13)."""
         return self in {IntentType.DO, IntentType.TEACH, IntentType.COOK, IntentType.VISIT}
 
 
@@ -283,10 +284,10 @@ class SourceRef:
         return cls(SourceKind.URL, url=url, creator=creator, title=title, text=text)
 
     @classmethod
-    def from_text(cls, text: str) -> Self:
+    def from_text(cls, text: str, *, title: str | None = None) -> Self:
         if not text.strip():
             raise ValueError("a text source requires text")
-        return cls(SourceKind.TEXT, text=text.strip())
+        return cls(SourceKind.TEXT, text=text.strip(), title=title.strip() if title else None)
 
     @classmethod
     def from_media(cls, kind: SourceKind, *, media_id: str, text: str | None = None) -> Self:

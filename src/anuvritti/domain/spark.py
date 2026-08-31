@@ -329,7 +329,9 @@ class Spark:
         """It actually happened (PRD 15). Real life does not wait for a notification."""
         if self.status is SparkStatus.ARCHIVED:
             return self._archived("experience")
-        if not (self.status.is_returnable or self.status is SparkStatus.PLANNED):
+        if not (
+            self.status.is_returnable or self.status in {SparkStatus.PLANNED, SparkStatus.CAPTURED}
+        ):
             return self._illegal("experience")
         return Ok(self._evolve(status=SparkStatus.EXPERIENCED, at=at))
 

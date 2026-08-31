@@ -36,9 +36,9 @@ export interface ErrorEnvelope {
     readonly details?: Record<string, unknown>;
   };
 }
-/** V0 ships six (PRD §48 F4). Others exist in the model but are gated off. */
-export type IntentType = "DO" | "BUY" | "WATCH" | "READ" | "TEACH" | "REMEMBER";
-export const INTENT_TYPE_VALUES: readonly IntentType[] = ["DO", "BUY", "WATCH", "READ", "TEACH", "REMEMBER"] as const;
+/** All 10 intents available (TASK-816, PRD 13, PRD 50). */
+export type IntentType = "DO" | "BUY" | "WATCH" | "READ" | "TEACH" | "REMEMBER" | "COOK" | "VISIT" | "TELL" | "LISTEN";
+export const INTENT_TYPE_VALUES: readonly IntentType[] = ["DO", "BUY", "WATCH", "READ", "TEACH", "REMEMBER", "COOK", "VISIT", "TELL", "LISTEN"] as const;
 export type SparkStatus = "CAPTURED" | "WAITING" | "RELEVANT" | "SUGGESTED" | "PLANNED" | "EXPERIENCED" | "REMEMBERED" | "ARCHIVED";
 export const SPARK_STATUS_VALUES: readonly SparkStatus[] = ["CAPTURED", "WAITING", "RELEVANT", "SUGGESTED", "PLANNED", "EXPERIENCED", "REMEMBERED", "ARCHIVED"] as const;
 export type SourceKind = "URL" | "TEXT" | "SCREENSHOT" | "PHOTO" | "VOICE";

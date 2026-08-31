@@ -23,23 +23,17 @@ from anuvritti.domain.values import (
 
 
 class TestIntentType:
-    def test_v0_ships_exactly_the_six_intents_the_prd_names(self):
-        """PRD 48 F4 - DO, BUY, WATCH, READ, TEACH, REMEMBER. 'Enough for V0.'"""
-        assert IntentType.v0_set() == frozenset(
-            {
-                IntentType.DO,
-                IntentType.BUY,
-                IntentType.WATCH,
-                IntentType.READ,
-                IntentType.TEACH,
-                IntentType.REMEMBER,
-            }
-        )
+    def test_all_ten_intents_are_supported(self):
+        """TASK-816 - DO, BUY, WATCH, READ, TEACH, REMEMBER, COOK, VISIT, TELL, LISTEN."""
+        assert len(IntentType) == 10
+        assert IntentType.v0_set() == frozenset(IntentType)
 
-    def test_later_intents_are_modelled_but_gated_off(self):
-        """PRD 10 lists COOK/VISIT/TELL/LISTEN; V1 enables them without a migration."""
-        assert IntentType.COOK not in IntentType.v0_set()
-        assert IntentType.COOK.is_available_in_v0 is False
+    def test_all_intents_are_available(self):
+        """TASK-816 enables COOK, VISIT, TELL, LISTEN."""
+        assert IntentType.COOK.is_available_in_v0 is True
+        assert IntentType.VISIT.is_available_in_v0 is True
+        assert IntentType.TELL.is_available_in_v0 is True
+        assert IntentType.LISTEN.is_available_in_v0 is True
         assert IntentType.DO.is_available_in_v0 is True
 
     def test_parsing_an_unknown_intent_fails_loudly(self):
@@ -51,8 +45,12 @@ class TestIntentType:
         [
             (IntentType.DO, True),
             (IntentType.TEACH, True),
+            (IntentType.COOK, True),
+            (IntentType.VISIT, True),
             (IntentType.BUY, False),
             (IntentType.REMEMBER, False),
+            (IntentType.TELL, False),
+            (IntentType.LISTEN, False),
         ],
     )
     def test_actionability_distinguishes_do_now_from_hold(self, intent, expected):

@@ -31,19 +31,19 @@ import { intentOf } from "./attributed.ts";
  * started and a parent can never reach a state they cannot leave. The test asserts that.
  */
 export const NEXT_INTENT: Readonly<Record<IntentType, readonly [IntentType, ...IntentType[]]>> = {
-  // A video of something to try is the archetypal capture, and "watch it" is the archetypal
-  // near-miss for it.
-  DO: ["WATCH", "TEACH", "BUY", "READ", "REMEMBER"],
-  WATCH: ["DO", "READ", "REMEMBER", "TEACH", "BUY"],
-  // A thing to buy is a thing to do that costs money; those two are the common confusion.
-  BUY: ["DO", "REMEMBER", "WATCH", "TEACH", "READ"],
-  READ: ["WATCH", "TEACH", "DO", "REMEMBER", "BUY"],
-  TEACH: ["DO", "READ", "WATCH", "REMEMBER", "BUY"],
-  // "Just remember this" is the honest default, so everything is one step from it.
-  REMEMBER: ["DO", "WATCH", "READ", "TEACH", "BUY"],
+  DO: ["WATCH", "TEACH", "COOK", "VISIT", "BUY", "READ", "TELL", "LISTEN", "REMEMBER"],
+  WATCH: ["READ", "LISTEN", "TELL", "DO", "TEACH", "COOK", "VISIT", "BUY", "REMEMBER"],
+  BUY: ["DO", "COOK", "VISIT", "READ", "WATCH", "TEACH", "TELL", "LISTEN", "REMEMBER"],
+  READ: ["TELL", "LISTEN", "TEACH", "WATCH", "DO", "COOK", "VISIT", "BUY", "REMEMBER"],
+  TEACH: ["TELL", "DO", "READ", "LISTEN", "COOK", "VISIT", "WATCH", "BUY", "REMEMBER"],
+  REMEMBER: ["DO", "WATCH", "READ", "TEACH", "COOK", "VISIT", "TELL", "LISTEN", "BUY"],
+  COOK: ["DO", "BUY", "TEACH", "VISIT", "WATCH", "READ", "TELL", "LISTEN", "REMEMBER"],
+  VISIT: ["DO", "BUY", "COOK", "WATCH", "READ", "TEACH", "TELL", "LISTEN", "REMEMBER"],
+  TELL: ["LISTEN", "READ", "TEACH", "DO", "WATCH", "COOK", "VISIT", "BUY", "REMEMBER"],
+  LISTEN: ["TELL", "WATCH", "READ", "TEACH", "DO", "COOK", "VISIT", "BUY", "REMEMBER"],
 };
 
-/** How the six are said to a parent. Verbs, because an intent is something you will do. */
+/** How the intents are said to a parent. Verbs, because an intent is something you will do. */
 export const INTENT_SAID: Readonly<Record<IntentType, string>> = {
   DO: "do together",
   BUY: "buy",
@@ -51,6 +51,10 @@ export const INTENT_SAID: Readonly<Record<IntentType, string>> = {
   READ: "read",
   TEACH: "teach",
   REMEMBER: "remember",
+  COOK: "cook",
+  VISIT: "visit",
+  TELL: "tell",
+  LISTEN: "listen",
 };
 
 /** The next intent one tap away. Wraps, so the cycle is closed. */

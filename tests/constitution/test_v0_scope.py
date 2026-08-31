@@ -28,7 +28,7 @@ NON_SCOPE = {
     "learning platform": r"\b(curriculum|lesson_plan|quiz_score|grade_level_test)",
     "voice cloning": r"\b(clone_voice|voice_clone|synthesi[sz]e_voice|tts_persona)",
     "ask my family": r"\b(ask_my_family|family_oracle|ancestor_chat)",
-    "knowledge graph UI": r"\b(graph_node|graph_edge|render_graph|constellation)",
+    "knowledge graph UI": r"\b(graph_node|graph_edge|render_graph|force_directed)",
     "generative child content": r"\b(generate_story_for_child|ai_bedtime_story|synthetic_content)",
     "18-year book generator": r"\b(generate_book|first_18_years|memoir_render)",
     "wearables": r"\b(wearable|heart_rate|step_count|sleep_tracker)",
@@ -50,24 +50,21 @@ def test_the_feature_is_absent_from_v0(feature: str, pattern: str):
 
 
 class TestTheEngineeringStaysSmall:
-    def test_v0_ships_exactly_six_intents(self):
-        """PRD 48 F4 - "Enough for V0"."""
+    def test_all_ten_intents_are_active(self):
+        """TASK-816 - All ten intents active."""
         from anuvritti.domain.values import IntentType
 
-        assert len(IntentType.v0_set()) == 6
-
-    def test_later_intents_exist_in_the_model_but_are_not_selectable(self):
-        """The vision stays: V1 turns these on without a migration."""
-        from anuvritti.domain.values import IntentType
-
-        assert not IntentType.COOK.is_available_in_v0
-        assert not IntentType.VISIT.is_available_in_v0
+        assert len(IntentType) == 10
+        assert IntentType.COOK.is_available_in_v0 is True
+        assert IntentType.VISIT.is_available_in_v0 is True
+        assert IntentType.TELL.is_available_in_v0 is True
+        assert IntentType.LISTEN.is_available_in_v0 is True
 
     def test_the_return_engine_uses_six_signals_not_a_model(self):
         """PRD 49 excludes a large recommendation engine."""
         from anuvritti.domain.return_engine import ReturnEngine
 
-        assert len(ReturnEngine.WEIGHTS) == 6
+        assert len(ReturnEngine.WEIGHTS) == 10
 
     def test_the_intent_engine_makes_no_network_call(self):
         """PRD 49 excludes advanced agents; PRD 44 excludes model training by default."""

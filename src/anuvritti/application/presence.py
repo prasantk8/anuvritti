@@ -17,10 +17,16 @@ from anuvritti.application.ports import (
     FamilyRepository,
     LittleThingRepository,
     RightNowRepository,
+    SparkRepository,
     UnitOfWork,
 )
-from anuvritti.domain.presence import LittleThing, RightNowSnapshot
-from anuvritti.domain.values import MemberRole
+from anuvritti.domain.presence import (
+    LittleThing,
+    RightNowMilestone,
+    RightNowSnapshot,
+)
+from anuvritti.domain.spark import Spark
+from anuvritti.domain.values import IntentType, MemberRole, SourceRef
 from anuvritti.shared.clock import Clock
 from anuvritti.shared.errors import DomainError, ErrorCode
 from anuvritti.shared.identity import (
@@ -30,6 +36,7 @@ from anuvritti.shared.identity import (
     LittleThingId,
     MemberId,
     RightNowId,
+    SparkId,
 )
 from anuvritti.shared.result import Err, Ok, Result
 
@@ -103,6 +110,7 @@ class CaptureRightNowCommand:
     child_id: ChildId
     answer: str
     prompt: str | None = None
+    author_id: MemberId | None = None
 
 
 class CaptureRightNowUseCase:
@@ -110,7 +118,106 @@ class CaptureRightNowUseCase:
 
     The prompt rotates daily and is chosen by the system, so answering never starts with
     "what should I write about?".
+
+    TASK-811: An answer to "What question did he ask that you could not answer?" automatically
+    becomes a TELL Spark with no extra tap required.
     """
+
+    def __init__(
+        self,
+        *,
+        families: FamilyRepository,
+        right_now: RightNowRepository,
+        events: EventPublisher,
+        clock: Clock,
+        ids: IdGenerator,
+        uow: UnitOfWork,
+        sparks: SparkRepository | None = None,
+    ) -> None:
+        self._families = families
+        self._right_now = right_now
+        self._events = events
+        self._clock = clock
+        self._ids = ids
+        self._uow = uow
+        self._sparks = sparks
+
+    def todays_prompt(self) -> str:
+        return RightNowSnapshot.prompt_for(self._clock.today())
+
+    def execute(self, command: CaptureRightNowCommand) -> Result[RightNowSnapshot, DomainError]:
+        family_result = self._families.get(command.family_id)
+        if family_result.is_err():
+            return Err(family_result.unwrap_err())
+
+        child_result = family_result.unwrap().child(command.child_id)
+        if child_result.is_err():
+            return Err(child_result.unwrap_err())
+
+        prompt_text = command.prompt or self.todays_prompt()
+        created = RightNowSnapshot.capture(
+            right_now_id=RightNowId(self._ids.new_id()),
+            family_id=command.family_id,
+            child_id=command.child_id,
+            prompt=prompt_text,
+            answer=command.answer,
+            at=self._clock.now(),
+        )
+        if created.is_err():
+            return Err(created.unwrap_err())
+
+        snapshot = created.unwrap()
+        with self._uow:
+            saved = self._right_now.save(snapshot)
+            if saved.is_err():
+                self._uow.rollback()
+                return Err(saved.unwrap_err())
+
+            # TASK-811: "Ask Papa, later" - auto-create TELL spark for unanswerable question prompt
+            if (
+                "question did he ask" in prompt_text.lower()
+                or "question did she ask" in prompt_text.lower()
+            ) and self._sparks is not None:
+                fam = family_result.unwrap()
+                parents = [m for m in fam.members if m.role.is_parent]
+                author_id = command.author_id or (parents[0].id if parents else fam.members[0].id)
+                child_name = child_result.unwrap().display_name
+                spark = Spark.capture(
+                    spark_id=SparkId(self._ids.new_id()),
+                    family_id=command.family_id,
+                    owner_id=author_id,
+                    subject_child_id=command.child_id,
+                    source=SourceRef.from_text(
+                        snapshot.answer,
+                        title=f"Question from {child_name}: {snapshot.answer}",
+                    ),
+                    at=self._clock.now(),
+                )
+                overridden = spark.override_intent(IntentType.TELL)
+                if overridden.is_ok():
+                    self._sparks.save(overridden.unwrap())
+
+            self._events.publish(snapshot.pending_events, family_id=command.family_id)
+            self._uow.commit()
+        return Ok(snapshot)
+
+
+@dataclass(frozen=True, slots=True)
+class CaptureRightNowMilestoneCommand:
+    """TASK-817: Multi-field snapshot capturing several dimensions at once."""
+
+    family_id: FamilyId
+    child_id: ChildId
+    obsessions: str = ""
+    funny_words: str = ""
+    favorite_things: str = ""
+    interests: tuple[str, ...] = ()
+    difficult_questions: str = ""
+    notes: str = ""
+
+
+class CaptureRightNowMilestoneUseCase:
+    """TASK-817: Periodic snapshot capturing multiple fields without habit pressure."""
 
     def __init__(
         self,
@@ -129,10 +236,9 @@ class CaptureRightNowUseCase:
         self._ids = ids
         self._uow = uow
 
-    def todays_prompt(self) -> str:
-        return RightNowSnapshot.prompt_for(self._clock.today())
-
-    def execute(self, command: CaptureRightNowCommand) -> Result[RightNowSnapshot, DomainError]:
+    def execute(
+        self, command: CaptureRightNowMilestoneCommand
+    ) -> Result[RightNowMilestone, DomainError]:
         family_result = self._families.get(command.family_id)
         if family_result.is_err():
             return Err(family_result.unwrap_err())
@@ -141,26 +247,45 @@ class CaptureRightNowUseCase:
         if child_result.is_err():
             return Err(child_result.unwrap_err())
 
-        created = RightNowSnapshot.capture(
-            right_now_id=RightNowId(self._ids.new_id()),
+        created = RightNowMilestone.capture(
+            milestone_id=RightNowId(self._ids.new_id()),
             family_id=command.family_id,
             child_id=command.child_id,
-            prompt=command.prompt or self.todays_prompt(),
-            answer=command.answer,
             at=self._clock.now(),
+            obsessions=command.obsessions,
+            funny_words=command.funny_words,
+            favorite_things=command.favorite_things,
+            interests=command.interests,
+            difficult_questions=command.difficult_questions,
+            notes=command.notes,
         )
         if created.is_err():
             return Err(created.unwrap_err())
 
-        snapshot = created.unwrap()
+        milestone = created.unwrap()
+        # Save summary in right_now repo as snapshot representation
+        summary = (
+            f"Obsessions: {milestone.obsessions}; "
+            f"Words: {milestone.funny_words}; "
+            f"Favorites: {milestone.favorite_things}"
+        )
+        rep_snapshot = RightNowSnapshot(
+            id=milestone.id,
+            family_id=milestone.family_id,
+            child_id=milestone.child_id,
+            prompt="Right Now Milestone Snapshot",
+            answer=summary,
+            captured_at=milestone.captured_at,
+            pending_events=milestone.pending_events,
+        )
         with self._uow:
-            saved = self._right_now.save(snapshot)
+            saved = self._right_now.save(rep_snapshot)
             if saved.is_err():
                 self._uow.rollback()
                 return Err(saved.unwrap_err())
-            self._events.publish(snapshot.pending_events, family_id=command.family_id)
+            self._events.publish(milestone.pending_events, family_id=command.family_id)
             self._uow.commit()
-        return Ok(snapshot)
+        return Ok(milestone)
 
 
 @dataclass(frozen=True, slots=True)
