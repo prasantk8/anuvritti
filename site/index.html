@@ -24,7 +24,7 @@
     }
 
     .container {
-      max-width: 800px;
+      max-width: 820px;
       margin: 0 auto;
       padding: var(--w-space-8) var(--w-space-5) var(--w-space-breath);
     }
@@ -170,37 +170,148 @@
       max-width: var(--w-layout-measure);
     }
 
-    /* Interactive Showcase Stage */
-    .interactive-stage {
+    /* Heartwarming Storyline Studio */
+    .storyline-studio {
       background: var(--w-color-surface);
       border: 1px solid var(--w-color-thread);
       border-radius: var(--w-radius-sheet);
       padding: var(--w-space-6);
-      box-shadow: var(--w-elevation-resting);
+      box-shadow: var(--w-elevation-lifted);
       margin-bottom: var(--w-space-7);
     }
-    .stage-tabs {
+    .prompt-pills {
       display: flex;
+      flex-wrap: wrap;
       gap: var(--w-space-2);
-      margin-bottom: var(--w-space-5);
-      border-bottom: 1px solid var(--w-color-thread);
-      padding-bottom: var(--w-space-3);
+      margin-bottom: var(--w-space-4);
     }
-    .stage-tab {
-      background: none;
+    .prompt-pill {
+      background: var(--w-color-surface-lifted);
+      border: 1px solid var(--w-color-thread);
+      border-radius: var(--w-radius-round);
+      padding: var(--w-space-2) var(--w-space-3);
+      font-size: var(--w-size-fine);
+      color: var(--w-color-ink-quiet);
+      cursor: pointer;
+      transition: all var(--w-duration-instant);
+    }
+    .prompt-pill:hover, .prompt-pill.active {
+      background: var(--w-color-indigo-wash);
+      border-color: var(--w-color-indigo);
+      color: var(--w-color-indigo);
+      font-weight: var(--w-weight-medium);
+    }
+    .studio-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: var(--w-space-3);
+      margin-bottom: var(--w-space-5);
+    }
+    .studio-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: var(--w-space-3);
+      border-radius: var(--w-radius-cut);
+      border: 1px solid var(--w-color-thread-strong);
+      background: var(--w-color-surface-lifted);
+      color: var(--w-color-ink);
+      font-family: var(--font-display);
+      font-size: var(--w-size-lead);
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    .studio-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--w-space-3);
+    }
+    .studio-mic-btn {
+      background: var(--w-color-saffron);
+      color: white;
       border: none;
+      border-radius: var(--w-radius-round);
+      padding: var(--w-space-2) var(--w-space-4);
       font-family: var(--font-body);
       font-size: var(--w-size-fine);
       font-weight: var(--w-weight-medium);
-      color: var(--w-color-ink-quiet);
       cursor: pointer;
-      padding: var(--w-space-2) var(--w-space-3);
-      border-radius: var(--w-radius-round);
-      transition: all var(--w-duration-instant);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--w-space-2);
+      box-shadow: var(--w-elevation-resting);
+      transition: transform var(--w-duration-instant), background-color var(--w-duration-instant);
     }
-    .stage-tab.active {
-      background: var(--w-color-indigo-wash);
-      color: var(--w-color-indigo);
+    .studio-mic-btn:hover {
+      background: #734A12;
+    }
+    .studio-mic-btn:active, .studio-mic-btn.recording {
+      transform: scale(0.95);
+      background: #5E390A;
+    }
+    .studio-render-btn {
+      background: var(--w-color-indigo);
+      color: white;
+      border: none;
+      border-radius: var(--w-radius-round);
+      padding: var(--w-space-2) var(--w-space-4);
+      font-family: var(--font-body);
+      font-size: var(--w-size-fine);
+      font-weight: var(--w-weight-medium);
+      cursor: pointer;
+      transition: background-color var(--w-duration-instant);
+    }
+    .studio-render-btn:hover {
+      background: #203566;
+    }
+
+    /* Compiled Storyline Scene Result */
+    .compiled-scene-box {
+      background: #0C0F15;
+      color: #ECEAE1;
+      border-radius: var(--w-radius-object);
+      padding: var(--w-space-6);
+      box-shadow: var(--w-elevation-held);
+      margin-top: var(--w-space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--w-space-3);
+      position: relative;
+    }
+    .compiled-scene-tag {
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      color: #E0AC5A;
+      text-transform: uppercase;
+      letter-spacing: var(--w-tracking-label);
+    }
+    .compiled-scene-heading {
+      font-family: var(--font-display);
+      font-size: var(--w-size-chapter);
+      line-height: var(--w-leading-tight);
+      margin: 0;
+      color: #FFFFFF;
+    }
+    .compiled-scene-why {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: var(--w-size-lead);
+      color: #ECEAE1;
+      margin: var(--w-space-1) 0;
+      line-height: var(--w-leading-open);
+    }
+    .compiled-voice-playback {
+      display: flex;
+      align-items: center;
+      gap: var(--w-space-3);
+      background: rgba(224, 172, 90, 0.15);
+      padding: var(--w-space-2) var(--w-space-4);
+      border-radius: var(--w-radius-round);
+      color: #E0AC5A;
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      align-self: flex-start;
     }
 
     /* 3D Spark Flip Card */
@@ -291,58 +402,6 @@
       color: var(--w-color-saffron);
       font-size: var(--w-size-fine);
       margin-top: var(--w-space-2);
-    }
-
-    /* Hold to Talk Studio */
-    .recorder-panel {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: var(--w-space-6) var(--w-space-4);
-      background: var(--w-color-ground-sunk);
-      border-radius: var(--w-radius-object);
-      gap: var(--w-space-4);
-      text-align: center;
-    }
-    .mic-button {
-      width: 88px;
-      height: 88px;
-      border-radius: var(--w-radius-round);
-      background: var(--w-color-saffron);
-      border: none;
-      color: white;
-      font-size: 36px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: var(--w-elevation-lifted);
-      transition: transform var(--w-duration-instant), background-color var(--w-duration-instant), box-shadow var(--w-duration-instant);
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .mic-button:active, .mic-button.pressed {
-      transform: scale(0.92);
-      background: #734A12;
-      box-shadow: var(--w-elevation-held);
-    }
-    .live-wave {
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      height: 32px;
-    }
-    .live-wave-col {
-      width: 4px;
-      height: 6px;
-      background: var(--w-color-saffron);
-      border-radius: 2px;
-      transition: height 0.08s ease;
-    }
-    .recorder-status {
-      font-family: var(--font-body);
-      font-size: var(--w-size-fine);
-      color: var(--w-color-ink-quiet);
     }
 
     /* Cinematic Film Reel Showcase */
@@ -523,10 +582,10 @@
         <span class="tagline-pill">Anuvritti Core</span>
       </div>
       <div class="nav-links">
-        <a href="#experience" class="nav-link">Experience</a>
-        <a href="#film" class="nav-link">The Film</a>
+        <a href="#studio" class="nav-link">Memory Studio</a>
+        <a href="#experience" class="nav-link">The Spark</a>
+        <a href="#film" class="nav-link">Annual Film</a>
         <a href="#refusals" class="nav-link">Manifesto</a>
-        <a href="#architecture" class="nav-link">Architecture</a>
         <button class="theme-toggle" id="theme-btn" aria-label="Toggle dark/light mode">Night</button>
       </div>
     </nav>
@@ -553,96 +612,90 @@
 
     <!-- Main Content -->
     <main>
-      <!-- Interactive Showcase Section -->
-      <section id="experience">
+      <!-- Heartwarming Storyline Studio -->
+      <section id="studio">
         <div class="section-header">
-          <div class="section-pre">Live Interface Simulation</div>
-          <h2 class="section-title">The Handset Experience</h2>
-          <p class="section-desc">Experience the exact gesture physics, provenance typography, and state machines running inside the app.</p>
+          <div class="section-pre">Interactive Experience</div>
+          <h2 class="section-title">The Storyline Studio: Author a Moment</h2>
+          <p class="section-desc">Try creating a real family moment right now. Select a gentle prompt, speak or type your reflection, and watch it compile into a timeless film scene.</p>
         </div>
 
-        <div class="interactive-stage">
-          <div class="stage-tabs">
-            <button class="stage-tab active" id="tab-spark" onclick="switchStageTab('spark')">1. The Tangible Spark</button>
-            <button class="stage-tab" id="tab-mic" onclick="switchStageTab('mic')">2. 5-Second Voice Studio</button>
-            <button class="stage-tab" id="tab-dict" onclick="switchStageTab('dict')">3. The Child's Words</button>
+        <div class="storyline-studio">
+          <div class="prompt-pills">
+            <button class="prompt-pill active" onclick="selectPrompt(this, 'What made both of you burst out laughing today?', 'He put his boots on backwards and did a penguin dance across the kitchen floor.')">🐧 The Penguin Dance</button>
+            <button class="prompt-pill" onclick="selectPrompt(this, 'What word did they pronounce in their own special way?', '\"Pash-getti\" — because regular spaghetti doesn\'t taste as delicious.')">🍝 Pash-getti</button>
+            <button class="prompt-pill" onclick="selectPrompt(this, 'What was their bedtime question tonight?', '\"Papa, where do dreams go when the sun wakes up?\"')">🌙 Where Dreams Go</button>
+            <button class="prompt-pill" onclick="selectPrompt(this, 'What tiny adventure did you share outside?', 'We hunted for shiny pebbles in the driveway for forty-five uninterrupted minutes.')">🪨 The Shiny Pebbles</button>
           </div>
 
-          <!-- Tab 1: Spark Card -->
-          <div id="panel-spark" class="stage-panel">
-            <div class="spark-box">
-              <div class="spark-card" id="demo-card" tabindex="0" role="button" aria-label="Spark Card. Tap to flip." onclick="toggleSparkFlip()">
-                <div class="spark-face front">
-                  <div class="spark-header">
-                    <span class="spark-date">Age 3 · 14 October</span>
-                    <span class="spark-chip">to do together</span>
-                  </div>
-                  <div>
-                    <p class="spark-main-text">"He learned to jump with both feet off the stone garden step today."</p>
-                  </div>
-                  <div class="spark-footer">
-                    <span>Front: The Observation</span>
-                    <span>Tap card to turn over ↺</span>
-                  </div>
-                </div>
-                <div class="spark-face back">
-                  <div class="spark-header">
-                    <span class="spark-why-label">Why you saved it · Spoken</span>
-                    <span class="spark-date">4.2s recording</span>
-                  </div>
-                  <div>
-                    <p class="spark-main-text">"He laughed so hard he fell onto the grass, and asked to do it twelve more times."</p>
-                    <div class="spark-voice-bar">
-                      <span>▶</span>
-                      <span>Audio recorded in Papa's voice</span>
-                    </div>
-                  </div>
-                  <div class="spark-footer">
-                    <span>Back: The Spoken Why</span>
-                    <span>Tap to flip back ↻</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p style="font-size: var(--w-size-fine); color: var(--w-color-ink-quiet); text-align: center; margin-top: var(--w-space-3);">
-              A Spark is a physical two-sided object. Front: what was noticed. Back: why you saved it, in the parent's voice.
-            </p>
+          <div class="studio-input-area">
+            <label style="font-size: var(--w-size-fine); color: var(--w-color-ink-quiet); font-weight: var(--w-weight-medium);" id="studio-prompt-label">
+              What made both of you burst out laughing today?
+            </label>
+            <textarea class="studio-textarea" id="studio-text" rows="3">He put his boots on backwards and did a penguin dance across the kitchen floor.</textarea>
           </div>
 
-          <!-- Tab 2: Hold to Talk -->
-          <div id="panel-mic" class="stage-panel" style="display: none;">
-            <div class="recorder-panel">
-              <div class="live-wave" id="wave-bars">
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-                <div class="live-wave-col"></div>
-              </div>
-              <button class="mic-button" id="demo-mic" aria-label="Hold to talk microphone button">🎙</button>
-              <div class="recorder-status" id="mic-status">Press and hold to speak · Release to save</div>
+          <div class="studio-controls">
+            <button class="studio-mic-btn" id="studio-mic" onmousedown="startStudioRecord(event)" onmouseup="stopStudioRecord(event)" ontouchstart="startStudioRecord(event)" ontouchend="stopStudioRecord(event)">
+              <span id="studio-mic-icon">🎙</span>
+              <span id="studio-mic-label">Hold to Speak Reflection</span>
+            </button>
+            <button class="studio-render-btn" onclick="compileStudioScene()">
+              Compile into Film Scene ✨
+            </button>
+          </div>
+
+          <!-- Dynamic Compiled Scene -->
+          <div class="compiled-scene-box" id="compiled-scene">
+            <div class="compiled-scene-tag" id="compiled-tag">Compiled Scene · Moment</div>
+            <h3 class="compiled-scene-heading" id="compiled-heading">"He put his boots on backwards and did a penguin dance across the kitchen floor."</h3>
+            <p class="compiled-scene-why" id="compiled-why">Why you saved it: He laughed so hard he fell onto the carpet, shouting "Look Papa, I am a waddler!"</p>
+            <div class="compiled-voice-playback">
+              <span>▶</span>
+              <span id="compiled-audio-label">Papa's Spoken Audio (4.8s · Saffron Voice Wave)</span>
             </div>
           </div>
+        </div>
+      </section>
 
-          <!-- Tab 3: Dictionary of Us -->
-          <div id="panel-dict" class="stage-panel" style="display: none;">
-            <div style="background: var(--w-color-surface-lifted); border: 1px solid var(--w-color-thread); border-radius: var(--w-radius-object); padding: var(--w-space-5);">
-              <div style="font-family: var(--font-mono); font-size: var(--w-size-micro); color: var(--w-color-saffron); text-transform: uppercase;">
-                Dictionary of Us · Child's Voice
+      <!-- The Tangible Spark Card Section -->
+      <section id="experience">
+        <div class="section-header">
+          <div class="section-pre">Physical Handset Physics</div>
+          <h2 class="section-title">The Tangible Spark Object</h2>
+          <p class="section-desc">A card in Memtara is an object you turn over with your hands. Front: what was noticed. Back: why you saved it, in your own spoken voice.</p>
+        </div>
+
+        <div class="spark-box">
+          <div class="spark-card" id="demo-card" tabindex="0" role="button" aria-label="Spark Card. Tap to flip." onclick="toggleSparkFlip()">
+            <div class="spark-face front">
+              <div class="spark-header">
+                <span class="spark-date">Age 3 · 14 October</span>
+                <span class="spark-chip">to do together</span>
               </div>
-              <h3 style="font-family: var(--font-display); font-style: italic; font-size: var(--w-size-year); margin: var(--w-space-2) 0; color: var(--w-color-ink);">
-                "Babbagoo"
-              </h3>
-              <p style="font-size: var(--w-size-lead); color: var(--w-color-ink-quiet); line-height: var(--w-leading-read);">
-                The special blue blanket that must be folded into a triangle before he can fall asleep. First heard in the spring he was two.
-              </p>
-              <div style="margin-top: var(--w-space-4); font-size: var(--w-size-fine); color: var(--w-color-ink-faint); border-top: 1px solid var(--w-color-thread); padding-top: var(--w-space-3);">
-                Typography rule: <em>Newsreader Italic</em> is reserved exclusively for the child's own voice.
+              <div>
+                <p class="spark-main-text">"He learned to jump with both feet off the stone garden step today."</p>
+              </div>
+              <div class="spark-footer">
+                <span>Front: What was noticed</span>
+                <span>Tap card to turn over ↺</span>
+              </div>
+            </div>
+            <div class="spark-face back">
+              <div class="spark-header">
+                <span class="spark-why-label">Why you saved it · Spoken</span>
+                <span class="spark-date">4.2s recording</span>
+              </div>
+              <div>
+                <p class="spark-main-text">"He laughed so hard he fell onto the grass, and asked to do it twelve more times."</p>
+                <div class="spark-voice-bar">
+                  <span>▶</span>
+                  <span>Spoken in Papa's voice</span>
+                </div>
+              </div>
+              <div class="spark-footer">
+                <span>Back: The Spoken Why</span>
+                <span>Tap to flip back ↻</span>
               </div>
             </div>
           </div>
@@ -653,7 +706,7 @@
       <section id="film">
         <div class="section-header">
           <div class="section-pre">Compiled Annually</div>
-          <h2 class="section-title">The Memory Film</h2>
+          <h2 class="section-title">The Living Memory Film</h2>
           <p class="section-desc">Once a year, the Python compiler (<code>packages/filmkit</code>) turns the family's raw memories into an unhurried 1920x1080 cinematic heirloom.</p>
         </div>
 
@@ -681,7 +734,7 @@
         <div class="section-header">
           <div class="section-pre">The Ethical Foundation</div>
           <h2 class="section-title">Our Constitutional Refusals</h2>
-          <p class="section-desc">We reject the extractive patterns of modern big tech. These promises are held by automated tests that fail the build if crossed.</p>
+          <p class="section-desc">We reject the extractive patterns of big tech. These promises are held by automated tests that fail the build if crossed.</p>
         </div>
 
         <ul class="refusals">
@@ -779,13 +832,66 @@ docker run -d \
       themeBtn.textContent = next === 'dark' ? 'Day' : 'Night';
     });
 
-    // Stage Tab Switcher
-    function switchStageTab(tabId) {
-      document.querySelectorAll('.stage-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.stage-panel').forEach(p => p.style.display = 'none');
+    // Storyline Studio Prompt Selection
+    function selectPrompt(btn, promptLabel, sampleText) {
+      document.querySelectorAll('.prompt-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('studio-prompt-label').textContent = promptLabel;
+      document.getElementById('studio-text').value = sampleText;
+      compileStudioScene();
+    }
+
+    // Studio Hold-to-Talk Recording Simulation
+    let studioRecTimer = null;
+    let studioRecMs = 0;
+    let isStudioRec = false;
+
+    function startStudioRecord(e) {
+      if (e) e.preventDefault();
+      if (isStudioRec) return;
+      isStudioRec = true;
+      studioRecMs = 0;
+      const btn = document.getElementById('studio-mic');
+      const label = document.getElementById('studio-mic-label');
+      btn.classList.add('recording');
+      label.textContent = 'Listening... (0.0s)';
+
+      studioRecTimer = setInterval(() => {
+        studioRecMs += 100;
+        label.textContent = `Listening... (${(studioRecMs / 1000).toFixed(1)}s)`;
+      }, 100);
+    }
+
+    function stopStudioRecord(e) {
+      if (e) e.preventDefault();
+      if (!isStudioRec) return;
+      isStudioRec = false;
+      const btn = document.getElementById('studio-mic');
+      const label = document.getElementById('studio-mic-label');
+      btn.classList.remove('recording');
+      clearInterval(studioRecTimer);
+
+      const sec = (studioRecMs / 1000).toFixed(1);
+      if (studioRecMs < 300) {
+        label.textContent = 'Hold to Speak Reflection';
+      } else {
+        label.textContent = `Recorded (${sec}s)`;
+        document.getElementById('compiled-audio-label').textContent = `Papa's Spoken Audio (${sec}s · Saffron Voice Wave)`;
+        compileStudioScene();
+        setTimeout(() => {
+          label.textContent = 'Hold to Speak Reflection';
+        }, 4000);
+      }
+    }
+
+    function compileStudioScene() {
+      const text = document.getElementById('studio-text').value;
+      document.getElementById('compiled-heading').textContent = `"${text}"`;
+      document.getElementById('compiled-why').textContent = `Why you saved it: Spoken reflection preserved in the archive for the year's film.`;
       
-      document.getElementById('tab-' + tabId).classList.add('active');
-      document.getElementById('panel-' + tabId).style.display = 'block';
+      const box = document.getElementById('compiled-scene');
+      box.style.transform = 'scale(0.98)';
+      setTimeout(() => { box.style.transform = 'scale(1)'; }, 150);
     }
 
     // Spark Flip
@@ -793,61 +899,6 @@ docker run -d \
       const card = document.getElementById('demo-card');
       card.classList.toggle('flipped');
     }
-
-    // Mic Hold to Talk
-    const micBtn = document.getElementById('demo-mic');
-    const micStatus = document.getElementById('mic-status');
-    const waveBars = document.querySelectorAll('.live-wave-col');
-    let recTimer = null;
-    let waveTimer = null;
-    let recMs = 0;
-    let isRec = false;
-
-    function onMicDown(e) {
-      if (e) e.preventDefault();
-      if (isRec) return;
-      isRec = true;
-      recMs = 0;
-      micBtn.classList.add('pressed');
-      micStatus.textContent = 'Listening to voice... (0.0s)';
-
-      recTimer = setInterval(() => {
-        recMs += 100;
-        micStatus.textContent = `Listening to voice... (${(recMs / 1000).toFixed(1)}s)`;
-      }, 100);
-
-      waveTimer = setInterval(() => {
-        waveBars.forEach(bar => {
-          const h = Math.floor(Math.random() * 26) + 6;
-          bar.style.height = `${h}px`;
-        });
-      }, 70);
-    }
-
-    function onMicUp(e) {
-      if (e) e.preventDefault();
-      if (!isRec) return;
-      isRec = false;
-      micBtn.classList.remove('pressed');
-      clearInterval(recTimer);
-      clearInterval(waveTimer);
-      waveBars.forEach(bar => { bar.style.height = '6px'; });
-
-      const sec = (recMs / 1000).toFixed(1);
-      if (recMs < 300) {
-        micStatus.textContent = 'Press and hold to speak · Release to save';
-      } else {
-        micStatus.textContent = `Saved. ${sec}s voice note preserved in your private vault.`;
-        setTimeout(() => {
-          if (!isRec) micStatus.textContent = 'Press and hold to speak · Release to save';
-        }, 4000);
-      }
-    }
-
-    micBtn.addEventListener('mousedown', onMicDown);
-    window.addEventListener('mouseup', onMicUp);
-    micBtn.addEventListener('touchstart', onMicDown);
-    window.addEventListener('touchend', onMicUp);
 
     // Film Scenes Reel
     const filmScenes = [
