@@ -3,54 +3,91 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Memtara — A Quiet Archive for Your Family</title>
+  <title>Memtara — A Father’s Quiet Archive for His Child</title>
   <link rel="stylesheet" href="../packages/world/dist/world.css">
   <style>
+    :root {
+      --font-display: var(--w-font-display, "Newsreader", serif);
+      --font-body: var(--w-font-body, "IBM Plex Sans", sans-serif);
+      --font-mono: var(--w-font-mono, "IBM Plex Mono", monospace);
+    }
+
     body {
       margin: 0;
       padding: 0;
       background-color: var(--w-color-ground);
       color: var(--w-color-ink);
-      font-family: var(--w-font-body);
+      font-family: var(--font-body);
       line-height: var(--w-leading-read);
       -webkit-font-smoothing: antialiased;
       transition: background-color var(--w-duration-settle) ease, color var(--w-duration-settle) ease;
     }
 
     .container {
-      max-width: 720px;
+      max-width: 800px;
       margin: 0 auto;
-      padding: var(--w-space-8) var(--w-space-5);
+      padding: var(--w-space-8) var(--w-space-5) var(--w-space-breath);
     }
 
-    /* Navigation & Theme Toggle */
+    /* Top Navigation */
     nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: var(--w-space-7);
+      margin-bottom: var(--w-space-8);
+      padding-bottom: var(--w-space-4);
+      border-bottom: 1px solid var(--w-color-thread);
+    }
+    .brand-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: var(--w-space-3);
     }
     .brand {
-      font-family: var(--w-font-display);
+      font-family: var(--font-display);
       font-size: var(--w-size-title);
       font-weight: var(--w-weight-semibold);
       letter-spacing: var(--w-tracking-name);
       text-decoration: none;
       color: var(--w-color-ink);
     }
+    .tagline-pill {
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      color: var(--w-color-indigo);
+      background: var(--w-color-indigo-wash);
+      padding: var(--w-space-hair) var(--w-space-2);
+      border-radius: var(--w-radius-round);
+      text-transform: uppercase;
+      letter-spacing: var(--w-tracking-label);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: var(--w-space-4);
+    }
+    .nav-link {
+      font-size: var(--w-size-fine);
+      color: var(--w-color-ink-quiet);
+      text-decoration: none;
+      transition: color var(--w-duration-instant);
+    }
+    .nav-link:hover {
+      color: var(--w-color-ink);
+    }
     .theme-toggle {
-      background: none;
+      background: var(--w-color-surface);
       border: 1px solid var(--w-color-thread);
       border-radius: var(--w-radius-round);
-      padding: var(--w-space-2) var(--w-space-4);
-      font-family: var(--w-font-mono);
+      padding: var(--w-space-1) var(--w-space-3);
+      font-family: var(--font-mono);
       font-size: var(--w-size-micro);
       color: var(--w-color-ink-quiet);
       cursor: pointer;
-      min-height: var(--w-layout-touch);
+      min-height: 32px;
       display: inline-flex;
       align-items: center;
-      transition: border-color var(--w-duration-instant);
+      transition: border-color var(--w-duration-instant), background-color var(--w-duration-instant);
     }
     .theme-toggle:hover {
       border-color: var(--w-color-thread-strong);
@@ -58,64 +95,133 @@
     }
 
     /* Hero Section */
-    header {
-      margin-bottom: var(--w-space-8);
+    .hero {
+      margin-bottom: var(--w-space-9);
     }
-    header h1 {
-      font-family: var(--w-font-display);
+    .founder-quote-band {
+      margin-bottom: var(--w-space-5);
+      border-left: 3px solid var(--w-color-saffron);
+      padding-left: var(--w-space-4);
+      font-style: italic;
+      color: var(--w-color-ink-quiet);
+      font-size: var(--w-size-lead);
+      line-height: var(--w-leading-open);
+      font-family: var(--font-display);
+    }
+    .hero h1 {
+      font-family: var(--font-display);
       font-size: var(--w-size-name);
       font-weight: var(--w-weight-regular);
       line-height: var(--w-leading-tight);
-      margin: 0 0 var(--w-space-4) 0;
       letter-spacing: var(--w-tracking-name);
+      margin: 0 0 var(--w-space-4) 0;
+      text-wrap: balance;
     }
-    .subtitle {
+    .hero-lead {
       font-size: var(--w-size-lead);
       color: var(--w-color-ink-quiet);
-      margin-bottom: var(--w-space-5);
       line-height: var(--w-leading-open);
+      margin-bottom: var(--w-space-6);
+      max-width: var(--w-layout-measure);
     }
 
-    /* Interactive Experience Container */
-    .experience-box {
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--w-space-2);
+      margin-bottom: var(--w-space-7);
+    }
+    .badge {
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      padding: var(--w-space-1) var(--w-space-3);
+      border-radius: var(--w-radius-edge);
+      background: var(--w-color-surface);
+      border: 1px solid var(--w-color-thread);
+      color: var(--w-color-ink-faint);
+    }
+
+    /* Section Headings */
+    .section-header {
+      margin-top: var(--w-space-9);
+      margin-bottom: var(--w-space-5);
+      padding-bottom: var(--w-space-2);
+      border-bottom: 1px solid var(--w-color-thread);
+    }
+    .section-pre {
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      color: var(--w-color-indigo);
+      text-transform: uppercase;
+      letter-spacing: var(--w-tracking-label);
+      margin-bottom: var(--w-space-1);
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: var(--w-size-chapter);
+      font-weight: var(--w-weight-regular);
+      margin: 0;
+      line-height: var(--w-leading-tight);
+    }
+    .section-desc {
+      color: var(--w-color-ink-quiet);
+      font-size: var(--w-size-fine);
+      margin-top: var(--w-space-2);
+      max-width: var(--w-layout-measure);
+    }
+
+    /* Interactive Showcase Stage */
+    .interactive-stage {
       background: var(--w-color-surface);
       border: 1px solid var(--w-color-thread);
       border-radius: var(--w-radius-sheet);
       padding: var(--w-space-6);
       box-shadow: var(--w-elevation-resting);
-      margin-bottom: var(--w-space-8);
+      margin-bottom: var(--w-space-7);
     }
-    .experience-title {
-      font-family: var(--w-font-display);
-      font-size: var(--w-size-chapter);
-      margin: 0 0 var(--w-space-2) 0;
-    }
-    .experience-hint {
-      font-size: var(--w-size-fine);
-      color: var(--w-color-ink-quiet);
+    .stage-tabs {
+      display: flex;
+      gap: var(--w-space-2);
       margin-bottom: var(--w-space-5);
+      border-bottom: 1px solid var(--w-color-thread);
+      padding-bottom: var(--w-space-3);
+    }
+    .stage-tab {
+      background: none;
+      border: none;
+      font-family: var(--font-body);
+      font-size: var(--w-size-fine);
+      font-weight: var(--w-weight-medium);
+      color: var(--w-color-ink-quiet);
+      cursor: pointer;
+      padding: var(--w-space-2) var(--w-space-3);
+      border-radius: var(--w-radius-round);
+      transition: all var(--w-duration-instant);
+    }
+    .stage-tab.active {
+      background: var(--w-color-indigo-wash);
+      color: var(--w-color-indigo);
     }
 
-    /* Spark Flip Card */
-    .spark-card-perspective {
-      perspective: 1000px;
-      margin-bottom: var(--w-space-6);
+    /* 3D Spark Flip Card */
+    .spark-box {
+      perspective: 1400px;
+      margin: var(--w-space-4) 0;
     }
     .spark-card {
       width: 100%;
-      min-height: 180px;
+      min-height: 240px;
       position: relative;
       transform-style: preserve-3d;
-      transition: transform var(--w-duration-flip) var(--w-easing-enter);
+      transition: transform var(--w-duration-flip) var(--w-easing-move);
       cursor: pointer;
     }
-    .spark-card.is-flipped {
+    .spark-card.flipped {
       transform: rotateY(180deg);
     }
-    .spark-card-face {
+    .spark-face {
       position: absolute;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       border-radius: var(--w-radius-object);
@@ -126,104 +232,203 @@
       justify-content: space-between;
       box-shadow: var(--w-elevation-lifted);
       border: 1px solid var(--w-color-thread);
-    }
-    .spark-card-front {
       background: var(--w-color-surface-lifted);
-      color: var(--w-color-ink);
     }
-    .spark-card-back {
-      background: var(--w-color-surface-lifted);
-      color: var(--w-color-ink);
+    .spark-face.front {
+      border-top: 3px solid var(--w-color-indigo);
+    }
+    .spark-face.back {
       transform: rotateY(180deg);
-      border-left: 4px solid var(--w-color-indigo);
+      border-top: 3px solid var(--w-color-saffron);
+      background: var(--w-color-surface-lifted);
     }
-    .spark-tag {
-      font-family: var(--w-font-mono);
+    .spark-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .spark-date {
+      font-family: var(--font-mono);
       font-size: var(--w-size-micro);
+      color: var(--w-color-ink-faint);
+    }
+    .spark-chip {
+      font-size: var(--w-size-micro);
+      padding: var(--w-space-hair) var(--w-space-2);
+      border-radius: var(--w-radius-round);
+      background: var(--w-color-indigo-wash);
       color: var(--w-color-indigo);
-      text-transform: uppercase;
-      letter-spacing: var(--w-tracking-label);
+      font-weight: var(--w-weight-medium);
     }
-    .spark-text {
-      font-family: var(--w-font-display);
-      font-size: var(--w-size-lead);
-      margin: var(--w-space-2) 0;
-      line-height: var(--w-leading-read);
+    .spark-main-text {
+      font-family: var(--font-display);
+      font-size: var(--w-size-chapter);
+      line-height: var(--w-leading-tight);
+      margin: var(--w-space-3) 0;
+      color: var(--w-color-ink);
     }
-    .spark-sub {
+    .spark-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       font-size: var(--w-size-fine);
       color: var(--w-color-ink-faint);
     }
+    .spark-why-label {
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      color: var(--w-color-saffron);
+      text-transform: uppercase;
+      letter-spacing: var(--w-tracking-label);
+    }
+    .spark-voice-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--w-space-3);
+      padding: var(--w-space-2) var(--w-space-3);
+      background: var(--w-color-saffron-wash);
+      border-radius: var(--w-radius-round);
+      color: var(--w-color-saffron);
+      font-size: var(--w-size-fine);
+      margin-top: var(--w-space-2);
+    }
 
-    /* Hold to Talk Widget */
-    .hold-to-talk-wrapper {
+    /* Hold to Talk Studio */
+    .recorder-panel {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: var(--w-space-4);
-      padding: var(--w-space-5);
+      padding: var(--w-space-6) var(--w-space-4);
       background: var(--w-color-ground-sunk);
       border-radius: var(--w-radius-object);
+      gap: var(--w-space-4);
+      text-align: center;
     }
-    .talk-btn {
-      width: 80px;
-      height: 80px;
+    .mic-button {
+      width: 88px;
+      height: 88px;
       border-radius: var(--w-radius-round);
-      border: none;
       background: var(--w-color-saffron);
+      border: none;
       color: white;
-      font-size: 32px;
+      font-size: 36px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: var(--w-elevation-lifted);
+      transition: transform var(--w-duration-instant), background-color var(--w-duration-instant), box-shadow var(--w-duration-instant);
       user-select: none;
       -webkit-user-select: none;
-      transition: transform var(--w-duration-instant) ease, background-color var(--w-duration-instant) ease, box-shadow var(--w-duration-instant) ease;
-      box-shadow: var(--w-elevation-lifted);
     }
-    .talk-btn:active, .talk-btn.active {
+    .mic-button:active, .mic-button.pressed {
       transform: scale(0.92);
-      background: #A06B1C;
+      background: #734A12;
       box-shadow: var(--w-elevation-held);
     }
-    .waveform-visualizer {
+    .live-wave {
       display: flex;
       align-items: center;
       gap: 3px;
-      height: 36px;
+      height: 32px;
     }
-    .wave-bar {
+    .live-wave-col {
       width: 4px;
-      height: 8px;
+      height: 6px;
       background: var(--w-color-saffron);
       border-radius: 2px;
-      transition: height 0.1s ease;
+      transition: height 0.08s ease;
     }
-    .talk-caption {
+    .recorder-status {
+      font-family: var(--font-body);
       font-size: var(--w-size-fine);
       color: var(--w-color-ink-quiet);
-      text-align: center;
     }
 
-    /* Refusals / Manifesto List */
-    h2 {
-      font-family: var(--w-font-display);
-      font-size: var(--w-size-title);
-      font-weight: var(--w-weight-regular);
-      margin-top: var(--w-space-8);
-      margin-bottom: var(--w-space-4);
+    /* Cinematic Film Reel Showcase */
+    .film-player {
+      background: #0C0F15;
+      color: #ECEAE1;
+      border-radius: var(--w-radius-object);
+      aspect-ratio: 16 / 9;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: var(--w-space-6);
+      box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--w-elevation-held);
     }
+    .film-meta {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      color: #868D99;
+    }
+    .film-scene-body {
+      text-align: center;
+      padding: 0 var(--w-space-5);
+    }
+    .film-scene-type {
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      color: #E0AC5A;
+      text-transform: uppercase;
+      letter-spacing: var(--w-tracking-label);
+      margin-bottom: var(--w-space-2);
+    }
+    .film-heading {
+      font-family: var(--font-display);
+      font-size: var(--w-size-year);
+      line-height: var(--w-leading-tight);
+      margin: 0 0 var(--w-space-2) 0;
+      color: #FFFFFF;
+    }
+    .film-child-quote {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: var(--w-size-title);
+      color: #ECEAE1;
+      margin: var(--w-space-2) 0;
+    }
+    .film-caption {
+      font-size: var(--w-size-fine);
+      color: #A8AEB9;
+      margin-top: var(--w-space-3);
+    }
+    .film-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: var(--w-space-3);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .film-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #ECEAE1;
+      padding: var(--w-space-1) var(--w-space-3);
+      border-radius: var(--w-radius-round);
+      font-family: var(--font-mono);
+      font-size: var(--w-size-micro);
+      cursor: pointer;
+    }
+    .film-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Manifesto & Refusals List */
     ul.refusals {
       list-style: none;
       padding: 0;
-      margin: var(--w-space-4) 0;
+      margin: var(--w-space-5) 0;
     }
     ul.refusals li {
-      margin-bottom: var(--w-space-4);
-      padding-left: var(--w-space-5);
+      margin-bottom: var(--w-space-5);
+      padding-left: var(--w-space-6);
       position: relative;
-      font-size: var(--w-size-body);
     }
     ul.refusals li::before {
       content: "—";
@@ -231,15 +436,27 @@
       left: 0;
       color: var(--w-color-ink-faint);
     }
+    .refusal-title {
+      font-weight: var(--w-weight-semibold);
+      color: var(--w-color-ink);
+      display: block;
+      font-size: var(--w-size-lead);
+      margin-bottom: var(--w-space-1);
+    }
+    .refusal-desc {
+      color: var(--w-color-ink-quiet);
+      font-size: var(--w-size-fine);
+      line-height: var(--w-leading-read);
+    }
 
-    /* Architecture Callout Grid */
+    /* Architecture Grid */
     .arch-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: var(--w-space-4);
-      margin-top: var(--w-space-5);
+      margin: var(--w-space-5) 0;
     }
-    @media (max-width: 600px) {
+    @media (max-width: 640px) {
       .arch-grid {
         grid-template-columns: 1fr;
       }
@@ -251,8 +468,8 @@
       padding: var(--w-space-4);
     }
     .arch-card h3 {
-      font-family: var(--w-font-display);
-      font-size: var(--w-size-lead);
+      font-family: var(--font-display);
+      font-size: var(--w-size-title);
       margin: 0 0 var(--w-space-2) 0;
       font-weight: var(--w-weight-medium);
     }
@@ -260,26 +477,29 @@
       font-size: var(--w-size-fine);
       color: var(--w-color-ink-quiet);
       margin: 0;
+      line-height: var(--w-leading-read);
     }
 
-    /* Getting Started / Code Box */
-    .code-box {
+    /* Self Hosting & Run Command */
+    .run-box {
       background: var(--w-color-surface-lifted);
-      border: 1px solid var(--w-color-thread);
+      border: 1px solid var(--w-color-thread-strong);
       border-radius: var(--w-radius-object);
       padding: var(--w-space-4);
-      font-family: var(--w-font-mono);
+      font-family: var(--font-mono);
       font-size: var(--w-size-fine);
       overflow-x: auto;
       margin: var(--w-space-4) 0;
+      color: var(--w-color-ink);
     }
 
+    /* Footer */
     footer {
       margin-top: var(--w-space-9);
+      padding-top: var(--w-space-5);
+      border-top: 1px solid var(--w-color-thread);
       font-size: var(--w-size-fine);
       color: var(--w-color-ink-faint);
-      border-top: 1px solid var(--w-color-thread);
-      padding-top: var(--w-space-5);
       display: flex;
       justify-content: space-between;
       flex-wrap: wrap;
@@ -296,114 +516,254 @@
 </head>
 <body>
   <div class="container">
+    <!-- Header / Navigation -->
     <nav>
-      <a href="/" class="brand">Memtara</a>
-      <button class="theme-toggle" id="theme-btn" aria-label="Toggle theme">Night</button>
+      <div class="brand-wrap">
+        <a href="/" class="brand">Memtara</a>
+        <span class="tagline-pill">Anuvritti Core</span>
+      </div>
+      <div class="nav-links">
+        <a href="#experience" class="nav-link">Experience</a>
+        <a href="#film" class="nav-link">The Film</a>
+        <a href="#refusals" class="nav-link">Manifesto</a>
+        <a href="#architecture" class="nav-link">Architecture</a>
+        <button class="theme-toggle" id="theme-btn" aria-label="Toggle dark/light mode">Night</button>
+      </div>
     </nav>
 
-    <header>
-      <h1>A quiet archive for your family.</h1>
-      <p class="subtitle">
-        Memtara helps you notice childhood while it is happening.
-        No algorithms, no public feeds, no streaks, and zero data brokers.
-        Encrypted on your device and owned by your family.
+    <!-- Hero -->
+    <header class="hero">
+      <div class="founder-quote-band">
+        "As a dad I should be able to use my child's photos, videos and audio to make a personal space. Something touching and beautiful — made of our own voices."
+      </div>
+      <h1>A quiet, sovereign family archive that helps you notice childhood while it is happening.</h1>
+      <p class="hero-lead">
+        Memtara is built for tired parents. Not a public feed, not a game, and not for strangers.
+        A private sanctuary on your own phone and private home server — capturing voices, small invented words, and whole photographs, compiled annually into a timeless film.
       </p>
+
+      <div class="badge-bar">
+        <span class="badge">Hardware Encrypted</span>
+        <span class="badge">Offline Spool</span>
+        <span class="badge">Zero Ad Trackers</span>
+        <span class="badge">Open JSON Archive</span>
+        <span class="badge">Single-Family Cloud</span>
+      </div>
     </header>
 
+    <!-- Main Content -->
     <main>
-      <!-- Live Interactive Experience -->
-      <section class="experience-box">
-        <h2 class="experience-title">Experience the Real Code</h2>
-        <p class="experience-hint">The components below run the exact same logic and state machines powering the native handset app.</p>
-
-        <div class="spark-card-perspective">
-          <div class="spark-card" id="demo-spark-card" tabindex="0" role="button" aria-label="Spark Card. Tap to flip.">
-            <div class="spark-card-face spark-card-front">
-              <div>
-                <span class="spark-tag">Spark · 14 July</span>
-                <p class="spark-text">"He built a rocket ship from the blender box and announced it leaves for Mars at bedtime."</p>
-              </div>
-              <span class="spark-sub">Tap card to turn over ↺</span>
-            </div>
-            <div class="spark-card-face spark-card-back">
-              <div>
-                <span class="spark-tag">Why you saved it</span>
-                <p class="spark-text">"He insisted we pack three bananas and his blue blanket for rocket fuel."</p>
-              </div>
-              <span class="spark-sub">Intent: To remember · Tap to flip back ↻</span>
-            </div>
-          </div>
+      <!-- Interactive Showcase Section -->
+      <section id="experience">
+        <div class="section-header">
+          <div class="section-pre">Live Interface Simulation</div>
+          <h2 class="section-title">The Handset Experience</h2>
+          <p class="section-desc">Experience the exact gesture physics, provenance typography, and state machines running inside the app.</p>
         </div>
 
-        <div class="hold-to-talk-wrapper">
-          <div class="waveform-visualizer" id="waveform">
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
+        <div class="interactive-stage">
+          <div class="stage-tabs">
+            <button class="stage-tab active" id="tab-spark" onclick="switchStageTab('spark')">1. The Tangible Spark</button>
+            <button class="stage-tab" id="tab-mic" onclick="switchStageTab('mic')">2. 5-Second Voice Studio</button>
+            <button class="stage-tab" id="tab-dict" onclick="switchStageTab('dict')">3. The Child's Words</button>
           </div>
-          <button class="talk-btn" id="talk-btn" aria-label="Hold to talk microphone button">🎙</button>
-          <div class="talk-caption" id="talk-caption">Hold to talk · Release to save</div>
+
+          <!-- Tab 1: Spark Card -->
+          <div id="panel-spark" class="stage-panel">
+            <div class="spark-box">
+              <div class="spark-card" id="demo-card" tabindex="0" role="button" aria-label="Spark Card. Tap to flip." onclick="toggleSparkFlip()">
+                <div class="spark-face front">
+                  <div class="spark-header">
+                    <span class="spark-date">Age 3 · 14 October</span>
+                    <span class="spark-chip">to do together</span>
+                  </div>
+                  <div>
+                    <p class="spark-main-text">"He learned to jump with both feet off the stone garden step today."</p>
+                  </div>
+                  <div class="spark-footer">
+                    <span>Front: The Observation</span>
+                    <span>Tap card to turn over ↺</span>
+                  </div>
+                </div>
+                <div class="spark-face back">
+                  <div class="spark-header">
+                    <span class="spark-why-label">Why you saved it · Spoken</span>
+                    <span class="spark-date">4.2s recording</span>
+                  </div>
+                  <div>
+                    <p class="spark-main-text">"He laughed so hard he fell onto the grass, and asked to do it twelve more times."</p>
+                    <div class="spark-voice-bar">
+                      <span>▶</span>
+                      <span>Audio recorded in Papa's voice</span>
+                    </div>
+                  </div>
+                  <div class="spark-footer">
+                    <span>Back: The Spoken Why</span>
+                    <span>Tap to flip back ↻</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p style="font-size: var(--w-size-fine); color: var(--w-color-ink-quiet); text-align: center; margin-top: var(--w-space-3);">
+              A Spark is a physical two-sided object. Front: what was noticed. Back: why you saved it, in the parent's voice.
+            </p>
+          </div>
+
+          <!-- Tab 2: Hold to Talk -->
+          <div id="panel-mic" class="stage-panel" style="display: none;">
+            <div class="recorder-panel">
+              <div class="live-wave" id="wave-bars">
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+                <div class="live-wave-col"></div>
+              </div>
+              <button class="mic-button" id="demo-mic" aria-label="Hold to talk microphone button">🎙</button>
+              <div class="recorder-status" id="mic-status">Press and hold to speak · Release to save</div>
+            </div>
+          </div>
+
+          <!-- Tab 3: Dictionary of Us -->
+          <div id="panel-dict" class="stage-panel" style="display: none;">
+            <div style="background: var(--w-color-surface-lifted); border: 1px solid var(--w-color-thread); border-radius: var(--w-radius-object); padding: var(--w-space-5);">
+              <div style="font-family: var(--font-mono); font-size: var(--w-size-micro); color: var(--w-color-saffron); text-transform: uppercase;">
+                Dictionary of Us · Child's Voice
+              </div>
+              <h3 style="font-family: var(--font-display); font-style: italic; font-size: var(--w-size-year); margin: var(--w-space-2) 0; color: var(--w-color-ink);">
+                "Babbagoo"
+              </h3>
+              <p style="font-size: var(--w-size-lead); color: var(--w-color-ink-quiet); line-height: var(--w-leading-read);">
+                The special blue blanket that must be folded into a triangle before he can fall asleep. First heard in the spring he was two.
+              </p>
+              <div style="margin-top: var(--w-space-4); font-size: var(--w-size-fine); color: var(--w-color-ink-faint); border-top: 1px solid var(--w-color-thread); padding-top: var(--w-space-3);">
+                Typography rule: <em>Newsreader Italic</em> is reserved exclusively for the child's own voice.
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- Constitutional Manifesto -->
-      <section>
-        <h2>Our Constitutional Refusals</h2>
-        <p>Most modern apps are designed to harvest your family's attention and exploit your private data. We built Memtara with the opposite commitments:</p>
-          <li><strong>No streaks or gamification:</strong> A family is not a game to be scored. You will never see badges, counters, or daily goals.</li>
-          <li><strong>No nagging notifications:</strong> We send at most one quiet suggestion a day, and it can be silenced forever in a single tap.</li>
-          <li><strong>No third-party trackers or ads:</strong> Zero ad networks, tracking pixels, or data brokers. Your memories are never analyzed for advertising.</li>
-          <li><strong>Never held hostage:</strong> If you ever stop paying, you keep the right to read, search, and export everything you saved.</li>
-          <li><strong>Complete export sovereignty:</strong> Download your entire archive anytime as open, versioned JSON and standard media files.</li>
+      <!-- The Film Section -->
+      <section id="film">
+        <div class="section-header">
+          <div class="section-pre">Compiled Annually</div>
+          <h2 class="section-title">The Memory Film</h2>
+          <p class="section-desc">Once a year, the Python compiler (<code>packages/filmkit</code>) turns the family's raw memories into an unhurried 1920x1080 cinematic heirloom.</p>
+        </div>
+
+        <div class="film-player" id="film-player">
+          <div class="film-meta">
+            <span id="film-chapter">Chapter 2 of 5</span>
+            <span>1920 × 1080 · 30 FPS</span>
+          </div>
+          <div class="film-scene-body">
+            <div class="film-scene-type" id="film-type">Scene: Moment</div>
+            <h3 class="film-heading" id="film-title">"The afternoon on the swings"</h3>
+            <p class="film-child-quote" id="film-child">"Higher, Papa! Push me into the clouds!"</p>
+            <p class="film-caption" id="film-caption">Recorded at sunset in late September. Uncropped original photograph.</p>
+          </div>
+          <div class="film-controls">
+            <button class="film-btn" onclick="prevFilmScene()">◀ Previous Scene</button>
+            <span style="font-family: var(--font-mono); font-size: var(--w-size-micro); color: #868D99;" id="film-indicator">Scene 2 / 5</span>
+            <button class="film-btn" onclick="nextFilmScene()">Next Scene ▶</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Constitutional Manifesto / Refusals -->
+      <section id="refusals">
+        <div class="section-header">
+          <div class="section-pre">The Ethical Foundation</div>
+          <h2 class="section-title">Our Constitutional Refusals</h2>
+          <p class="section-desc">We reject the extractive patterns of modern big tech. These promises are held by automated tests that fail the build if crossed.</p>
+        </div>
+
+        <ul class="refusals">
+          <li>
+            <span class="refusal-title">No streaks or gamification</span>
+            <span class="refusal-desc">A family is not a game to be scored. You will never see badges, counters, unread dots, or daily guilt. If a parent is quiet for a month, that is a valid, respected state.</span>
+          </li>
+          <li>
+            <span class="refusal-title">No nagging notifications</span>
+            <span class="refusal-desc">At most one quiet suggestion a day, asking if anything is worth bringing back. It can be silenced forever in a single tap.</span>
+          </li>
+          <li>
+            <span class="refusal-title">No third-party trackers or ads</span>
+            <span class="refusal-desc">Zero ad networks, tracking pixels, or data brokers. Your memories are never mined, analyzed for targeting, or shared with third parties.</span>
+          </li>
+          <li>
+            <span class="refusal-title">Never held hostage</span>
+            <span class="refusal-desc">If you ever stop paying for a subscription, you keep the right to read, search, and export everything you saved. Your memories remain yours forever.</span>
+          </li>
+          <li>
+            <span class="refusal-title">Complete export sovereignty</span>
+            <span class="refusal-desc">Download your entire archive anytime as open, versioned JSON and standard lossless media files. Zero proprietary lock-in.</span>
+          </li>
         </ul>
       </section>
 
       <!-- Architecture Section -->
-      <section>
-        <h2>Engineering for 50-Year Longevity</h2>
+      <section id="architecture">
+        <div class="section-header">
+          <div class="section-pre">System Design</div>
+          <h2 class="section-title">Built for 50-Year Longevity</h2>
+          <p class="section-desc">How Memtara ensures your children can access their archive in the year 2076.</p>
+        </div>
+
         <div class="arch-grid">
           <div class="arch-card">
-            <h3>Encrypted at Rest</h3>
-            <p>Every recording and photo is encrypted on device using hardware-backed Secure Enclave / Keystore keys before uploading.</p>
+            <h3>Hardware Encrypted</h3>
+            <p>On-device encryption backed by iOS Secure Enclave and Android Keystore. Media is encrypted at rest before hitting any network.</p>
           </div>
           <div class="arch-card">
             <h3>Durable Offline Spool</h3>
-            <p>Capture never fails in a basement or on an airplane. The offline spool survives force-quits and replays with strict idempotency.</p>
+            <p>Saving a memory writes immediately to a local disk spool. Never lost on an airplane or in a basement with zero cellular signal.</p>
           </div>
           <div class="arch-card">
-            <h3>Pure Domain Architecture</h3>
-            <p>Hexagonal core in Python 3.12 with 93%+ strict coverage and zero framework dependencies in the business layer.</p>
+            <h3>Pure Domain Core</h3>
+            <p>Hexagonal architecture in Python 3.12 with 93%+ strict coverage. Free from framework rot and ephemeral cloud dependencies.</p>
           </div>
           <div class="arch-card">
-            <h3>Private Family Cloud</h3>
-            <p>Runs as a single container behind automatic Caddy TLS at <code>family.memtara.com</code> or entirely within your home LAN.</p>
+            <h3>Private Single-Family Cloud</h3>
+            <p>Runs as a single lightweight container behind automatic Caddy TLS at <code>family.memtara.com</code> or locally on your home network.</p>
           </div>
         </div>
       </section>
 
-      <!-- Self Hosting & Download -->
-      <section>
-        <h2>Run Your Own Family Server</h2>
-        <p>You can run the server on a home Raspberry Pi, NAS, or private VPS in thirty seconds:</p>
-        <div class="code-box">
-docker run -d --name memtara -p 8000:8000 \<br>
-&nbsp;&nbsp;-e ANUVRITTI_MEDIA_KEY="your-base64-key" \<br>
-&nbsp;&nbsp;-v ~/memtara/data:/var/lib/anuvritti/data \<br>
-&nbsp;&nbsp;ghcr.io/prasantk8/anuvritti:latest
+      <!-- Self-Hosting Quickstart -->
+      <section id="self-host">
+        <div class="section-header">
+          <div class="section-pre">Sovereignty in Practice</div>
+          <h2 class="section-title">Run Your Own Server</h2>
+          <p class="section-desc">Deploy your family's encrypted vault container to any Raspberry Pi, home NAS, or VPS in seconds:</p>
+        </div>
+
+        <div class="run-box">
+docker run -d \
+  --name memtara \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -e ANUVRITTI_MEDIA_KEY="base64-encoded-key" \
+  -v ~/memtara/data:/var/lib/anuvritti/data \
+  -v ~/memtara/media:/var/lib/anuvritti/media \
+  ghcr.io/prasantk8/anuvritti:latest
         </div>
       </section>
     </main>
 
+    <!-- Footer -->
     <footer>
       <div>&copy; 2026 Memtara. Purely for families.</div>
       <div>
         <a href="https://github.com/prasantk8/anuvritti" target="_blank" rel="noopener">GitHub</a> &middot;
         <a href="https://github.com/prasantk8/anuvritti/blob/main/docs/TRUST.md">Trust Contract</a> &middot;
+        <a href="https://github.com/prasantk8/anuvritti/blob/main/docs/DESIGN-BRIEF.md">Design Brief</a> &middot;
         <a href="https://github.com/prasantk8/anuvritti/blob/main/docs/RUNBOOK.md">Runbook</a>
       </div>
     </footer>
@@ -419,72 +779,136 @@ docker run -d --name memtara -p 8000:8000 \<br>
       themeBtn.textContent = next === 'dark' ? 'Day' : 'Night';
     });
 
-    // Spark Card Flip
-    const sparkCard = document.getElementById('demo-spark-card');
-    sparkCard.addEventListener('click', () => {
-      sparkCard.classList.toggle('is-flipped');
-    });
-    sparkCard.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        sparkCard.classList.toggle('is-flipped');
-      }
-    });
+    // Stage Tab Switcher
+    function switchStageTab(tabId) {
+      document.querySelectorAll('.stage-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.stage-panel').forEach(p => p.style.display = 'none');
+      
+      document.getElementById('tab-' + tabId).classList.add('active');
+      document.getElementById('panel-' + tabId).style.display = 'block';
+    }
 
-    // Hold-to-Talk Simulation
-    const talkBtn = document.getElementById('talk-btn');
-    const talkCaption = document.getElementById('talk-caption');
-    const waveBars = document.querySelectorAll('.wave-bar');
-    let isRecording = false;
-    let waveInterval = null;
-    let recordTimer = null;
-    let elapsedMs = 0;
+    // Spark Flip
+    function toggleSparkFlip() {
+      const card = document.getElementById('demo-card');
+      card.classList.toggle('flipped');
+    }
 
-    function startRecording(e) {
+    // Mic Hold to Talk
+    const micBtn = document.getElementById('demo-mic');
+    const micStatus = document.getElementById('mic-status');
+    const waveBars = document.querySelectorAll('.live-wave-col');
+    let recTimer = null;
+    let waveTimer = null;
+    let recMs = 0;
+    let isRec = false;
+
+    function onMicDown(e) {
       if (e) e.preventDefault();
-      if (isRecording) return;
-      isRecording = true;
-      elapsedMs = 0;
-      talkBtn.classList.add('active');
-      talkCaption.textContent = 'Listening... (0.0s)';
+      if (isRec) return;
+      isRec = true;
+      recMs = 0;
+      micBtn.classList.add('pressed');
+      micStatus.textContent = 'Listening to voice... (0.0s)';
 
-      recordTimer = setInterval(() => {
-        elapsedMs += 100;
-        talkCaption.textContent = `Listening... (${(elapsedMs / 1000).toFixed(1)}s)`;
+      recTimer = setInterval(() => {
+        recMs += 100;
+        micStatus.textContent = `Listening to voice... (${(recMs / 1000).toFixed(1)}s)`;
       }, 100);
 
-      waveInterval = setInterval(() => {
+      waveTimer = setInterval(() => {
         waveBars.forEach(bar => {
-          const height = Math.floor(Math.random() * 28) + 6;
-          bar.style.height = `${height}px`;
+          const h = Math.floor(Math.random() * 26) + 6;
+          bar.style.height = `${h}px`;
         });
-      }, 80);
+      }, 70);
     }
 
-    function stopRecording(e) {
+    function onMicUp(e) {
       if (e) e.preventDefault();
-      if (!isRecording) return;
-      isRecording = false;
-      talkBtn.classList.remove('active');
-      clearInterval(waveInterval);
-      clearInterval(recordTimer);
-      waveBars.forEach(bar => { bar.style.height = '8px'; });
-      
-      const seconds = (elapsedMs / 1000).toFixed(1);
-      if (elapsedMs < 300) {
-        talkCaption.textContent = 'Hold to talk · Release to save';
+      if (!isRec) return;
+      isRec = false;
+      micBtn.classList.remove('pressed');
+      clearInterval(recTimer);
+      clearInterval(waveTimer);
+      waveBars.forEach(bar => { bar.style.height = '6px'; });
+
+      const sec = (recMs / 1000).toFixed(1);
+      if (recMs < 300) {
+        micStatus.textContent = 'Press and hold to speak · Release to save';
       } else {
-        talkCaption.textContent = `Saved. ${seconds}s voice note kept in your private vault.`;
+        micStatus.textContent = `Saved. ${sec}s voice note preserved in your private vault.`;
         setTimeout(() => {
-          if (!isRecording) talkCaption.textContent = 'Hold to talk · Release to save';
-        }, 3500);
+          if (!isRec) micStatus.textContent = 'Press and hold to speak · Release to save';
+        }, 4000);
       }
     }
 
-    talkBtn.addEventListener('mousedown', startRecording);
-    window.addEventListener('mouseup', stopRecording);
-    talkBtn.addEventListener('touchstart', startRecording);
-    window.addEventListener('touchend', stopRecording);
+    micBtn.addEventListener('mousedown', onMicDown);
+    window.addEventListener('mouseup', onMicUp);
+    micBtn.addEventListener('touchstart', onMicDown);
+    window.addEventListener('touchend', onMicUp);
+
+    // Film Scenes Reel
+    const filmScenes = [
+      {
+        type: "Scene: OPENING",
+        chapter: "Chapter 1 of 5",
+        title: "Year Three",
+        child: "The Year of Building Rockets",
+        caption: "Opening title page in Papa's voice. Title on undyed cloth."
+      },
+      {
+        type: "Scene: MOMENT",
+        chapter: "Chapter 2 of 5",
+        title: "The afternoon on the swings",
+        child: "\"Higher, Papa! Push me into the clouds!\"",
+        caption: "Recorded at sunset in late September. Uncropped photograph."
+      },
+      {
+        type: "Scene: LITTLE_THING",
+        chapter: "Chapter 3 of 5",
+        title: "The Invented Word",
+        child: "\"Babbagoo!\"",
+        caption: "His word for the blue blanket. Rendered in Newsreader Italic."
+      },
+      {
+        type: "Scene: PROMISE_KEPT",
+        chapter: "Chapter 4 of 5",
+        title: "Making paper airplanes",
+        child: "\"We made them fly all the way to the kitchen!\"",
+        caption: "Saved 8 months ago, surfaced on a quiet morning, lived."
+      },
+      {
+        type: "Scene: CLOSING",
+        chapter: "Chapter 5 of 5",
+        title: "End of Year Three",
+        child: "\"Goodnight Papa.\"",
+        caption: "Child speaking his own name. The screen dims and ends itself."
+      }
+    ];
+
+    let currentSceneIdx = 1;
+
+    function renderFilmScene(idx) {
+      const s = filmScenes[idx];
+      document.getElementById('film-chapter').textContent = s.chapter;
+      document.getElementById('film-type').textContent = s.type;
+      document.getElementById('film-title').textContent = s.title;
+      document.getElementById('film-child').textContent = s.child;
+      document.getElementById('film-caption').textContent = s.caption;
+      document.getElementById('film-indicator').textContent = `Scene ${idx + 1} / ${filmScenes.length}`;
+    }
+
+    function prevFilmScene() {
+      currentSceneIdx = (currentSceneIdx - 1 + filmScenes.length) % filmScenes.length;
+      renderFilmScene(currentSceneIdx);
+    }
+
+    function nextFilmScene() {
+      currentSceneIdx = (currentSceneIdx + 1) % filmScenes.length;
+      renderFilmScene(currentSceneIdx);
+    }
   </script>
 </body>
 </html>

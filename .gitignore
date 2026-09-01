@@ -14,7 +14,6 @@ apps/*/ios/
 apps/*/android/
 apps/*/.expo/
 apps/*/dist/
-site/dist/
 *.tsbuildinfo
 
 # --- A family's own material. Never, under any circumstances, in version control.
@@ -22,6 +21,11 @@ site/dist/
 # add a bare `media/` rule here: it matches at any depth and silently swallows
 # src/anuvritti/adapters/media, which is source code.
 var/
+personal_attachments/
+*.HEIC
+*.heic
+*.JPG
+*.jpg
 *.db
 *.db-wal
 *.db-shm
